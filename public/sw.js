@@ -1,4 +1,4 @@
-const CACHE_NAME = 'maladum-v1';
+const CACHE_NAME = 'maladum-v3';
 const ASSETS = [
   '/',
   '/index.html',

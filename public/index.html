@@ -8,679 +8,260 @@
   <meta name="apple-mobile-web-app-title" content="Maladum">
   <meta name="theme-color" content="#0c0c1d">
   <link rel="manifest" href="/manifest.json">
-  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230c0c1d' width='100' height='100' rx='20'/><text x='50' y='62' text-anchor='middle' font-size='50'>⚔️</text></svg>">
   <title>Maladum Companion</title>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body { background: #0c0c1d; font-family: 'Cinzel', Georgia, serif; color: #d4b896; overflow-x: hidden;
-      -webkit-font-smoothing: antialiased; padding-top: env(safe-area-inset-top); }
-    input, select, button { font-family: inherit; }
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #2d2d44; border-radius: 2px; }
+    *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    body{background:#0c0c1d;font-family:'Cinzel',Georgia,serif;color:#d4b896;overflow-x:hidden;-webkit-font-smoothing:antialiased;padding-top:env(safe-area-inset-top)}
+    input,select,button,textarea{font-family:inherit}
+    .mo{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.85);z-index:200;display:flex;align-items:flex-end;justify-content:center}
+    .mc{background:#121225;border-top:2px solid #b91c1c;border-radius:16px 16px 0 0;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;padding:20px 16px}
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
-  <script type="text/babel" data-type="module">
-const { useState, useEffect, useCallback, useRef } = React;
-
-// ========== DATABASE LAYER (IndexedDB) ==========
-const IDB = (() => {
-  const DB_NAME = 'maladum_db';
-  const DB_VERSION = 1;
-  const STORE = 'data';
-  let dbPromise = null;
-  function openDB() {
-    if (dbPromise) return dbPromise;
-    dbPromise = new Promise((resolve, reject) => {
-      const req = indexedDB.open(DB_NAME, DB_VERSION);
-      req.onupgradeneeded = () => { req.result.createObjectStore(STORE); };
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => reject(req.error);
-    });
-    return dbPromise;
-  }
-  return {
-    async get(key) {
-      const db = await openDB();
-      return new Promise((res, rej) => {
-        const tx = db.transaction(STORE, 'readonly');
-        const req = tx.objectStore(STORE).get(key);
-        req.onsuccess = () => res(req.result ?? null);
-        req.onerror = () => rej(req.error);
-      });
-    },
-    async set(key, val) {
-      const db = await openDB();
-      return new Promise((res, rej) => {
-        const tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).put(val, key);
-        tx.oncomplete = () => res();
-        tx.onerror = () => rej(tx.error);
-      });
-    },
-    async del(key) {
-      const db = await openDB();
-      return new Promise((res, rej) => {
-        const tx = db.transaction(STORE, 'readwrite');
-        tx.objectStore(STORE).delete(key);
-        tx.oncomplete = () => res();
-        tx.onerror = () => rej(tx.error);
-      });
-    }
-  };
-})();
-
-// ========== GAME DATA ==========
-const THREAT_BANDS = {
-  A: [
-    { name: "Disquiet", color: "#22c55e", slots: 4 },
-    { name: "Unease", color: "#84cc16", slots: 4 },
-    { name: "Distress", color: "#eab308", slots: 4 },
-    { name: "Dismay", color: "#f97316", slots: 4 },
-    { name: "Desperation", color: "#ef4444", slots: 4 },
-    { name: "Doom", color: "#991b1b", slots: 4 },
-  ],
-  B: [
-    { name: "Disquiet", color: "#22c55e", slots: 3 },
-    { name: "Unease", color: "#84cc16", slots: 3 },
-    { name: "Distress", color: "#eab308", slots: 4 },
-    { name: "Dismay", color: "#f97316", slots: 4 },
-    { name: "Desperation", color: "#ef4444", slots: 5 },
-    { name: "Doom", color: "#991b1b", slots: 5 },
-  ],
-};
-
-const STATUS_EFFECTS = [
-  { id:"fatigued", name:"Fatigado", icon:"😰", color:"#eab308" },
-  { id:"poisoned", name:"Envenenado", icon:"☠️", color:"#22c55e" },
-  { id:"cursed", name:"Maldito", icon:"💀", color:"#7c3aed" },
-  { id:"burning", name:"Quemando", icon:"🔥", color:"#ef4444" },
-  { id:"terrified", name:"Aterrorizado", icon:"😱", color:"#a855f7" },
-  { id:"stunned", name:"Aturdido", icon:"💫", color:"#3b82f6" },
-  { id:"wounded", name:"Herido", icon:"🩸", color:"#dc2626" },
-  { id:"blessed", name:"Bendito", icon:"✨", color:"#fbbf24" },
-  { id:"corrupted", name:"Corrompido", icon:"🌑", color:"#1e1b4b" },
-  { id:"prone", name:"Derribado", icon:"⬇️", color:"#6b7280" },
-];
-
-const BASE_CHARACTERS = [
-  { nombre:"Grogmar", especie:"Ormen", salud_max:7, habilidad_max:3, magia_max:2, acciones:2, coste:73, innatas:["Quick Recovery"] },
-  { nombre:"Moranna", especie:"Human", salud_max:5, habilidad_max:5, magia_max:4, acciones:2, coste:80, innatas:["Impervious","Malacyte Mastery"] },
-  { nombre:"Greet", especie:"Grobbler", salud_max:5, habilidad_max:5, magia_max:3, acciones:3, coste:75, innatas:["Barter","Tricks of the Trade"] },
-  { nombre:"Syrio", especie:"Eld", salud_max:6, habilidad_max:4, magia_max:3, acciones:2, coste:64, innatas:["Reflexes"] },
-  { nombre:"Callan", especie:"Human", salud_max:5, habilidad_max:4, magia_max:3, acciones:2, coste:54, innatas:["Frenzy"] },
-  { nombre:"Nerinda", especie:"Human", salud_max:5, habilidad_max:4, magia_max:2, acciones:2, coste:80, innatas:["Weapons Master 1"] },
-  { nombre:"Unger", especie:"Tregar", salud_max:4, habilidad_max:3, magia_max:1, acciones:2, coste:73, innatas:["Persuasion","Detect"] },
-  { nombre:"Kriga", especie:"Human", salud_max:4, habilidad_max:3, magia_max:1, acciones:2, coste:73, innatas:[] },
-  { nombre:"Beren", especie:"Human", salud_max:4, habilidad_max:4, magia_max:2, acciones:2, coste:71, innatas:["Natural Remedies","Ready for Anything"] },
-  { nombre:"Hendley", especie:"Dwella", salud_max:4, habilidad_max:3, magia_max:1, acciones:2, coste:75, innatas:["Night Vision","Smithing"] },
-  { nombre:"Galen", especie:"Eld", salud_max:3, habilidad_max:3, magia_max:1, acciones:2, coste:75, innatas:["Ambush"] },
-  { nombre:"Artain", especie:"Human", salud_max:3, habilidad_max:3, magia_max:3, acciones:2, coste:61, innatas:["Entertainer"] },
-  { nombre:"Ariah", especie:"Human", salud_max:3, habilidad_max:4, magia_max:1, acciones:2, coste:73, innatas:["Tactical Gift","Ranged Expert"] },
-  { nombre:"Brahm", especie:"Human", salud_max:4, habilidad_max:4, magia_max:3, acciones:2, coste:90, innatas:["Weapons Master","Ranged Expert"] },
-  { nombre:"Emmerik", especie:"Human", salud_max:3, habilidad_max:3, magia_max:4, acciones:2, coste:60, innatas:["Loremaster"] },
-];
-
-const CLASSES = ["Barbarian","Rogue","Sellsword","Assassin","Scavenger","Swindler","Marksman","Guardian","Blacksmith","Curator","Contender","Strategist","Maestro","Rook","Paladin","Prymorist","Eudaemon","Ranger","Druid","Magus","Rambler"];
-
-const MISSIONS = {
-  Intro: { id:"Intro", nombre:"De Moneda y Gloria", pagina:4,
-    condicion:"Misión independiente rejugable. +1 Demora si se juega en campaña.",
-    objetivo_primario:"Recolectar armas, armaduras y recursos. Ganar experiencia.",
-    objetivo_secundario:"Recuperar Objetivos 7 y 8. Cada uno vale 1 Renombre en Mercado.",
-    reglas_especiales:[{nombre:"Mecanismos Antiguos",desc:"4 palancas: 1=roto, 2=abre tragaluz, 3=cierra tragaluz, 4=cierra puerta, 5=desbloquea puerta, 6=retira pared → Cámara del Arcanista."}],
-    amenaza:{cara:"A",clavijas:0}, mazo_eventos:"8× Lamentor, 2× Hellfront, 8× Mapa, 2× Malagaunt + dificultad",
-    consecuencias:"Ninguna (independiente). En campaña: +1 Demora." },
-  A: { id:"A", nombre:"Secretos en la Oscuridad", pagina:6,
-    condicion:"Primera misión de la campaña.",
-    objetivo_primario:"Recuperar Reliquias (Obj 1-8). Cada una vale 6₲. Anotar cantidad recuperada.",
-    objetivo_secundario:"Recuperar Obj 9 del Escritorio del Arcanista → marcar Logro Parafernalia Oculta.",
-    reglas_especiales:[], amenaza:{cara:"A",clavijas:0},
-    mazo_eventos:"8× Lamentor, 8× Mapa, 2× Hellfront, 2× Malagaunt + dificultad",
-    asignacion_busqueda:"Dejar 2 negras aparte. 6× fichas + 1× mapa en terreno buscable.",
-    consecuencias:"Obj 1 → puedes jugar B. 5+ reliquias → C. 4 o menos → D." },
-  B: { id:"B", nombre:"La Reliquia", pagina:8,
-    condicion:"Opcional. Después de A si recuperaste Objetivo 1.",
-    objetivo_primario:"Rescatar familiar del aldeano. Si escapa: 10₲ + 2 Renombre + Logro Deuda de Favor.",
-    objetivo_secundario:"Saquear todo lo posible.",
-    reglas_especiales:[{nombre:"Oscuridad",desc:"Toda el área en Oscuridad. Habitante no se activa hasta contacto → Amenaza +3."}],
-    amenaza:{cara:"A",clavijas:2}, mazo_eventos:"8× Lamentor, 8× Mapa, 3× Hellfront, 1× Malagaunt + dificultad",
-    consecuencias:"+1 Demora. 5+ reliquias → C, 4 o menos → D." },
-  C: { id:"C", nombre:"Un Nuevo Poder en Ascenso", pagina:10,
-    condicion:"5+ reliquias en Misión A.",
-    objetivo_primario:"Recuperar partes de criaturas: Lamentor≥Distress→Obj1-3, Myria≥Distress→Obj4-5, Hellfront→Obj6, Rot Troll→Obj9.",
-    objetivo_secundario:"Obj 7 y 8 juntos → Logro Rastro Esquelético.",
-    reglas_especiales:[{nombre:"Sombras Cambiantes",desc:"Oscuridad activa. 3× Dado Mágico al inicio → Luz. Desde Distress: mover luz. Palancas mueven luz."}],
-    amenaza:{cara:"A",clavijas:2}, mazo_eventos:"8× Lamentor, 8× Mapa, 2× Hellfront, 2× Malagaunt + dificultad",
-    consecuencias:"Con Obj7/8: elegir ruta. Carretera→E, Túneles→F. Sin ellos→E." },
-  D: { id:"D", nombre:"Resurrectionistas", pagina:12,
-    condicion:"4 o menos reliquias en Misión A.",
-    objetivo_primario:"Acumular botín. 1 Renombre / 20₲ de aumento.",
-    objetivo_secundario:"Mapeo Túneles: Interactuar con puntos de entrada. Robo Tumbas: Buscar Sepulturas.",
-    reglas_especiales:[{nombre:"Spawn",desc:"Si Revenants llegan sin ninguno activo → punto de entrada más cercano."}],
-    amenaza:{cara:"A",clavijas:1}, mazo_eventos:"7× Lamentor, 2× Malagaunt, 6× Mapa, 2× Hellfront, 3× Malagaunt, 1× Omega + dif.",
-    consecuencias:"Siguiente: Misión F." },
-};
-
-const TURN_PHASES = [
-  { id:"dread", name:"Fase de Amenaza", icon:"⚡",
-    steps:["Avanzar Amenaza +1","Si magia usada → +1 adicional","Si entra en espacio rojo → Dado Mágico","Robar Carta de Evento (desde ronda 2)","Resolver efecto según Amenaza"] },
-  { id:"adventurers", name:"Fase de Aventureros", icon:"⚔️",
-    steps:["Activar Aventureros alternando","Cada uno: hasta 2 acciones + 1 sin esfuerzo","Todos activados"] },
-  { id:"adversary", name:"Fase de Adversarios", icon:"👹",
-    steps:["Nuevas llegadas según Amenaza","Activar por Rango (mayor primero)","Resolver IA"] },
-  { id:"npc", name:"Fase de PNJs", icon:"🧙",
-    steps:["Activar Wandering Beasts","Activar Habitantes"] },
-  { id:"assessment", name:"Fase de Evaluación", icon:"📋",
-    steps:["Resolver estados (Burning, Poisoned...)",
-      "Envenenado: 1-2=−1HP, 3-4=−1Skill, 5=Fatigado, 6=curado",
-      "Retirar contadores de Activación","Siguiente primer jugador"] },
-];
-
-function defaultCampaign(name) {
-  return {
-    id:"camp_"+Date.now(), name, createdAt:new Date().toISOString(), currentMission:"A", demora:0,
-    registro:{
-      malagauntDerrotado:0, troll_derrotado:false, aprendiz_estado:null, aprendiz_nombre:null,
-      cadaveres_examinados:0, sepulturas_registradas:0, invasores_escapados:0, disminuir_horda:0, salas_santificadas:0,
-      puntos_entrada_mapeados:[],
-      logros:{deuda_de_favor:false,rastro_esqueletico:false,parafernalia_oculta:false,aprendiz_derrotado:false,aprendiz_liberado:false,troll_derrotado_logro:false,investigacion_en_curso:false,escudo_de_almas:false},
-      recompensas:{perspectiva_tactica:0,resistencia_al_veneno:false,debilidad_del_objetivo:false,experiencia_de_combate:false,saqueo_de_sepulturas:false,signos_reveladores:false,ritual_de_consagracion:false,oferta_de_ayuda:false,contactos_en_gremio:false,sabiduria_de_mazmorra:0}
-    }
-  };
-}
-
-function defaultAdventurer(campId, ch) {
-  return {
-    id:"adv_"+Date.now()+"_"+Math.random().toString(36).slice(2,6), campaign_id:campId,
-    nombre:ch.nombre, clase:"", especie:ch.especie, rango:1, experiencia:0,
-    salud_max:ch.salud_max, salud_actual:ch.salud_max, magia_max:ch.magia_max, magia_actual:ch.magia_max,
-    habilidad_max:ch.habilidad_max, habilidad_actual:ch.habilidad_max, acciones:ch.acciones,
-    coste:ch.coste, innatas:ch.innatas||[], status_effects:[], inventario:[], habilidades:[], renombre:0, vivo:true
-  };
-}
-
-function defaultMissionState(campId, mid) {
-  const m = MISSIONS[mid];
-  return { id:"ms_"+Date.now(), campaign_id:campId, mision_id:mid, ronda:1,
-    amenaza_nivel:m?.amenaza?.clavijas||0, amenaza_cara:m?.amenaza?.cara||"A",
-    fase_actual:"dread", magia_usada_esta_ronda:false, fases_completadas:{}, steps_completados:{}, notas:"" };
-}
-
-// ========== COMPONENTS ==========
-function PegBar({label,icon,current,max,color,onChange}) {
-  const pegs = [];
-  for(let i=0;i<max;i++) pegs.push(
-    React.createElement('button',{key:i,onClick:()=>onChange(i<current?i:i+1),
-      style:{width:28,height:28,borderRadius:'50%',border:'2px solid '+(i<current?color:'#374151'),
-        background:i<current?color:'transparent',transition:'all 0.2s',cursor:'pointer',margin:2}})
-  );
-  return React.createElement('div',{style:{marginBottom:8}},
-    React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},
-      React.createElement('span',{style:{fontSize:16}},icon),
-      React.createElement('span',{style:{color:'#d4b896',fontSize:13,fontWeight:600}},label),
-      React.createElement('span',{style:{color:'#9ca3af',fontSize:12,marginLeft:'auto'}},current+'/'+max)),
-    React.createElement('div',{style:{display:'flex',flexWrap:'wrap',gap:2}},pegs)
-  );
-}
-
-function StatusEffects({effects,onChange}) {
-  return React.createElement('div',{style:{display:'flex',flexWrap:'wrap',gap:6,marginTop:6}},
-    STATUS_EFFECTS.map(se=>{
-      const count=effects.filter(e=>e===se.id).length;
-      const active=count>0;
-      return React.createElement('div',{key:se.id,style:{display:'flex',alignItems:'center',gap:2}},
-        React.createElement('button',{onClick:()=>onChange([...effects,se.id]),
-          style:{minWidth:44,minHeight:36,padding:'4px 8px',borderRadius:6,
-            border:active?'2px solid '+se.color:'1px solid #374151',
-            background:active?se.color+'33':'transparent',color:active?se.color:'#6b7280',
-            fontSize:12,cursor:'pointer',display:'flex',alignItems:'center',gap:3}},
-          React.createElement('span',null,se.icon),
-          count>1&&React.createElement('span',{style:{fontWeight:700}},'×'+count)),
-        active&&React.createElement('button',{onClick:()=>{const i=effects.indexOf(se.id);if(i>-1){const n=[...effects];n.splice(i,1);onChange(n);}},
-          style:{width:24,height:24,borderRadius:'50%',border:'1px solid #ef4444',
-            background:'transparent',color:'#ef4444',fontSize:14,cursor:'pointer',
-            display:'flex',alignItems:'center',justifyContent:'center'}},'−')
-      );
-    })
-  );
-}
-
-function ThreatTracker({level,cara,onLevelChange}) {
-  const bands=THREAT_BANDS[cara]||THREAT_BANDS.A;
-  let cum=0,bIdx=0;
-  for(let i=0;i<bands.length;i++){if(level>=cum+bands[i].slots){cum+=bands[i].slots;bIdx=i+1;}else break;}
-  const total=bands.reduce((s,b)=>s+b.slots,0);
-  const bi=Math.min(bIdx,bands.length-1);
-  return React.createElement('div',{style:{background:'#1a1a2e',borderRadius:12,padding:14,border:'1px solid #2d2d44'}},
-    React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}},
-      React.createElement('div',null,
-        React.createElement('div',{style:{color:'#d4b896',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:1}},'Amenaza'),
-        React.createElement('div',{style:{color:bands[bi].color,fontSize:20,fontWeight:800}},bands[bi].name)),
-      React.createElement('div',{style:{display:'flex',gap:6}},
-        React.createElement('button',{onClick:()=>onLevelChange(Math.max(0,level-1)),
-          style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#1e293b',color:'#d4b896',fontSize:20,cursor:'pointer'}},'−'),
-        React.createElement('div',{style:{width:52,height:44,borderRadius:8,background:bands[bi].color+'33',
-          border:'2px solid '+bands[bi].color,display:'flex',alignItems:'center',justifyContent:'center',
-          color:bands[bi].color,fontSize:22,fontWeight:800}},level),
-        React.createElement('button',{onClick:()=>onLevelChange(Math.min(total,level+1)),
-          style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#1e293b',color:'#d4b896',fontSize:20,cursor:'pointer'}},'+'))),
-    React.createElement('div',{style:{display:'flex',gap:2,height:18}},
-      bands.map((band,bi2)=>{
-        const sl=[];
-        for(let s=0;s<band.slots;s++){
-          const si=bands.slice(0,bi2).reduce((a,b2)=>a+b2.slots,0)+s;
-          sl.push(React.createElement('div',{key:s,style:{flex:1,height:'100%',borderRadius:3,
-            background:si<level?band.color:band.color+'22',border:'1px solid '+band.color+'44',transition:'background 0.3s'}}));
-        }
-        return React.createElement('div',{key:bi2,style:{display:'flex',gap:1,flex:band.slots}},sl);
-      })),
-    React.createElement('div',{style:{fontSize:10,color:'#6b7280',marginTop:6,textAlign:'center'}},'Cara '+cara+' · '+level+'/'+total+' clavijas')
-  );
-}
-
-function Collapsible({title,icon,children,defaultOpen}) {
-  const [open,setOpen]=useState(defaultOpen||false);
-  return React.createElement('div',{style:{background:'#1a1a2e',borderRadius:10,border:'1px solid #2d2d44',marginBottom:8}},
-    React.createElement('button',{onClick:()=>setOpen(!open),
-      style:{width:'100%',padding:'12px 14px',background:'transparent',border:'none',display:'flex',alignItems:'center',gap:8,cursor:'pointer',color:'#d4b896'}},
-      icon&&React.createElement('span',{style:{fontSize:18}},icon),
-      React.createElement('span',{style:{flex:1,textAlign:'left',fontSize:14,fontWeight:700}},title),
-      React.createElement('span',{style:{fontSize:12,transform:open?'rotate(180deg)':'',transition:'0.2s'}},'▼')),
-    open&&React.createElement('div',{style:{padding:'0 14px 14px'}},children)
-  );
-}
-
-function PhaseChecklist({phases,completedSteps,onToggleStep}) {
-  const [expanded,setExpanded]=useState(null);
-  return React.createElement('div',{style:{display:'flex',flexDirection:'column',gap:4}},
-    phases.map(phase=>{
-      const isOpen=expanded===phase.id;
-      const allDone=phase.steps.every((_,i)=>completedSteps[phase.id+'_'+i]);
-      return React.createElement('div',{key:phase.id,style:{background:'#1a1a2e',borderRadius:10,border:'1px solid #2d2d44',overflow:'hidden'}},
-        React.createElement('button',{onClick:()=>setExpanded(isOpen?null:phase.id),
-          style:{width:'100%',padding:'12px 14px',background:'transparent',border:'none',display:'flex',alignItems:'center',gap:10,cursor:'pointer',color:'#d4b896'}},
-          React.createElement('span',{style:{fontSize:20}},phase.icon),
-          React.createElement('span',{style:{flex:1,textAlign:'left',fontSize:14,fontWeight:700}},phase.name),
-          allDone&&React.createElement('span',{style:{color:'#22c55e',fontSize:18}},'✓'),
-          React.createElement('span',{style:{fontSize:12,transform:isOpen?'rotate(180deg)':'',transition:'0.2s'}},'▼')),
-        isOpen&&React.createElement('div',{style:{padding:'0 14px 12px'}},
-          phase.steps.map((step,i)=>{
-            const done=completedSteps[phase.id+'_'+i];
-            return React.createElement('button',{key:i,onClick:()=>onToggleStep(phase.id,i),
-              style:{display:'flex',alignItems:'flex-start',gap:10,padding:'8px 0',background:'none',border:'none',
-                borderTop:i>0?'1px solid #2d2d44':'none',width:'100%',cursor:'pointer',textAlign:'left'}},
-              React.createElement('div',{style:{width:22,height:22,borderRadius:4,flexShrink:0,marginTop:1,
-                border:done?'2px solid #22c55e':'2px solid #4b5563',background:done?'#22c55e22':'transparent',
-                display:'flex',alignItems:'center',justifyContent:'center',color:'#22c55e',fontSize:14}},done?'✓':''),
-              React.createElement('span',{style:{color:done?'#6b7280':'#d4b896',fontSize:13,textDecoration:done?'line-through':'none'}},step));
-          }))
-      );
-    })
-  );
-}
-
-// ========== MAIN APP ==========
-function App() {
-  const [screen,setScreen]=useState('loading');
-  const [campaigns,setCampaigns]=useState([]);
-  const [campaign,setCampaign]=useState(null);
-  const [adventurers,setAdventurers]=useState([]);
-  const [missionState,setMissionState]=useState(null);
-  const [subScreen,setSubScreen]=useState('hub');
-  const [selectedAdv,setSelectedAdv]=useState(null);
-  const [showAddAdv,setShowAddAdv]=useState(false);
-  const [showCreate,setShowCreate]=useState(false);
-  const [newName,setNewName]=useState('');
-
-  useEffect(()=>{
-    (async()=>{
-      const campList=await IDB.get('campaigns_list')||[];
-      setCampaigns(campList);
-      const lastId=await IDB.get('last_campaign_id');
-      if(lastId){
-        const c=await IDB.get('campaign_'+lastId);
-        if(c){setCampaign(c);setAdventurers(await IDB.get('adventurers_'+lastId)||[]);
-          setMissionState(await IDB.get('mission_state_'+lastId));setSubScreen('hub');setScreen('campaign');return;}
-      }
-      setScreen('home');
-    })();
-  },[]);
-
-  useEffect(()=>{
-    if(!campaign)return;
-    IDB.set('campaign_'+campaign.id,campaign);
-    IDB.set('last_campaign_id',campaign.id);
-    const list=campaigns.map(c=>c.id===campaign.id?{id:c.id,name:campaign.name,currentMission:campaign.currentMission,demora:campaign.demora}:c);
-    if(!list.find(c=>c.id===campaign.id))list.push({id:campaign.id,name:campaign.name,currentMission:campaign.currentMission,demora:campaign.demora});
-    setCampaigns(list);IDB.set('campaigns_list',list);
-  },[campaign]);
-  useEffect(()=>{if(campaign)IDB.set('adventurers_'+campaign.id,adventurers);},[adventurers]);
-  useEffect(()=>{if(campaign&&missionState)IDB.set('mission_state_'+campaign.id,missionState);},[missionState]);
-
-  const createCampaign=(name)=>{const c=defaultCampaign(name);setCampaign(c);setAdventurers([]);setMissionState(null);setSubScreen('hub');setScreen('campaign');};
-  const loadCampaign=async(s)=>{const c=await IDB.get('campaign_'+s.id);if(c){setCampaign(c);setAdventurers(await IDB.get('adventurers_'+s.id)||[]);setMissionState(await IDB.get('mission_state_'+s.id));setSubScreen('hub');setScreen('campaign');}};
-  const addAdv=(ch)=>{setAdventurers(p=>[...p,defaultAdventurer(campaign.id,ch)]);};
-  const updateAdv=(u)=>{setAdventurers(p=>p.map(a=>a.id===u.id?u:a));};
-  const removeAdv=(id)=>{setAdventurers(p=>p.filter(a=>a.id!==id));};
-  const startMission=()=>{setMissionState(defaultMissionState(campaign.id,campaign.currentMission));setSubScreen('board');};
-  const goHome=()=>{setCampaign(null);setAdventurers([]);setMissionState(null);setScreen('home');IDB.del('last_campaign_id');};
-
-  const S={wrap:{minHeight:'100vh',background:'linear-gradient(180deg,#0c0c1d,#121225)',fontFamily:"'Cinzel',Georgia,serif",color:'#d4b896',maxWidth:500,margin:'0 auto',position:'relative',paddingBottom:80}};
-
-  if(screen==='loading')return React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#0c0c1d',color:'#d4b896'}},
-    React.createElement('div',{style:{textAlign:'center'}},React.createElement('div',{style:{fontSize:48,marginBottom:12}},'⚔️'),React.createElement('div',null,'Cargando...')));
-
-  // ---- HOME ----
-  if(screen==='home') return React.createElement('div',{style:S.wrap},
-    React.createElement('div',{style:{padding:16,maxWidth:500,margin:'0 auto'}},
-      React.createElement('div',{style:{textAlign:'center',marginBottom:32,paddingTop:24}},
-        React.createElement('div',{style:{fontSize:42,marginBottom:8}},'⚔️'),
-        React.createElement('h1',{style:{color:'#d4b896',fontSize:26,fontWeight:800,margin:0,letterSpacing:2}},'MALADUM'),
-        React.createElement('div',{style:{color:'#9ca3af',fontSize:13,marginTop:4,letterSpacing:3,textTransform:'uppercase'}},'Companion App'),
-        React.createElement('div',{style:{width:60,height:2,background:'linear-gradient(90deg,transparent,#b91c1c,transparent)',margin:'12px auto'}})),
-      campaigns.length>0&&React.createElement('div',{style:{marginBottom:20}},
-        React.createElement('div',{style:{color:'#9ca3af',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,marginBottom:8}},'Campañas guardadas'),
-        campaigns.map(c=>React.createElement('button',{key:c.id,onClick:()=>loadCampaign(c),
-          style:{width:'100%',padding:14,borderRadius:10,border:'1px solid #2d2d44',background:'#1a1a2e',marginBottom:8,cursor:'pointer',textAlign:'left'}},
-          React.createElement('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700}},c.name),
-          React.createElement('div',{style:{display:'flex',gap:12,marginTop:6,fontSize:12,color:'#9ca3af'}},
-            React.createElement('span',null,'Misión: '+c.currentMission),React.createElement('span',null,'Demora: '+c.demora))))),
-      !showCreate?React.createElement('button',{onClick:()=>setShowCreate(true),
-        style:{width:'100%',padding:16,borderRadius:10,border:'2px solid #b91c1c',background:'#b91c1c22',color:'#fca5a5',fontSize:16,fontWeight:700,cursor:'pointer',letterSpacing:1}},
-        '+ Nueva Campaña'):
-      React.createElement('div',{style:{background:'#1a1a2e',borderRadius:12,padding:16,border:'1px solid #2d2d44'}},
-        React.createElement('input',{value:newName,onChange:e=>setNewName(e.target.value),placeholder:'Nombre de la campaña',
-          style:{width:'100%',padding:12,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:15,boxSizing:'border-box'}}),
-        React.createElement('div',{style:{display:'flex',gap:8,marginTop:12}},
-          React.createElement('button',{onClick:()=>setShowCreate(false),style:{flex:1,padding:12,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#9ca3af',fontSize:14,cursor:'pointer'}},'Cancelar'),
-          React.createElement('button',{onClick:()=>{if(newName.trim()){createCampaign(newName.trim());setNewName('');setShowCreate(false);}},
-            style:{flex:1,padding:12,borderRadius:8,border:'none',background:'#b91c1c',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer'}},'Crear')))));
-
-  // ---- CAMPAIGN SCREENS ----
-  const BottomNav=React.createElement('div',{style:{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:500,background:'#0c0c1dee',backdropFilter:'blur(10px)',borderTop:'1px solid #2d2d44',display:'flex',zIndex:100}},
-    [{id:'hub',icon:'🏠',label:'Hub'},{id:'adventurers',icon:'🛡️',label:'Grupo'},{id:'board',icon:'⚔️',label:'Partida'},{id:'registry',icon:'📜',label:'Registro'}].map(t=>
-      React.createElement('button',{key:t.id,onClick:()=>{setSelectedAdv(null);setSubScreen(t.id);},
-        style:{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
-        React.createElement('span',{style:{fontSize:20}},t.icon),
-        React.createElement('span',{style:{fontSize:9,color:subScreen===t.id?'#d4b896':'#4b5563',fontWeight:subScreen===t.id?700:400}},t.label))),
-    React.createElement('button',{onClick:goHome,style:{padding:'10px 16px',background:'none',border:'none',borderLeft:'1px solid #2d2d44',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}},
-      React.createElement('span',{style:{fontSize:20}},'🚪'),React.createElement('span',{style:{fontSize:9,color:'#4b5563'}},'Salir')));
-
-  // HUB
-  if(subScreen==='hub'&&campaign){
-    return React.createElement('div',{style:S.wrap},
-      React.createElement('div',{style:{padding:16}},
-        React.createElement('div',{style:{textAlign:'center',marginBottom:16}},
-          React.createElement('div',{style:{color:'#9ca3af',fontSize:11,textTransform:'uppercase',letterSpacing:2}},'Campaña'),
-          React.createElement('h2',{style:{color:'#d4b896',fontSize:20,fontWeight:800,margin:'4px 0'}},campaign.name)),
-        React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}},
-          React.createElement('div',{style:{background:'#1a1a2e',borderRadius:10,padding:12,border:'1px solid #2d2d44',textAlign:'center'}},
-            React.createElement('div',{style:{color:'#9ca3af',fontSize:10,textTransform:'uppercase'}},'Misión'),
-            React.createElement('div',{style:{color:'#d4b896',fontSize:24,fontWeight:800}},campaign.currentMission),
-            React.createElement('div',{style:{color:'#6b7280',fontSize:11}},MISSIONS[campaign.currentMission]?.nombre||'')),
-          React.createElement('div',{style:{background:'#1a1a2e',borderRadius:10,padding:12,border:'1px solid #2d2d44',textAlign:'center'}},
-            React.createElement('div',{style:{color:'#9ca3af',fontSize:10,textTransform:'uppercase'}},'Demora'),
-            React.createElement('div',{style:{color:campaign.demora>=7?'#ef4444':campaign.demora>=4?'#eab308':'#22c55e',fontSize:24,fontWeight:800}},campaign.demora+'/12'))),
-        adventurers.length>0&&React.createElement('div',{style:{marginBottom:16}},
-          React.createElement('div',{style:{color:'#9ca3af',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,marginBottom:8}},'Grupo ('+adventurers.length+')'),
-          React.createElement('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},
-            adventurers.map(a=>React.createElement('div',{key:a.id,style:{background:'#1a1a2e',borderRadius:8,padding:'6px 12px',border:'1px solid #2d2d44',fontSize:13,color:'#d4b896'}},a.nombre+(a.clase?' ('+a.clase+')':''))))),
-        [{icon:'⚔️',label:'Comenzar Misión',sub:'Setup y partida',to:'mission-setup',accent:true},
-         {icon:'🛡️',label:'Gestionar Grupo',sub:'Fichas de aventureros',to:'adventurers'},
-         {icon:'📜',label:'Registro de Campaña',sub:'Logros y recompensas',to:'registry'}].map(b=>
-          React.createElement('button',{key:b.to,onClick:()=>setSubScreen(b.to),
-            style:{display:'flex',alignItems:'center',gap:14,padding:14,borderRadius:10,width:'100%',marginBottom:8,
-              border:b.accent?'2px solid #b91c1c':'1px solid #2d2d44',background:b.accent?'#b91c1c18':'#1a1a2e',cursor:'pointer',textAlign:'left'}},
-            React.createElement('span',{style:{fontSize:24,width:40,textAlign:'center'}},b.icon),
-            React.createElement('div',null,
-              React.createElement('div',{style:{color:b.accent?'#fca5a5':'#d4b896',fontSize:15,fontWeight:700}},b.label),
-              b.sub&&React.createElement('div',{style:{color:'#6b7280',fontSize:12}},b.sub))))),
-      BottomNav);
-  }
-
-  // ADVENTURERS
-  if(subScreen==='adventurers'){
-    if(selectedAdv){
-      const adv=adventurers.find(a=>a.id===selectedAdv);
-      if(!adv){setSelectedAdv(null);return null;}
-      return React.createElement('div',{style:S.wrap},
-        React.createElement('div',{style:{padding:16}},
-          React.createElement('button',{onClick:()=>setSelectedAdv(null),style:{background:'none',border:'none',color:'#9ca3af',fontSize:13,cursor:'pointer',padding:0,marginBottom:12}},'← Volver al grupo'),
-          React.createElement('div',{style:{textAlign:'center',marginBottom:16}},
-            React.createElement('h2',{style:{color:'#d4b896',fontSize:22,fontWeight:800,margin:0}},adv.nombre),
-            React.createElement('div',{style:{color:'#6b7280',fontSize:13}},adv.especie+' · Rango '+adv.rango+' · '+adv.coste+'₲')),
-          React.createElement('div',{style:{marginBottom:12}},
-            React.createElement('select',{value:adv.clase,onChange:e=>updateAdv({...adv,clase:e.target.value}),
-              style:{width:'100%',padding:10,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:14}},
-              React.createElement('option',{value:''},'— Sin clase —'),
-              CLASSES.map(c=>React.createElement('option',{key:c,value:c},c)))),
-          React.createElement('div',{style:{background:'#1a1a2e',borderRadius:12,padding:14,border:'1px solid #2d2d44',marginBottom:12}},
-            React.createElement(PegBar,{label:'Salud',icon:'♥',current:adv.salud_actual,max:adv.salud_max,color:'#22c55e',onChange:v=>updateAdv({...adv,salud_actual:v})}),
-            React.createElement(PegBar,{label:'Magia',icon:'✦',current:adv.magia_actual,max:adv.magia_max,color:'#3b82f6',onChange:v=>updateAdv({...adv,magia_actual:v})}),
-            React.createElement(PegBar,{label:'Habilidad',icon:'◆',current:adv.habilidad_actual,max:adv.habilidad_max,color:'#eab308',onChange:v=>updateAdv({...adv,habilidad_actual:v})})),
-          React.createElement(Collapsible,{title:'Estados',icon:'💀',defaultOpen:adv.status_effects.length>0},
-            React.createElement(StatusEffects,{effects:adv.status_effects,onChange:v=>updateAdv({...adv,status_effects:v})})),
-          adv.innatas.length>0&&React.createElement(Collapsible,{title:'Habilidades Innatas',icon:'⭐'},
-            React.createElement('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},
-              adv.innatas.map(h=>React.createElement('span',{key:h,style:{padding:'4px 10px',borderRadius:6,background:'#eab30822',border:'1px solid #eab30844',color:'#eab308',fontSize:12}},h)))),
-          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}},
-            ['experiencia','renombre'].map(f=>
-              React.createElement('div',{key:f,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#0f172a',borderRadius:8,padding:'8px 10px'}},
-                React.createElement('span',{style:{color:'#9ca3af',fontSize:12}},f.charAt(0).toUpperCase()+f.slice(1)),
-                React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}},
-                  React.createElement('button',{onClick:()=>updateAdv({...adv,[f]:Math.max(0,adv[f]-1)}),style:{width:28,height:28,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'−'),
-                  React.createElement('span',{style:{color:'#d4b896',fontSize:16,fontWeight:700,width:24,textAlign:'center'}},adv[f]),
-                  React.createElement('button',{onClick:()=>updateAdv({...adv,[f]:adv[f]+1}),style:{width:28,height:28,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'+'))
-              ))),
-          React.createElement('button',{onClick:()=>{removeAdv(adv.id);setSelectedAdv(null);},
-            style:{width:'100%',padding:12,marginTop:12,borderRadius:8,border:'1px solid #7f1d1d',background:'#7f1d1d22',color:'#fca5a5',fontSize:13,cursor:'pointer'}},'Retirar del grupo')),
-        BottomNav);
-    }
-    return React.createElement('div',{style:S.wrap},
-      React.createElement('div',{style:{padding:16}},
-        React.createElement('div',{style:{color:'#9ca3af',fontSize:11,textTransform:'uppercase',letterSpacing:2,marginBottom:12}},'Aventureros del Grupo'),
-        adventurers.map(a=>React.createElement('button',{key:a.id,onClick:()=>setSelectedAdv(a.id),
-          style:{width:'100%',display:'flex',alignItems:'center',gap:12,padding:12,borderRadius:10,border:'1px solid #2d2d44',background:'#1a1a2e',marginBottom:8,cursor:'pointer',textAlign:'left'}},
-          React.createElement('div',{style:{flex:1}},
-            React.createElement('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700}},a.nombre),
-            React.createElement('div',{style:{color:'#6b7280',fontSize:12}},a.especie+' · '+(a.clase||'Sin clase')+' · Rango '+a.rango)),
-          React.createElement('div',{style:{display:'flex',gap:8,fontSize:12}},
-            React.createElement('span',{style:{color:'#22c55e'}},'♥'+a.salud_actual),
-            React.createElement('span',{style:{color:'#3b82f6'}},'✦'+a.magia_actual),
-            React.createElement('span',{style:{color:'#eab308'}},'◆'+a.habilidad_actual)))),
-        !showAddAdv?React.createElement('button',{onClick:()=>setShowAddAdv(true),
-          style:{width:'100%',padding:14,borderRadius:10,border:'2px dashed #374151',background:'transparent',color:'#9ca3af',fontSize:14,cursor:'pointer',marginTop:8}},
-          '+ Añadir Aventurero'):
-        React.createElement('div',{style:{background:'#1a1a2e',borderRadius:12,padding:12,border:'1px solid #2d2d44',marginTop:8}},
-          React.createElement('div',{style:{maxHeight:300,overflowY:'auto'}},
-            BASE_CHARACTERS.map(ch=>React.createElement('button',{key:ch.nombre,onClick:()=>{addAdv(ch);setShowAddAdv(false);},
-              style:{width:'100%',padding:10,borderRadius:8,border:'1px solid #2d2d44',background:'#0f172a',marginBottom:4,cursor:'pointer',textAlign:'left',display:'flex',justifyContent:'space-between',alignItems:'center'}},
-              React.createElement('div',null,
-                React.createElement('div',{style:{color:'#d4b896',fontSize:14,fontWeight:600}},ch.nombre),
-                React.createElement('div',{style:{color:'#6b7280',fontSize:11}},ch.especie+' · ♥'+ch.salud_max+' ✦'+ch.magia_max+' ◆'+ch.habilidad_max)),
-              React.createElement('div',{style:{color:'#9ca3af',fontSize:11}},ch.coste+'₲')))),
-          React.createElement('button',{onClick:()=>setShowAddAdv(false),
-            style:{width:'100%',marginTop:8,padding:10,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#9ca3af',fontSize:13,cursor:'pointer'}},'Cancelar'))),
-      BottomNav);
-  }
-
-  // MISSION SETUP
-  if(subScreen==='mission-setup'){
-    const m=MISSIONS[campaign.currentMission];
-    if(!m)return React.createElement('div',{style:S.wrap},
-      React.createElement('div',{style:{padding:16}},
-        React.createElement('button',{onClick:()=>setSubScreen('hub'),style:{background:'none',border:'none',color:'#9ca3af',cursor:'pointer',padding:0,marginBottom:12,fontSize:13}},'← Volver'),
-        React.createElement('div',{style:{color:'#d4b896',textAlign:'center',padding:40}},'Misión '+campaign.currentMission+' — datos disponibles en Fase 2.')),BottomNav);
-    return React.createElement('div',{style:S.wrap},
-      React.createElement('div',{style:{padding:16}},
-        React.createElement('button',{onClick:()=>setSubScreen('hub'),style:{background:'none',border:'none',color:'#9ca3af',cursor:'pointer',padding:0,marginBottom:12,fontSize:13}},'← Volver'),
-        React.createElement('div',{style:{textAlign:'center',marginBottom:16}},
-          React.createElement('div',{style:{color:'#b91c1c',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:2}},'Misión '+m.id),
-          React.createElement('h2',{style:{color:'#d4b896',fontSize:20,fontWeight:800,margin:'4px 0'}},m.nombre),
-          React.createElement('div',{style:{color:'#6b7280',fontSize:12}},'p.'+m.pagina)),
-        React.createElement(Collapsible,{title:'Condición',icon:'🔑',defaultOpen:true},
-          React.createElement('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6,margin:0}},m.condicion)),
-        React.createElement(Collapsible,{title:'Objetivo Primario',icon:'🎯',defaultOpen:true},
-          React.createElement('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6,margin:0}},m.objetivo_primario)),
-        React.createElement(Collapsible,{title:'Objetivo Secundario',icon:'📌'},
-          React.createElement('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6,margin:0}},m.objetivo_secundario)),
-        m.reglas_especiales.length>0&&React.createElement(Collapsible,{title:'Reglas Especiales',icon:'📖'},
-          m.reglas_especiales.map((r,i)=>React.createElement('div',{key:i,style:{marginBottom:i<m.reglas_especiales.length-1?10:0}},
-            React.createElement('div',{style:{color:'#fca5a5',fontSize:13,fontWeight:700,marginBottom:4}},r.nombre),
-            React.createElement('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6,margin:0}},r.desc)))),
-        React.createElement('div',{style:{background:'#1a1a2e',borderRadius:10,padding:14,border:'1px solid #2d2d44',marginBottom:8}},
-          React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},
-            React.createElement('div',{style:{background:'#0f172a',borderRadius:8,padding:10}},
-              React.createElement('div',{style:{color:'#6b7280',fontSize:10}},'Registro Amenaza'),
-              React.createElement('div',{style:{color:'#d4b896',fontSize:16,fontWeight:800}},'Cara '+m.amenaza.cara),
-              React.createElement('div',{style:{color:'#9ca3af',fontSize:12}},m.amenaza.clavijas+' clavijas')),
-            React.createElement('div',{style:{background:'#0f172a',borderRadius:8,padding:10}},
-              React.createElement('div',{style:{color:'#6b7280',fontSize:10}},'Mazo Eventos'),
-              React.createElement('div',{style:{color:'#d4b896',fontSize:11,lineHeight:1.5}},m.mazo_eventos)))),
-        React.createElement(Collapsible,{title:'Consecuencias',icon:'🔮'},
-          React.createElement('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6,margin:0}},m.consecuencias)),
-        React.createElement('button',{onClick:startMission,
-          style:{width:'100%',padding:16,borderRadius:10,border:'none',background:'linear-gradient(135deg,#b91c1c,#991b1b)',color:'#fff',fontSize:16,fontWeight:800,cursor:'pointer',marginTop:12,letterSpacing:1}},
-          '⚔️ Comenzar Partida')),
-      BottomNav);
-  }
-
-  // MAIN BOARD
-  if(subScreen==='board'&&missionState){
-    const m=MISSIONS[missionState.mision_id];
-    return React.createElement('div',{style:S.wrap},
-      React.createElement('div',{style:{padding:16}},
-        React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},
-          React.createElement('button',{onClick:()=>setSubScreen('hub'),style:{background:'none',border:'none',color:'#9ca3af',cursor:'pointer',padding:0,fontSize:13}},'← Hub'),
-          React.createElement('div',{style:{textAlign:'center'}},
-            React.createElement('div',{style:{color:'#b91c1c',fontSize:10,fontWeight:700,textTransform:'uppercase'}},'Misión '+missionState.mision_id),
-            React.createElement('div',{style:{color:'#d4b896',fontSize:13,fontWeight:700}},m?.nombre||'')),
-          React.createElement('div',{style:{background:'#1a1a2e',borderRadius:8,padding:'4px 12px',border:'1px solid #2d2d44'}},
-            React.createElement('div',{style:{color:'#6b7280',fontSize:9,textTransform:'uppercase'}},'Ronda'),
-            React.createElement('div',{style:{color:'#d4b896',fontSize:22,fontWeight:800,textAlign:'center'}},missionState.ronda))),
-        React.createElement(ThreatTracker,{level:missionState.amenaza_nivel,cara:missionState.amenaza_cara,
-          onLevelChange:v=>setMissionState({...missionState,amenaza_nivel:v})}),
-        React.createElement('button',{onClick:()=>setMissionState({...missionState,magia_usada_esta_ronda:!missionState.magia_usada_esta_ronda}),
-          style:{width:'100%',padding:10,borderRadius:8,marginTop:8,marginBottom:12,
-            border:missionState.magia_usada_esta_ronda?'2px solid #3b82f6':'1px solid #374151',
-            background:missionState.magia_usada_esta_ronda?'#3b82f622':'#1a1a2e',
-            color:missionState.magia_usada_esta_ronda?'#60a5fa':'#6b7280',fontSize:13,cursor:'pointer',fontWeight:600}},
-          '✦ '+(missionState.magia_usada_esta_ronda?'Magia usada (+1 Amenaza)':'¿Se usó magia?')),
-        React.createElement('div',{style:{marginBottom:12}},
-          React.createElement('div',{style:{color:'#9ca3af',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,marginBottom:8}},'Fases del turno'),
-          React.createElement(PhaseChecklist,{phases:TURN_PHASES,completedSteps:missionState.steps_completados||{},
-            onToggleStep:(ph,i)=>setMissionState({...missionState,steps_completados:{...missionState.steps_completados,[ph+'_'+i]:!missionState.steps_completados[ph+'_'+i]}})})),
-        React.createElement('button',{onClick:()=>setMissionState({...missionState,ronda:missionState.ronda+1,magia_usada_esta_ronda:false,steps_completados:{}}),
-          style:{width:'100%',padding:14,borderRadius:10,border:'2px solid #eab308',background:'#eab30815',color:'#eab308',fontSize:15,fontWeight:700,cursor:'pointer',marginBottom:12}},
-          '▶ Avanzar a Ronda '+(missionState.ronda+1)),
-        React.createElement('div',{style:{color:'#9ca3af',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,marginBottom:8}},'Aventureros'),
-        adventurers.map(a=>React.createElement('div',{key:a.id,style:{background:'#1a1a2e',borderRadius:10,padding:12,border:'1px solid #2d2d44',marginBottom:8}},
-          React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:8}},
-            React.createElement('div',null,
-              React.createElement('span',{style:{color:'#d4b896',fontSize:14,fontWeight:700}},a.nombre),
-              React.createElement('span',{style:{color:'#6b7280',fontSize:12,marginLeft:8}},a.clase||a.especie)),
-            a.status_effects.length>0&&React.createElement('div',{style:{display:'flex',gap:2}},
-              [...new Set(a.status_effects)].map(se=>{const s=STATUS_EFFECTS.find(x=>x.id===se);return s?React.createElement('span',{key:se,style:{fontSize:14}},s.icon):null;}))),
-          React.createElement(PegBar,{label:'HP',icon:'♥',current:a.salud_actual,max:a.salud_max,color:'#22c55e',onChange:v=>updateAdv({...a,salud_actual:v})}),
-          React.createElement(PegBar,{label:'MP',icon:'✦',current:a.magia_actual,max:a.magia_max,color:'#3b82f6',onChange:v=>updateAdv({...a,magia_actual:v})}),
-          React.createElement(PegBar,{label:'SP',icon:'◆',current:a.habilidad_actual,max:a.habilidad_max,color:'#eab308',onChange:v=>updateAdv({...a,habilidad_actual:v})}))),
-        React.createElement('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}},
-          React.createElement('button',{onClick:()=>window.open('https://xinix.github.io/maladum/','_blank'),
-            style:{padding:12,borderRadius:8,border:'1px solid #2d2d44',background:'#1a1a2e',color:'#d4b896',fontSize:12,cursor:'pointer'}},'📦 Items DB'),
-          React.createElement('button',{onClick:()=>{setMissionState(null);setSubScreen('hub');},
-            style:{padding:12,borderRadius:8,border:'1px solid #7f1d1d',background:'#7f1d1d22',color:'#fca5a5',fontSize:12,cursor:'pointer'}},'✅ Fin de Misión'))),
-      BottomNav);
-  }
-
-  // REGISTRY
-  if(subScreen==='registry'&&campaign){
-    const reg=campaign.registro;
-    const updateField=(path,val)=>{const parts=path.split('.');const nr=JSON.parse(JSON.stringify(reg));let o=nr;for(let i=0;i<parts.length-1;i++)o=o[parts[i]];o[parts[parts.length-1]]=val;setCampaign({...campaign,registro:nr});};
-    const NF=(l,p,v)=>React.createElement('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#0f172a',borderRadius:8,padding:'8px 12px',marginBottom:4}},
-      React.createElement('span',{style:{color:'#d4b896',fontSize:13}},l),
-      React.createElement('div',{style:{display:'flex',alignItems:'center',gap:6}},
-        React.createElement('button',{onClick:()=>updateField(p,Math.max(0,v-1)),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'−'),
-        React.createElement('span',{style:{color:'#d4b896',fontSize:16,fontWeight:700,width:28,textAlign:'center'}},v),
-        React.createElement('button',{onClick:()=>updateField(p,v+1),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'+')));
-    const BF=(l,p,v)=>React.createElement('button',{onClick:()=>updateField(p,!v),
-      style:{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'8px 12px',borderRadius:8,background:'#0f172a',border:'none',marginBottom:4,cursor:'pointer',textAlign:'left'}},
-      React.createElement('div',{style:{width:22,height:22,borderRadius:4,border:v?'2px solid #22c55e':'2px solid #4b5563',background:v?'#22c55e22':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#22c55e',fontSize:14,flexShrink:0}},v?'✓':''),
-      React.createElement('span',{style:{color:v?'#d4b896':'#6b7280',fontSize:13}},l));
-    return React.createElement('div',{style:S.wrap},
-      React.createElement('div',{style:{padding:16}},
-        React.createElement('h2',{style:{color:'#d4b896',fontSize:18,fontWeight:800,margin:'0 0 16px'}},'📜 Registro de Campaña'),
-        React.createElement('div',{style:{background:'#1a1a2e',borderRadius:10,padding:14,border:'1px solid #2d2d44',marginBottom:12}},
-          React.createElement('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
-            React.createElement('div',null,
-              React.createElement('div',{style:{color:'#9ca3af',fontSize:10,textTransform:'uppercase'}},'Demora'),
-              React.createElement('div',{style:{color:campaign.demora>=7?'#ef4444':'#eab308',fontSize:28,fontWeight:800}},campaign.demora)),
-            React.createElement('div',{style:{display:'flex',gap:6}},
-              React.createElement('button',{onClick:()=>setCampaign({...campaign,demora:Math.max(0,campaign.demora-1)}),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:20,cursor:'pointer'}},'−'),
-              React.createElement('button',{onClick:()=>setCampaign({...campaign,demora:Math.min(12,campaign.demora+1)}),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:20,cursor:'pointer'}},'+'))),
-          React.createElement('div',{style:{width:'100%',height:8,background:'#0f172a',borderRadius:4,marginTop:8,overflow:'hidden'}},
-            React.createElement('div',{style:{width:(campaign.demora/12*100)+'%',height:'100%',background:campaign.demora>=7?'#ef4444':'#eab308',borderRadius:4,transition:'width 0.3s'}}))),
-        React.createElement(Collapsible,{title:'Contadores',icon:'🔢',defaultOpen:true},
-          NF('Malagaunt derrotado','malagauntDerrotado',reg.malagauntDerrotado),
-          NF('Cadáveres examinados','cadaveres_examinados',reg.cadaveres_examinados),
-          NF('Sepulturas registradas','sepulturas_registradas',reg.sepulturas_registradas),
-          NF('Invasores escapados','invasores_escapados',reg.invasores_escapados),
-          NF('Disminuir la horda','disminuir_horda',reg.disminuir_horda),
-          NF('Salas santificadas','salas_santificadas',reg.salas_santificadas)),
-        React.createElement(Collapsible,{title:'Logros',icon:'🏆'},
-          BF('Deuda de Favor','logros.deuda_de_favor',reg.logros.deuda_de_favor),
-          BF('Rastro Esquelético','logros.rastro_esqueletico',reg.logros.rastro_esqueletico),
-          BF('Parafernalia Oculta','logros.parafernalia_oculta',reg.logros.parafernalia_oculta),
-          BF('Aprendiz Derrotado','logros.aprendiz_derrotado',reg.logros.aprendiz_derrotado),
-          BF('Aprendiz Liberado','logros.aprendiz_liberado',reg.logros.aprendiz_liberado),
-          BF('Troll Derrotado','logros.troll_derrotado_logro',reg.logros.troll_derrotado_logro),
-          BF('Investigación en Curso','logros.investigacion_en_curso',reg.logros.investigacion_en_curso),
-          BF('Escudo de Almas','logros.escudo_de_almas',reg.logros.escudo_de_almas)),
-        React.createElement(Collapsible,{title:'Recompensas',icon:'🎁'},
-          NF('Perspectiva Táctica','recompensas.perspectiva_tactica',reg.recompensas.perspectiva_tactica),
-          NF('Sabiduría de Mazmorra','recompensas.sabiduria_de_mazmorra',reg.recompensas.sabiduria_de_mazmorra),
-          BF('Resistencia al Veneno','recompensas.resistencia_al_veneno',reg.recompensas.resistencia_al_veneno),
-          BF('Debilidad del Objetivo','recompensas.debilidad_del_objetivo',reg.recompensas.debilidad_del_objetivo),
-          BF('Experiencia de Combate','recompensas.experiencia_de_combate',reg.recompensas.experiencia_de_combate),
-          BF('Saqueo de Sepulturas','recompensas.saqueo_de_sepulturas',reg.recompensas.saqueo_de_sepulturas),
-          BF('Signos Reveladores','recompensas.signos_reveladores',reg.recompensas.signos_reveladores),
-          BF('Ritual de Consagración','recompensas.ritual_de_consagracion',reg.recompensas.ritual_de_consagracion),
-          BF('Oferta de Ayuda','recompensas.oferta_de_ayuda',reg.recompensas.oferta_de_ayuda),
-          BF('Contactos en Gremio','recompensas.contactos_en_gremio',reg.recompensas.contactos_en_gremio)),
-        React.createElement(Collapsible,{title:'Puntos de Entrada Mapeados',icon:'🗺️'},
-          React.createElement('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},
-            [1,2,3,4,5,6].map(n=>{
-              const mapped=reg.puntos_entrada_mapeados.includes(n);
-              return React.createElement('button',{key:n,onClick:()=>{
-                const arr=mapped?reg.puntos_entrada_mapeados.filter(x=>x!==n):[...reg.puntos_entrada_mapeados,n];
-                updateField('puntos_entrada_mapeados',arr);},
-                style:{width:44,height:44,borderRadius:8,border:mapped?'2px solid #22c55e':'1px solid #374151',
-                  background:mapped?'#22c55e22':'#0f172a',color:mapped?'#22c55e':'#6b7280',fontSize:18,fontWeight:700,cursor:'pointer'}},n);}))),
-        React.createElement(Collapsible,{title:'Misión Actual',icon:'📍'},
-          React.createElement('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},
-            ['Intro','A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T'].map(mi=>
-              React.createElement('button',{key:mi,onClick:()=>setCampaign({...campaign,currentMission:mi}),
-                style:{minWidth:40,height:36,borderRadius:6,fontSize:13,fontWeight:700,cursor:'pointer',
-                  border:campaign.currentMission===mi?'2px solid #b91c1c':'1px solid #374151',
-                  background:campaign.currentMission===mi?'#b91c1c33':'#0f172a',
-                  color:campaign.currentMission===mi?'#fca5a5':'#6b7280'}},mi))))),
-      BottomNav);
-  }
-
-  return React.createElement('div',{style:S.wrap},
-    React.createElement('div',{style:{padding:40,textAlign:'center',color:'#6b7280'}},'Selecciona una opción'),BottomNav);
-}
-
-// Register SW and render
-if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{});}
-const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(React.createElement(App));
-  </script>
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel">
+const{useState,useEffect}=React;const h=React.createElement;
+const IDB=(()=>{const N='maladum_db',V=2,S='data';let p=null;function open(){if(p)return p;p=new Promise((ok,no)=>{const r=indexedDB.open(N,V);r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(S))r.result.createObjectStore(S);};r.onsuccess=()=>ok(r.result);r.onerror=()=>no(r.error);});return p;}return{async get(k){const d=await open();return new Promise((r,j)=>{const t=d.transaction(S,'readonly');const q=t.objectStore(S).get(k);q.onsuccess=()=>r(q.result??null);q.onerror=()=>j(q.error);})},async set(k,v){const d=await open();return new Promise((r,j)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).put(v,k);t.oncomplete=()=>r();t.onerror=()=>j(t.error);})},async del(k){const d=await open();return new Promise((r,j)=>{const t=d.transaction(S,'readwrite');t.objectStore(S).delete(k);t.oncomplete=()=>r();t.onerror=()=>j(t.error);})}};})();
+const TB={A:[{n:"Disquiet",c:"#22c55e",s:4},{n:"Unease",c:"#84cc16",s:4},{n:"Distress",c:"#eab308",s:4},{n:"Dismay",c:"#f97316",s:4},{n:"Desperation",c:"#ef4444",s:4},{n:"Doom",c:"#991b1b",s:4}],B:[{n:"Disquiet",c:"#22c55e",s:3},{n:"Unease",c:"#84cc16",s:3},{n:"Distress",c:"#eab308",s:4},{n:"Dismay",c:"#f97316",s:4},{n:"Desperation",c:"#ef4444",s:5},{n:"Doom",c:"#991b1b",s:5}]};
+const SE=[{id:"fatigued",name:"Fatigado",icon:"😰",color:"#eab308"},{id:"poisoned",name:"Envenenado",icon:"☠️",color:"#22c55e"},{id:"cursed",name:"Maldito",icon:"💀",color:"#7c3aed"},{id:"burning",name:"Quemando",icon:"🔥",color:"#ef4444"},{id:"terrified",name:"Aterrorizado",icon:"😱",color:"#a855f7"},{id:"stunned",name:"Aturdido",icon:"💫",color:"#3b82f6"},{id:"wounded",name:"Herido",icon:"🩸",color:"#dc2626"},{id:"blessed",name:"Bendito",icon:"✨",color:"#fbbf24"},{id:"corrupted",name:"Corrompido",icon:"🌑",color:"#1e1b4b"},{id:"prone",name:"Derribado",icon:"⬇️",color:"#6b7280"}];
+const BC=[{nombre:"Grogmar",especie:"Ormen",salud_max:7,habilidad_max:3,magia_max:2,acciones:2,coste:73,innatas:["Quick Recovery"]},{nombre:"Moranna",especie:"Human",salud_max:5,habilidad_max:5,magia_max:4,acciones:2,coste:80,innatas:["Impervious","Malacyte Mastery"]},{nombre:"Greet",especie:"Grobbler",salud_max:5,habilidad_max:5,magia_max:3,acciones:3,coste:75,innatas:["Barter","Tricks of the Trade"]},{nombre:"Syrio",especie:"Eld",salud_max:6,habilidad_max:4,magia_max:3,acciones:2,coste:64,innatas:["Reflexes"]},{nombre:"Callan",especie:"Human",salud_max:5,habilidad_max:4,magia_max:3,acciones:2,coste:54,innatas:["Frenzy"]},{nombre:"Nerinda",especie:"Human",salud_max:5,habilidad_max:4,magia_max:2,acciones:2,coste:80,innatas:["Weapons Master 1"]},{nombre:"Unger",especie:"Tregar",salud_max:4,habilidad_max:3,magia_max:1,acciones:2,coste:73,innatas:["Persuasion","Detect"]},{nombre:"Kriga",especie:"Human",salud_max:4,habilidad_max:3,magia_max:1,acciones:2,coste:73,innatas:[]},{nombre:"Beren",especie:"Human",salud_max:4,habilidad_max:4,magia_max:2,acciones:2,coste:71,innatas:["Natural Remedies","Ready for Anything"]},{nombre:"Hendley",especie:"Dwella",salud_max:4,habilidad_max:3,magia_max:1,acciones:2,coste:75,innatas:["Night Vision","Smithing"]},{nombre:"Galen",especie:"Eld",salud_max:3,habilidad_max:3,magia_max:1,acciones:2,coste:75,innatas:["Ambush"]},{nombre:"Artain",especie:"Human",salud_max:3,habilidad_max:3,magia_max:3,acciones:2,coste:61,innatas:["Entertainer"]},{nombre:"Ariah",especie:"Human",salud_max:3,habilidad_max:4,magia_max:1,acciones:2,coste:73,innatas:["Tactical Gift","Ranged Expert"]},{nombre:"Brahm",especie:"Human",salud_max:4,habilidad_max:4,magia_max:3,acciones:2,coste:90,innatas:["Weapons Master","Ranged Expert"]},{nombre:"Emmerik",especie:"Human",salud_max:3,habilidad_max:3,magia_max:4,acciones:2,coste:60,innatas:["Loremaster"]}];
+const CL=["Barbarian","Rogue","Sellsword","Assassin","Scavenger","Swindler","Marksman","Guardian","Blacksmith","Curator","Contender","Strategist","Maestro","Rook","Paladin","Prymorist","Eudaemon","Ranger","Druid","Magus","Rambler"];
+const ENEMY=[{nombre:"Lamentor",rank:1,melee:1,armadura:0},{nombre:"Lamentor Veterano",rank:2,melee:2,armadura:1},{nombre:"Myria",rank:2,melee:2,armadura:1},{nombre:"Hellfront",rank:3,melee:3,armadura:2},{nombre:"Rot Troll",rank:4,melee:4,armadura:3},{nombre:"Malagaunt",rank:5,melee:3,armadura:3},{nombre:"Troglodyte",rank:2,melee:1,armadura:1},{nombre:"Drakon",rank:3,melee:1,armadura:2},{nombre:"Cankers",rank:1,melee:2,armadura:0},{nombre:"Deathly Avatar",rank:4,melee:3,armadura:3}];
+const M={Intro:{id:"Intro",nombre:"De Moneda y Gloria",p:4,condicion:"Independiente rejugable. +1 Demora en campaña.",obj1:"Recolectar armas, armaduras y recursos.",obj2:"Recuperar Obj 7 y 8. 1 Renombre cada uno.",reglas:[{n:"Mecanismos Antiguos",d:"4 palancas: 1=roto, 2=abre tragaluz, 3=cierra, 4=cierra puerta, 5=desbloquea, 6=Cámara Arcanista."}],amenaza:{cara:"A",clav:0},mazo:"8×Lamentor, 2×Hellfront, 8×Mapa, 2×Malagaunt+dif.",cons_texto:"Ninguna. En campaña: +1 Demora.",cons:[]},
+A:{id:"A",nombre:"Secretos en la Oscuridad",p:6,condicion:"Primera misión de campaña.",obj1:"Recuperar Reliquias (Obj 1-8). 6₲ cada una. Anotar cantidad.",obj2:"Obj 9 del Escritorio → Logro Parafernalia Oculta.",reglas:[],amenaza:{cara:"A",clav:0},mazo:"8×Lamentor, 8×Mapa, 2×Hellfront, 2×Malagaunt+dif.",cons_texto:"Obj 1→B opcional. 5+reliquias→C. 4 o menos→D.",cons:[{q:"¿Recuperaste Objetivo 1?",f:"obj1",t:"bool"},{q:"¿Cuántas reliquias? (0-8)",f:"rel",t:"num",min:0,max:8},{q:"¿Obj 9 recuperado? (Parafernalia Oculta)",f:"parf",t:"bool"}]},
+B:{id:"B",nombre:"La Reliquia",p:8,condicion:"Opcional tras A si Obj 1 recuperado.",obj1:"Rescatar familiar. 10₲+2 Renombre+Logro Deuda de Favor.",obj2:"Saquear todo.",reglas:[{n:"Oscuridad",d:"Toda el área en Oscuridad. Habitante no se activa hasta contacto → Amenaza +3."}],amenaza:{cara:"A",clav:2},mazo:"8×Lamentor, 8×Mapa, 3×Hellfront, 1×Malagaunt+dif.",cons_texto:"+1 Demora. 5+rel→C, 4-→D.",cons:[{q:"¿Rescataste al familiar? (Deuda de Favor)",f:"deuda",t:"bool"}]},
+C:{id:"C",nombre:"Un Nuevo Poder en Ascenso",p:10,condicion:"5+ reliquias en A.",obj1:"Partes de criaturas: Lamentor≥Distress→Obj1-3, Myria≥Distress→Obj4-5, Hellfront→Obj6, Troll→Obj9.",obj2:"Obj 7+8 juntos → Logro Rastro Esquelético.",reglas:[{n:"Sombras Cambiantes",d:"Oscuridad activa. 3×Dado Mágico→Luz. Desde Distress: mover luz. Palancas mueven luz."}],amenaza:{cara:"A",clav:2},mazo:"8×Lamentor, 8×Mapa, 2×Hellfront, 2×Malagaunt+dif.",cons_texto:"Con Obj7/8: elegir ruta. Carretera→E, Túneles→F. Sin→E.",cons:[{q:"¿Encontraste Obj 7 u 8?",f:"obj78",t:"bool"},{q:"¿Ambos Obj 7 y 8? (Rastro Esquelético)",f:"rastro",t:"bool"},{q:"¿Qué ruta?",f:"ruta",t:"choice",ops:["Carretera→E","Túneles→F"]}]},
+D:{id:"D",nombre:"Resurrectionistas",p:12,condicion:"4 o menos reliquias en A.",obj1:"Acumular botín. 1 Renombre/20₲ de aumento.",obj2:"Mapeo Túneles + Robo de Tumbas.",reglas:[{n:"Spawn",d:"Revenants sin activos → punto de entrada más cercano."}],amenaza:{cara:"A",clav:1},mazo:"7×Lamentor, 2×Malagaunt, 6×Mapa, 2×Hellfront+dif.",cons_texto:"Siguiente: Misión F.",cons:[{q:"Sepulturas registradas",f:"sep",t:"num",min:0,max:20},{q:"Puntos mapeados",f:"ptos",t:"multi",ops:["1","2","3","4","5","6"]}]},
+E:{id:"E",nombre:"Eclipse de los Eruditos",p:14,condicion:"Carretera desde C o sin pasaje.",obj1:"Sellar 4 compuertas (puntos 3-6). Las 4 cerradas: escapar. 4 Renombre.",obj2:"Viajero Perdido + 3 Habitantes. 1 Renombre por cada uno evacuado.",reglas:[{n:"La Única Salida es Arriba",d:"Solo Entradas 1 y 2 elegibles para Reagrupamiento."},{n:"Anegado",d:"Cada casilla = fuente de agua. Interactuar elimina Quemado."}],amenaza:{cara:"B",clav:0},mazo:"8×Lamentor, 9×Mapa, 3×Hellfront+dif.",cons_texto:"4 compuertas→Interludio+G. Si no→−2 Demora/puerta+H.",cons:[{q:"¿Compuertas selladas? (0-4)",f:"comp",t:"num",min:0,max:4}]},
+F:{id:"F",nombre:"La Oscuridad Debajo",p:16,condicion:"Túneles desde C o D.",obj1:"Bloquear 6 puntos de entrada. 1 Renombre por cada uno.",obj2:"Trampas+Mazmorra = Sabiduría de la Mazmorra.",reglas:[{n:"Entradas Alternativas",d:"Puntos mapeados en D = ruta alternativa. −1 Amenaza por no usado."},{n:"Invasión de la Ciudad",d:"Revenant sin LdV → mueve a Reagrupamiento. Anotar rangos = Invasores Escapados."}],amenaza:{cara:"A",clav:3},mazo:"Según dificultad.",cons_texto:"Siguiente: Interludio Necrótico + G.",cons:[{q:"Puntos bloqueados (0-6)",f:"bloq",t:"num",min:0,max:6},{q:"Sabiduría (trampas+mazmorras)",f:"sab",t:"num",min:0,max:30},{q:"Invasores escapados (suma rangos)",f:"inv",t:"num",min:0,max:50}]},
+IN:{id:"IN",nombre:"Interludio: Conocimiento Necrótico",p:18,tipo:"interlude",condicion:"Tras E o F, antes de G.",obj1:"Marcar Recompensas: Obj1-2→Perspectiva, Obj3→Veneno, Obj4-6→Debilidad, Obj9→Exp.Combate, 3+Sep→Saqueo, 7+→Signos, 10+→Ritual. Descartar Objetivos.",obj2:"",reglas:[],amenaza:{cara:"A",clav:0},mazo:"",cons_texto:"Continuar a G o H.",cons:[]},
+G:{id:"G",nombre:"Cavernas de los Abandonados",p:18,condicion:"4 compuertas en E o horda desviada en F.",obj1:"4 Aventureros al azar. 3 boca abajo, Aturdidos, HP−1. Encontrar y escapar.",obj2:"3 PNJs inconscientes. Arrastrar fuera: 1 Renombre + 1 objeto cada uno.",reglas:[{n:"Centinelas",d:"Reglas de Centinelas del Reglamento."}],amenaza:{cara:"A",clav:5},mazo:"5×Lamentor, 2×Malagaunt, 6×Mapa, 4×Hellfront+dif.",cons_texto:"Siguiente: Misión I.",cons:[]},
+H:{id:"H",nombre:"El Exilio",p:20,condicion:"No cerraste las 4 compuertas en E.",obj1:"Recuperar objeto del Escritorio Arcanista (azul). Salir con él.",obj2:"Puertas azules bloqueadas + nadie dentro → Recompensa Investigación en Curso.",reglas:[{n:"Mecanismo de Cierre",d:"Palancas/Pilares con símbolo: interactuar cierra puertas del mismo símbolo."},{n:"¡No Robes!",d:"Entregar objetos raros para recompensas."},{n:"Puertas de Hierro",d:"Armadura física 3."}],amenaza:{cara:"B",clav:0},mazo:"Según dif.",cons_texto:"+1 Demora. → Misión I.",cons:[{q:"¿Investigación en Curso?",f:"invest",t:"bool"}]},
+I:{id:"I",nombre:"Los Secretos del Cabo Feere",p:22,condicion:"Después de G o H.",obj1:"Encontrar reliquia. Dado Mágico. −1 si Parafernalia, −1 si Rastro. Tirada ≤ criterios = éxito.",obj2:"",reglas:[{n:"No Hay Salida",d:"Sin Reagrupamiento. Termina: todos derrotados, Amenaza→Desperation, o Malagaunt con LdV."}],amenaza:{cara:"A",clav:4},mazo:"Según dif.",cons_texto:"Éxito→J (Escudo de Almas). Fallo→L.",cons:[{q:"¿Encontraste la reliquia?",f:"rel",t:"bool"}]},
+J:{id:"J",nombre:"Bajo la Mansión",p:24,condicion:"Escapaste de I o L.",obj1:"Fuente de Almas: examinar cadáveres de Lamentors. Anotar Cadáveres.",obj2:"Aprendiz (Obj7): Logro. Sacerdote: mantener a salvo. Troll: Logro.",reglas:[{n:"Fuente de Almas",d:"Lamentor derrotado→Recordatorio. Interactuar para examinar."},{n:"El Aprendiz",d:"Obj7 buscable. Escapar con él → Aprendiz Involuntario."},{n:"Deber Sagrado",d:"Clavija morada en Dismay → llega sacerdote."},{n:"El Troll Solitario",d:"Derrotado → Logro."}],amenaza:{cara:"A",clav:6},mazo:"Según dif.",cons_texto:"Cadáveres≥9→M. Aprendiz→N. Nada→O. Sacerdote→K opcional.",cons:[{q:"Cadáveres examinados",f:"cad",t:"num",min:0,max:30},{q:"¿Aprendiz Involuntario? (Obj7)",f:"apr",t:"bool"},{q:"¿Troll derrotado?",f:"troll",t:"bool"},{q:"¿Sacerdote escapó?",f:"sac",t:"bool"}]},
+K:{id:"K",nombre:"Maldiciones Deshechas",p:26,tipo:"optional",condicion:"Opcional tras J si sacerdote escapó.",obj1:"Sacerdote santifica salas. Anotar Salas Santificadas.",obj2:"Troll: si aparece y derrotado → Logro.",reglas:[{n:"Purgar a los Impíos",d:"Luz = Salas Santificadas. Impiden poderes Malagaunt."},{n:"¡Detener la Purga!",d:"Revenant sin LdV → persigue sacerdote."}],amenaza:{cara:"A",clav:2},mazo:"Según dif.",cons_texto:"+1 Demora. Siguiente según J.",cons:[{q:"Salas santificadas",f:"salas",t:"num",min:0,max:12}]},
+L:{id:"L",nombre:"Huida de la Necrópolis",p:28,condicion:"Fallo en I.",obj1:"Escapar. Mismo estado que I. 1 Descanso por Aventurero antes.",obj2:"",reglas:[{n:"Centinelas",d:"Reglas de Centinelas."},{n:"Oscuridad",d:"Todo en Oscuridad."},{n:"Derrumbes",d:"¡Colapso! → Luz + rebarajar."}],amenaza:{cara:"A",clav:4},mazo:"Según dif.",cons_texto:"+1 Demora. Investigar mansión (+1 Demora)→J. Entrenar→O.",cons:[{q:"¿Investigar mansión? (+1 Demora extra → J)",f:"invest",t:"bool"}]},
+MM:{id:"MM",nombre:"Salvad Nuestras Almas",p:30,condicion:"10+ cadáveres en J.",obj1:"Crisol: gastar 1 Magia → objetivo. Devolver almas. 2 Renombre cada una.",obj2:"Revenant derrotado → clavija morada. Banda más alta = Disminuir Horda.",reglas:[{n:"Espectáculo Espeluznante",d:"Punto de Entrada = Terrorífico. Dado Mágico, 1=Aterrorizado."},{n:"El Troll Solitario",d:"Si derrotado → no aparece."}],amenaza:{cara:"B",clav:4},mazo:"Según dif.",cons_texto:"Demora≥6→Interludio. Aprendiz→N(+2 Demora). Si no→Interludio.",cons:[{q:"Disminuir Horda (0-6)",f:"dis",t:"num",min:0,max:6},{q:"¿Jugar Misión N? (+2 Demora)",f:"jN",t:"bool"}]},
+N:{id:"N",nombre:"El Aprendiz Indispuesto",p:32,condicion:"Aprendiz Involuntario en J.",obj1:"Escrutinio: Dado Mágico, 6→objetivo. Obj3=Aprendiz. Derrotado/Liberado→Logro.",obj2:"Obj1→Oferta de Ayuda. Obj2→Contactos en Gremio.",reglas:[{n:"Pilares de Poder",d:"Casillas amarillas: dado combate→clavijas Mágicas. Pifia=Fatiga."},{n:"El Troll Solitario",d:"Si derrotado→no aparece."}],amenaza:{cara:"B",clav:0},mazo:"Según dif.",cons_texto:"Demora≥6→Interludio. Cadáveres≥9→M(+2). Si no→Interludio.",cons:[{q:"¿Aprendiz Derrotado?",f:"aDer",t:"bool"},{q:"¿Aprendiz Liberado?",f:"aLib",t:"bool"},{q:"¿Oferta de Ayuda? (Obj1)",f:"ofer",t:"bool"},{q:"¿Contactos en Gremio? (Obj2)",f:"cont",t:"bool"}]},
+O:{id:"O",nombre:"Un Nuevo Despertar",p:34,condicion:"Sin descubrimientos o elegiste no continuar.",obj1:"Derrotar Revenants. Clavija morada. Disminuir Horda. EXP extra.",obj2:"Crisol: devolver almas.",reglas:[{n:"El Troll Solitario",d:"Si derrotado→no aparece."}],amenaza:{cara:"A",clav:0},mazo:"Según dif.",cons_texto:"Siguiente: Interludio Antorchas.",cons:[{q:"Disminuir Horda (0-6)",f:"dis",t:"num",min:0,max:6}]},
+IA:{id:"IA",nombre:"Interludio: Antorchas y Horcas",p:36,tipo:"interlude",condicion:"Tras M, N u O.",obj1:"Persuadir turba. Valor 10 (necesitas 11+). +3 Deuda Favor, +1 Oferta/Contactos, +1/Renombre gastado.",obj2:"",reglas:[],amenaza:{cara:"A",clav:0},mazo:"",cons_texto:"Éxito→R. Fallo→P.",cons:[{q:"¿Convenciste a la turba? (11+ impactos)",f:"turba",t:"bool"}]},
+P:{id:"P",nombre:"La Cárcel del Crepúsculo",p:37,condicion:"No convenciste a la turba.",obj1:"Sin Reagrupamiento. Amenaza→Disaster: ruta escape. Obj7/8 = llaves. Palancas 3+4 → Reagrupamiento.",obj2:"",reglas:[{n:"Mecanismos Misteriosos",d:"Palancas 1/2→giran salas. 3/4→escape con llaves."},{n:"Salas Giratorias",d:"2 salas azules. Palanca→rotar 90° en Evaluación."}],amenaza:{cara:"A",clav:4},mazo:"Según dif.",cons_texto:"Alguien escapó→R. Nadie→Q.",cons:[{q:"¿Algún aventurero escapó?",f:"esc",t:"bool"}]},
+Q:{id:"Q",nombre:"La Penumbra Que Nos Une",p:39,condicion:"Nadie escapó en P.",obj1:"Buscar salida. Patrulla+Objetivos = Punto de Entrada correcto.",obj2:"",reglas:[{n:"Los Que Deambulan",d:"3 Habitantes con objetos. Sin Reagrupamiento."},{n:"Oscuridad",d:"Todo el área."}],amenaza:{cara:"A",clav:0},mazo:"Según dif.",cons_texto:"+1 Demora. →R.",cons:[]},
+R:{id:"R",nombre:"La Puerta de los No Muertos",p:41,condicion:"Tras Interludio, P o Q. ¡Sin Mercado ni Posada desde aquí!",obj1:"Entrar por la Puerta. 6 Ejes: Tumbas=Magia, Pilares=Fuerza(arm.2), Palancas=Habilidad. Clavijas ≥ Banda Amenaza.",obj2:"",reglas:[{n:"Abrir el Portón",d:"Explosión: robar clavijas. Negra=1 daño."},{n:"Se Acabó el Tiempo",d:"Amenaza→Doom = fin."},{n:"Campaña de Reclutamiento",d:"2 Habitantes contratables."},{n:"La Horda Disminuida",d:"Clavijas moradas según registro."},{n:"Perseguidores",d:"+1 Veterano/2 rangos Invasores."},{n:"Retiro Reacio",d:"Puedes salir por Reagrupamiento pero pierdes objetivo."}],amenaza:{cara:"A",clav:0},mazo:"Según dif.",cons_texto:"Escaparon por Puerta→T(−1 Demora c/u). Nadie→S.",cons:[{q:"Escapados por la Puerta (0-6)",f:"escP",t:"num",min:0,max:6},{q:"¿Alguien por Reagrupamiento?",f:"escR",t:"bool"}]},
+S:{id:"S",nombre:"Puerta de los No Muertos II",p:44,condicion:"Nadie escapó en R.",obj1:"Mismo objetivo. Ejes desactivados. Explosión+cerrar Puerta.",obj2:"",reglas:[{n:"Ejes Desactivados",d:"Explosión de clavijas. Cerrar Puerta."},{n:"Lugartenientes",d:"Aprendiz, Avatar Mortal y Troll pueden llegar."}],amenaza:{cara:"B",clav:0},mazo:"Según dif.",cons_texto:"Escaparon→T(−1 Demora c/u). Nadie→todos sobrevividos, T con Cara B.",cons:[{q:"Escapados por Puerta",f:"escP",t:"num",min:0,max:6}]},
+T:{id:"T",nombre:"El Corazón de las Tinieblas",p:46,tipo:"final",condicion:"Alguien escapó por Puerta en R/S. MISIÓN FINAL.",obj1:"Derrotar al Malagaunt. +8 Renombre. +3 EXP todos.",obj2:"Objetos Malagaunt: 10₲ cada uno.",reglas:[{n:"Santuario Interior",d:"Malagaunt + séquito de Revenants."},{n:"Cuando es Atacado",d:"Daño redirigido a Revenant cercano. −1 Magia/daño."},{n:"Distracción",d:"Salas Santificadas→moradas. Sin Regeneración hasta reemplazo."},{n:"El Final del Camino",d:"Si fallas: Malagaunt escapa. No repetible."}],amenaza:{cara:"A",clav:0},mazo:"8×Lamentor, 2×Malagaunt, 2×Mapa, 7×Hellfront+dif.",cons_texto:"¡Victoria! Fin de campaña.",cons:[{q:"¿Derrotaste al Malagaunt?",f:"victoria",t:"bool"}]}};
+function calcNext(mid,ans,camp){const r=camp.registro;switch(mid){
+case'Intro':return null;case'A':{const n=ans.rel||0;if(ans.obj1)return{next:'B',note:'Puedes jugar B (+1 Demora) o ir a '+(n>=5?'C':'D'),opt:true,alt:n>=5?'C':'D'};return{next:n>=5?'C':'D',note:n>=5?'5+ reliquias→C':'4 o menos→D'};}
+case'B':return{next:(r.reliquias_encontradas||0)>=5?'C':'D',note:'+1 Demora.',dem:1};case'C':return ans.ruta==='Túneles→F'?{next:'F',note:'Túneles→F'}:{next:'E',note:'Carretera→E'};case'D':return{next:'F',note:'→Misión F'};
+case'E':{const c=ans.comp||0;return c>=4?{next:'IN',note:'4 compuertas→Interludio+G',then:'G'}:{next:'H',note:'Fallaste. −'+(4-c)*2+' Demora. →H',dem:(4-c)*2};}
+case'F':return{next:'IN',note:'Interludio Necrótico→G',then:'G'};case'IN':return{next:'G',note:'→Misión G'};case'G':return{next:'I',note:'→Misión I'};case'H':return{next:'I',note:'+1 Demora. →I',dem:1};
+case'I':return ans.rel?{next:'J',note:'¡Reliquia! Escudo de Almas. →J'}:{next:'L',note:'Fallo. Solo Avance. →L'};
+case'J':{const c=ans.cad||0;if(c>=9)return{next:'MM',note:'9+ cadáveres→M'};if(ans.apr)return{next:'N',note:'Aprendiz→N'};return{next:'O',note:'→O',opt:ans.sac,alt:'K',altNote:'K opcional (sacerdote, +1 Dem.)'};}
+case'K':return{next:'IA',note:'+1 Demora. →Interludio',dem:1};case'L':return ans.invest?{next:'J',note:'Investigar→J (+2 Demora)',dem:2}:{next:'O',note:'→O',dem:1};
+case'MM':return ans.jN?{next:'N',note:'→N (+2 Demora)',dem:2}:{next:'IA',note:'→Interludio Antorchas'};case'N':return{next:'IA',note:'→Interludio'};case'O':return{next:'IA',note:'→Interludio'};
+case'IA':return ans.turba?{next:'R',note:'¡Convenciste! →R'}:{next:'P',note:'No convenciste. →P'};case'P':return ans.esc?{next:'R',note:'Escaparon→R'}:{next:'Q',note:'Nadie→Q'};case'Q':return{next:'R',note:'+1 Demora. →R',dem:1};
+case'R':{const e=ans.escP||0;return e>0?{next:'T',note:e+' escaparon! −'+e+' Dem. →T FINAL',dem:-e}:{next:'S',note:'Nadie→S'};}
+case'S':{const e=ans.escP||0;return e>0?{next:'T',note:e+' escaparon! −'+e+' Dem. →T',dem:-e}:{next:'T',note:'Todos sobrevividos→T Cara B'};}
+case'T':return{next:null,note:ans.victoria?'¡¡VICTORIA!! Campaña completada.':'Malagaunt escapó. Fin.'};default:return null;}}
+const TP=[{id:"dread",name:"Fase de Amenaza",icon:"⚡",steps:["Avanzar Amenaza +1","Si magia usada→+1","Si espacio rojo→Dado Mágico","Carta Evento (desde ronda 2)","Resolver efecto Amenaza"]},{id:"adventurers",name:"Fase de Aventureros",icon:"⚔️",steps:["Activar alternando","Hasta 2 acciones+1 sin esfuerzo","Todos activados"]},{id:"adversary",name:"Fase de Adversarios",icon:"👹",steps:["Nuevas llegadas","Activar por Rango","Resolver IA"]},{id:"npc",name:"Fase de PNJs",icon:"🧙",steps:["Wandering Beasts","Habitantes"]},{id:"assessment",name:"Fase de Evaluación",icon:"📋",steps:["Resolver estados","Retirar Activación","Siguiente 1er jugador"]}];
+function dC(n){return{id:"c_"+Date.now(),name:n,createdAt:new Date().toISOString(),currentMission:"A",demora:0,registro:{malagauntDerrotado:0,troll_derrotado:false,aprendiz_estado:null,aprendiz_nombre:null,cadaveres_examinados:0,sepulturas_registradas:0,invasores_escapados:0,disminuir_horda:0,salas_santificadas:0,reliquias_encontradas:0,puntos_entrada_mapeados:[],logros:{deuda_de_favor:false,rastro_esqueletico:false,parafernalia_oculta:false,aprendiz_derrotado:false,aprendiz_liberado:false,troll_derrotado_logro:false,investigacion_en_curso:false,escudo_de_almas:false},recompensas:{perspectiva_tactica:0,resistencia_al_veneno:false,debilidad_del_objetivo:false,experiencia_de_combate:false,saqueo_de_sepulturas:false,signos_reveladores:false,ritual_de_consagracion:false,oferta_de_ayuda:false,contactos_en_gremio:false,sabiduria_de_mazmorra:0}}};}
+function dA(cid,ch){return{id:"a_"+Date.now()+"_"+Math.random().toString(36).slice(2,6),campaign_id:cid,nombre:ch.nombre,clase:"",especie:ch.especie,rango:1,experiencia:0,salud_max:ch.salud_max,salud_actual:ch.salud_max,magia_max:ch.magia_max,magia_actual:ch.magia_max,habilidad_max:ch.habilidad_max,habilidad_actual:ch.habilidad_max,acciones:ch.acciones,coste:ch.coste,innatas:ch.innatas||[],status_effects:[],inventario:[],habilidades:[],renombre:0,vivo:true};}
+function dM(cid,mid){const m=M[mid];return{id:"ms_"+Date.now(),campaign_id:cid,mision_id:mid,ronda:1,amenaza_nivel:m?.amenaza?.clav||0,amenaza_cara:m?.amenaza?.cara||"A",magia_usada:false,steps:{},notas:""};}
+// === UI ===
+function PB({label,icon,cur,max,color,onChange}){const ps=[];for(let i=0;i<max;i++)ps.push(h('button',{key:i,onClick:()=>onChange(i<cur?i:i+1),style:{width:28,height:28,borderRadius:'50%',border:'2px solid '+(i<cur?color:'#374151'),background:i<cur?color:'transparent',cursor:'pointer',margin:2}}));return h('div',{style:{marginBottom:8}},h('div',{style:{display:'flex',alignItems:'center',gap:6,marginBottom:4}},h('span',{style:{fontSize:16}},icon),h('span',{style:{color:'#d4b896',fontSize:13,fontWeight:600}},label),h('span',{style:{color:'#9ca3af',fontSize:12,marginLeft:'auto'}},cur+'/'+max)),h('div',{style:{display:'flex',flexWrap:'wrap',gap:2}},ps));}
+function TT({level,cara,onCh}){const bands=TB[cara]||TB.A;let cum=0,bI=0;for(let i=0;i<bands.length;i++){if(level>=cum+bands[i].s){cum+=bands[i].s;bI=i+1;}else break;}const tot=bands.reduce((s,b)=>s+b.s,0);const bi=Math.min(bI,bands.length-1);return h('div',{style:{background:'#1a1a2e',borderRadius:12,padding:14,border:'1px solid #2d2d44'}},h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:10}},h('div',null,h('div',{style:{color:'#d4b896',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:1}},'Amenaza'),h('div',{style:{color:bands[bi].c,fontSize:20,fontWeight:800}},bands[bi].n)),h('div',{style:{display:'flex',gap:6}},h('button',{onClick:()=>onCh(Math.max(0,level-1)),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#1e293b',color:'#d4b896',fontSize:20,cursor:'pointer'}},'−'),h('div',{style:{width:52,height:44,borderRadius:8,background:bands[bi].c+'33',border:'2px solid '+bands[bi].c,display:'flex',alignItems:'center',justifyContent:'center',color:bands[bi].c,fontSize:22,fontWeight:800}},level),h('button',{onClick:()=>onCh(Math.min(tot,level+1)),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#1e293b',color:'#d4b896',fontSize:20,cursor:'pointer'}},'+'))),h('div',{style:{display:'flex',gap:2,height:18}},bands.map((b,i)=>{const sl=[];for(let s=0;s<b.s;s++){const si=bands.slice(0,i).reduce((a,x)=>a+x.s,0)+s;sl.push(h('div',{key:s,style:{flex:1,height:'100%',borderRadius:3,background:si<level?b.c:b.c+'22',border:'1px solid '+b.c+'44'}}));}return h('div',{key:i,style:{display:'flex',gap:1,flex:b.s}},sl);})),h('div',{style:{fontSize:10,color:'#6b7280',marginTop:6,textAlign:'center'}},'Cara '+cara+' · '+level+'/'+tot));}
+function Col({title,icon,children,open:dO}){const[o,setO]=useState(dO||false);return h('div',{style:{background:'#1a1a2e',borderRadius:10,border:'1px solid #2d2d44',marginBottom:8}},h('button',{onClick:()=>setO(!o),style:{width:'100%',padding:'12px 14px',background:'transparent',border:'none',display:'flex',alignItems:'center',gap:8,cursor:'pointer',color:'#d4b896'}},icon&&h('span',{style:{fontSize:18}},icon),h('span',{style:{flex:1,textAlign:'left',fontSize:14,fontWeight:700}},title),h('span',{style:{fontSize:12,transform:o?'rotate(180deg)':'',transition:'0.2s'}},'▼')),o&&h('div',{style:{padding:'0 14px 14px'}},children));}
+function PCL({phases,steps,onTog}){const[ex,setEx]=useState(null);return h('div',{style:{display:'flex',flexDirection:'column',gap:4}},phases.map(p=>{const io=ex===p.id;const ad=p.steps.every((_,i)=>steps[p.id+'_'+i]);return h('div',{key:p.id,style:{background:'#1a1a2e',borderRadius:10,border:'1px solid #2d2d44',overflow:'hidden'}},h('button',{onClick:()=>setEx(io?null:p.id),style:{width:'100%',padding:'12px 14px',background:'transparent',border:'none',display:'flex',alignItems:'center',gap:10,cursor:'pointer',color:'#d4b896'}},h('span',{style:{fontSize:20}},p.icon),h('span',{style:{flex:1,textAlign:'left',fontSize:14,fontWeight:700}},p.name),ad&&h('span',{style:{color:'#22c55e',fontSize:18}},'✓'),h('span',{style:{fontSize:12,transform:io?'rotate(180deg)':'',transition:'0.2s'}},'▼')),io&&h('div',{style:{padding:'0 14px 12px'}},p.steps.map((st,i)=>{const d=steps[p.id+'_'+i];return h('button',{key:i,onClick:()=>onTog(p.id,i),style:{display:'flex',alignItems:'flex-start',gap:10,padding:'8px 0',background:'none',border:'none',borderTop:i>0?'1px solid #2d2d44':'none',width:'100%',cursor:'pointer',textAlign:'left'}},h('div',{style:{width:22,height:22,borderRadius:4,flexShrink:0,border:d?'2px solid #22c55e':'2px solid #4b5563',background:d?'#22c55e22':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#22c55e',fontSize:14}},d?'✓':''),h('span',{style:{color:d?'#6b7280':'#d4b896',fontSize:13,textDecoration:d?'line-through':'none'}},st));})));}));}
+// === COMBAT RESOLVER ===
+function CR({advs,onClose}){const[st,setSt]=useState(0);const[atk,setAtk]=useState(null);const[at,setAt]=useState('adventurer');const[tp,setTp]=useState('melee');const[cov,setCov]=useState(false);const[nd,setNd]=useState(2);const[res,setRes]=useState([]);const[arm,setArm]=useState(0);
+const hits=res.filter(r=>r==='hit').length,crits=res.filter(r=>r==='crit').length,blunders=res.filter(r=>r==='blunder').length,total=hits+crits*2,dmg=Math.max(0,total+(cov?-1:0)-arm);
+const icons={hit:'🎯',crit:'💥',miss:'○',blunder:'💀'};
+const content=()=>{
+if(st===0)return h('div',null,h('div',{style:{color:'#d4b896',fontSize:14,fontWeight:700,marginBottom:12}},'1. Atacante'),h('div',{style:{display:'flex',gap:8,marginBottom:12}},h('button',{onClick:()=>setAt('adventurer'),style:{flex:1,padding:10,borderRadius:8,border:at==='adventurer'?'2px solid #b91c1c':'1px solid #374151',background:at==='adventurer'?'#b91c1c22':'transparent',color:'#d4b896',fontSize:13,cursor:'pointer'}},'Aventurero'),h('button',{onClick:()=>setAt('enemy'),style:{flex:1,padding:10,borderRadius:8,border:at==='enemy'?'2px solid #b91c1c':'1px solid #374151',background:at==='enemy'?'#b91c1c22':'transparent',color:'#d4b896',fontSize:13,cursor:'pointer'}},'Enemigo')),at==='adventurer'?h('div',{style:{display:'flex',flexDirection:'column',gap:4}},advs.map(a=>h('button',{key:a.id,onClick:()=>{setAtk(a.nombre);setSt(1);},style:{padding:10,borderRadius:8,border:'1px solid #2d2d44',background:'#0f172a',color:'#d4b896',fontSize:13,cursor:'pointer',textAlign:'left'}},a.nombre))):h('div',{style:{display:'flex',flexDirection:'column',gap:4,maxHeight:200,overflowY:'auto'}},ENEMY.map(e=>h('button',{key:e.nombre,onClick:()=>{setAtk(e.nombre);setNd(e.melee);setSt(1);},style:{padding:10,borderRadius:8,border:'1px solid #2d2d44',background:'#0f172a',color:'#d4b896',fontSize:13,cursor:'pointer',textAlign:'left',display:'flex',justifyContent:'space-between'}},h('span',null,e.nombre),h('span',{style:{color:'#6b7280',fontSize:11}},'R'+e.rank+' Arm'+e.armadura)))));
+if(st===1)return h('div',null,h('div',{style:{color:'#d4b896',fontSize:14,fontWeight:700,marginBottom:12}},'2. '+atk+' — Tipo'),h('div',{style:{display:'flex',gap:8}},h('button',{onClick:()=>setSt(2),style:{flex:1,padding:14,borderRadius:10,border:'2px solid #ef4444',background:'#ef444422',color:'#fca5a5',fontSize:15,fontWeight:700,cursor:'pointer'}},'⚔️ Melee'),h('button',{onClick:()=>{setTp('ranged');setSt(2);},style:{flex:1,padding:14,borderRadius:10,border:'2px solid #3b82f6',background:'#3b82f622',color:'#93c5fd',fontSize:15,fontWeight:700,cursor:'pointer'}},'🏹 Ranged')));
+if(st===2)return h('div',null,h('div',{style:{color:'#d4b896',fontSize:14,fontWeight:700,marginBottom:8}},'3. Dados'),h('button',{onClick:()=>setCov(!cov),style:{width:'100%',padding:10,borderRadius:8,marginBottom:12,border:cov?'2px solid #eab308':'1px solid #374151',background:cov?'#eab30822':'transparent',color:cov?'#eab308':'#6b7280',fontSize:13,cursor:'pointer'}},cov?'🛡️ Cobertura (−1)':'¿Cobertura parcial?'),h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}},h('span',{style:{color:'#9ca3af',fontSize:13}},'Dados:'),h('div',{style:{display:'flex',alignItems:'center',gap:8}},h('button',{onClick:()=>setNd(Math.max(1,nd-1)),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'−'),h('span',{style:{color:'#d4b896',fontSize:22,fontWeight:800}},nd),h('button',{onClick:()=>setNd(nd+1),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'+'))),h('div',{style:{background:'#0f172a',borderRadius:10,padding:14,textAlign:'center',marginBottom:12}},h('div',{style:{color:'#ef4444',fontSize:22,fontWeight:800}},nd+' dado'+(nd>1?'s':'')+' rojo'+(nd>1?'s':'')),h('div',{style:{color:'#3b82f6',fontSize:16,fontWeight:700,marginTop:4}},'+ 1 dado azul')),h('button',{onClick:()=>setSt(3),style:{width:'100%',padding:14,borderRadius:10,border:'none',background:'#b91c1c',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer'}},'Resultados →'));
+if(st===3)return h('div',null,h('div',{style:{color:'#d4b896',fontSize:14,fontWeight:700,marginBottom:8}},'4. Resultados'),h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:12}},h('button',{onClick:()=>setRes(p=>[...p,'hit']),style:{padding:12,borderRadius:10,border:'1px solid #22c55e',background:'#22c55e22',color:'#22c55e',fontSize:14,fontWeight:700,cursor:'pointer'}},'🎯 Impacto'),h('button',{onClick:()=>setRes(p=>[...p,'crit']),style:{padding:12,borderRadius:10,border:'1px solid #eab308',background:'#eab30822',color:'#eab308',fontSize:14,fontWeight:700,cursor:'pointer'}},'💥 Crítico'),h('button',{onClick:()=>setRes(p=>[...p,'miss']),style:{padding:12,borderRadius:10,border:'1px solid #6b7280',background:'#6b728022',color:'#9ca3af',fontSize:14,fontWeight:700,cursor:'pointer'}},'○ Fallo'),h('button',{onClick:()=>setRes(p=>[...p,'blunder']),style:{padding:12,borderRadius:10,border:'1px solid #ef4444',background:'#ef444422',color:'#ef4444',fontSize:14,fontWeight:700,cursor:'pointer'}},'💀 Pifia')),res.length>0&&h('div',{style:{marginBottom:8}},h('div',{style:{display:'flex',flexWrap:'wrap',gap:4,marginBottom:6}},res.map((r,i)=>h('span',{key:i,style:{fontSize:20}},icons[r]))),h('button',{onClick:()=>setRes(p=>p.slice(0,-1)),style:{padding:4,borderRadius:4,border:'1px solid #374151',background:'transparent',color:'#9ca3af',fontSize:11,cursor:'pointer'}},'← Quitar')),h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}},h('span',{style:{color:'#9ca3af',fontSize:13}},'Armadura:'),h('div',{style:{display:'flex',alignItems:'center',gap:8}},h('button',{onClick:()=>setArm(Math.max(0,arm-1)),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'−'),h('span',{style:{color:'#d4b896',fontSize:22,fontWeight:800}},arm),h('button',{onClick:()=>setArm(arm+1),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'+'))),h('div',{style:{background:'#0f172a',borderRadius:10,padding:14,textAlign:'center',marginBottom:12}},h('div',{style:{display:'flex',justifyContent:'space-around',marginBottom:8}},h('div',null,h('div',{style:{color:'#6b7280',fontSize:10}},'Impactos'),h('div',{style:{color:'#22c55e',fontSize:18,fontWeight:800}},hits)),h('div',null,h('div',{style:{color:'#6b7280',fontSize:10}},'Críticos'),h('div',{style:{color:'#eab308',fontSize:18,fontWeight:800}},crits)),h('div',null,h('div',{style:{color:'#6b7280',fontSize:10}},'Pifias'),h('div',{style:{color:'#ef4444',fontSize:18,fontWeight:800}},blunders))),h('div',{style:{borderTop:'1px solid #2d2d44',paddingTop:8}},h('div',{style:{color:'#6b7280',fontSize:10}},'DAÑO'),h('div',{style:{color:dmg>0?'#ef4444':'#6b7280',fontSize:32,fontWeight:800}},dmg),h('div',{style:{color:'#6b7280',fontSize:10}},'('+total+(cov?' −1':'')+' − '+arm+')'))),h('button',{onClick:()=>{setSt(0);setRes([]);setAtk(null);setArm(0);},style:{width:'100%',padding:10,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:13,cursor:'pointer'}},'Nuevo combate'));};
+return h('div',{className:'mo',onClick:e=>{if(e.target===e.currentTarget)onClose();}},h('div',{className:'mc'},h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:16}},h('h3',{style:{color:'#d4b896',fontSize:18,fontWeight:800}},'🎲 Combate'),h('button',{onClick:onClose,style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#9ca3af',fontSize:18,cursor:'pointer'}},'✕')),st>0&&h('button',{onClick:()=>setSt(st-1),style:{background:'none',border:'none',color:'#9ca3af',fontSize:12,cursor:'pointer',marginBottom:8,padding:0}},'← Atrás'),content()));}
+// === CRAFTING DATA ===
+const RES=[{s:"W",n:"Wood",c:4},{s:"S",n:"Steel",c:5},{s:"T",n:"Textiles",c:5},{s:"H",n:"Herbs",c:5},{s:"F",n:"Fungus",c:5},{s:"M",n:"Minerals",c:7},{s:"R",n:"Riches",c:8},{s:"V",n:"Serpent Venom",c:9},{s:"K",n:"Keltic Steel",c:13},{s:"B",n:"Powdered Drakon Bone",c:15},{s:"G",n:"Graam Ore",c:16},{s:"I",n:"Issen Oil",c:21},{s:"A",n:"Alary Carapace",c:23},{s:"E",n:"Extract of Maladite",c:25},{s:"N",n:"Necrotic Fluids",c:0}];
+const RECIPES=[
+{n:"Arrow-Entangle x2",t:"Ammo",sz:"XS",ing:"WT",sell:2,r:"C"},{n:"Arrow-Viscous/Sharp x2",t:"Ammo",sz:"XS",ing:"WS",sell:3,r:"C"},{n:"Arrow-Poison/Sharp x2",t:"Ammo",sz:"XS",ing:"WV",sell:2,r:"U"},{n:"Magic Potion x3",t:"Potion",sz:"XS",ing:"HFF",sell:4,r:"C"},{n:"Health Potion x3",t:"Potion",sz:"XS",ing:"HHF",sell:5,r:"C"},{n:"Arrow-Hawkeye/Sharp x2",t:"Ammo",sz:"XS",ing:"WG",sell:2,r:"U"},{n:"Skill Potion x2",t:"Potion",sz:"XS",ing:"HFM",sell:6,r:"C"},{n:"Action Potion x3",t:"Potion",sz:"XS",ing:"HMB",sell:4,r:"U"},{n:"Hat",t:"Armour",sz:"XS",ing:"TA",sell:2,r:"R"},{n:"Bullet-Burning x2",t:"Ammo",sz:"XS",ing:"SI",sell:3,r:"U"},
+{n:"Mighty Brew x2",t:"Potion",sz:"S",ing:"HMV",sell:5,r:"U"},{n:"Cordial of Cognisance",t:"Potion",sz:"S",ing:"MMR",sell:7,r:"C"},{n:"Honed Leather Armour",t:"Armour",sz:"S",ing:"TTR",sell:12,r:"C"},{n:"Potion of Finesse x2",t:"Potion",sz:"S",ing:"HRG",sell:6,r:"U"},{n:"Wardweaver's Nip",t:"Potion",sz:"S",ing:"FFE",sell:5,r:"R"},{n:"Destiny's Tincture",t:"Potion",sz:"S",ing:"FMA",sell:8,r:"R"},{n:"Adamantine Elixir",t:"Potion",sz:"S",ing:"HVBI",sell:9,r:"U"},{n:"Warrior Totem",t:"Misc",sz:"S",ing:"WMRI",sell:8,r:"U"},{n:"Protection Orb",t:"Misc",sz:"S",ing:"RBGE",sell:12,r:"R"},
+{n:"Shillelagh",t:"Weapon",sz:"M",ing:"WWM",sell:11,r:"C"},{n:"Spiked Armour",t:"Armour",sz:"M",ing:"SSST",sell:14,r:"C"},{n:"Eld Short Bow",t:"Weapon",sz:"M",ing:"WSG",sell:9,r:"U"},{n:"Herbalist's Cloak",t:"Armour",sz:"M",ing:"TTHFV",sell:7,r:"U"},{n:"Curative Cuirass",t:"Armour",sz:"M",ing:"STHH",sell:18,r:"C"},{n:"Keltic Falchion",t:"Weapon",sz:"M",ing:"SSRK",sell:13,r:"U"},{n:"Blitz-Hammer",t:"Weapon",sz:"M",ing:"WSSRB",sell:8,r:"U"},{n:"Makeshift Wings",t:"Armour",sz:"M",ing:"WTTA",sell:8,r:"R"},{n:"Sentient Scimitar",t:"Weapon",sz:"M",ing:"SSRG",sell:14,r:"U"},{n:"Reaper's Riposte",t:"Weapon",sz:"M",ing:"SSRA",sell:12,r:"R"},{n:"Bladed Shield",t:"Weapon",sz:"M",ing:"WSSKB",sell:13,r:"U"},{n:"Keltmail Armour",t:"Armour",sz:"M",ing:"TRKK",sell:10,r:"U"},{n:"Sacrificium",t:"Misc",sz:"M",ing:"HHREN",sell:5,r:"Uq"},{n:"Grail of the Gods",t:"Misc",sz:"M",ing:"MRGIE",sell:28,r:"R"},{n:"Robes of Invulnerability",t:"Armour",sz:"M",ing:"TTMBA",sell:15,r:"R"},{n:"Cloak of Cloning",t:"Armour",sz:"M",ing:"TTFIE",sell:9,r:"R"},{n:"Refined Robes",t:"Armour",sz:"M",ing:"TFREE",sell:24,r:"R"},{n:"Daemon Mantle",t:"Armour",sz:"M",ing:"TFVBB",sell:28,r:"U"},
+{n:"Honed Long Sword x2",t:"Weapon",sz:"L",ing:"SRK",sell:8,r:"U"},{n:"Starstrike Flail",t:"Weapon",sz:"L",ing:"WSSR",sell:14,r:"C"},{n:"Mastercrafted Bow",t:"Weapon",sz:"L",ing:"WWTR",sell:17,r:"C"},{n:"Viperfang",t:"Weapon",sz:"L",ing:"SRVV",sell:11,r:"U"},{n:"Disarming Staff",t:"Weapon",sz:"L",ing:"WWKB",sell:6,r:"U"},{n:"Arcane Steel",t:"Weapon",sz:"L",ing:"SSKG",sell:10,r:"U"},{n:"Bewitched Blade",t:"Weapon",sz:"L",ing:"SSRG",sell:16,r:"U"},{n:"Spelleater",t:"Weapon",sz:"L",ing:"RRKG",sell:10,r:"U"},{n:"Necrotic Censor",t:"Weapon",sz:"L",ing:"WMRVG",sell:11,r:"U"},{n:"Liberator of Souls",t:"Weapon",sz:"L",ing:"WGANN",sell:13,r:"Uq"},{n:"Mechanical Musket",t:"Weapon",sz:"L",ing:"WSMRG",sell:18,r:"U"},{n:"Blade of Momentum",t:"Weapon",sz:"L",ing:"SRBG",sell:15,r:"U"},{n:"Hellfire Blade",t:"Weapon",sz:"L",ing:"SRKII",sell:12,r:"U"},{n:"Soul Siphon",t:"Weapon",sz:"L",ing:"WRVGI",sell:28,r:"U"},{n:"Sceptre of Dominion",t:"Misc",sz:"L",ing:"RRRGA",sell:28,r:"R"},{n:"Ethereal Edge",t:"Weapon",sz:"L",ing:"SRNN",sell:10,r:"Uq"},
+{n:"Crafted Great Axe",t:"Weapon",sz:"XL",ing:"WSSTR",sell:14,r:"C"},{n:"Crafted Great Sword",t:"Weapon",sz:"XL",ing:"SSSSR",sell:13,r:"C"},{n:"Calamitous Caber",t:"Weapon",sz:"XL",ing:"WWWMA",sell:10,r:"R"},{n:"Sword of Tephysus",t:"Weapon",sz:"XL",ing:"SRKKB",sell:28,r:"U"},{n:"Nature's Fury",t:"Weapon",sz:"XL",ing:"MMVBA",sell:28,r:"R"},{n:"Astral Arbiter",t:"Weapon",sz:"XL",ing:"WWMKGE",sell:19,r:"R"},{n:"Vampiric Blade",t:"Weapon",sz:"XL",ing:"SSVBGN",sell:15,r:"Uq"},{n:"Uncanny Oculus",t:"Weapon",sz:"XL",ing:"VGIEN",sell:28,r:"Uq"},{n:"Ascendant Blades",t:"Weapon",sz:"XL",ing:"SMKIE",sell:28,r:"R"}];
+function canCraft(recipe,inv){const need={};for(const c of recipe.ing){need[c]=(need[c]||0)+1;}for(const[k,v]of Object.entries(need)){if((inv[k]||0)<v)return false;}return true;}
+function missingFor(recipe,inv){const need={};for(const c of recipe.ing)need[c]=(need[c]||0)+1;const miss={};for(const[k,v]of Object.entries(need)){const d=v-(inv[k]||0);if(d>0)miss[k]=d;}return miss;}
+function missCost(miss){let t=0;for(const[k,v]of Object.entries(miss)){const r=RES.find(x=>x.s===k);t+=(r?.c||0)*v;}return t;}
+const INN_TABLE={
+"1-2":{n:"Noche Tranquila",opts:["Buena noche: todos empiezan Bendecidos","Entrenar: +1 EXP a un aventurero rango 1 al azar"]},
+"3-4":{n:"Fraternizar con los Locales",sub:{"1-2":"Apuesta: ganas un objeto poco común al azar de la reserva.","3-4":"Mercancía premium: 2 objetos poco comunes + 1 raro al precio de venta. Dado Mágico por cada compra: 1=falso.","5-6":"Información: al inicio de la siguiente partida elige: ver 3 Cartas Evento superiores O mirar dentro de una pieza Buscable."}},
+"5-6":{n:"Noche Estruendosa",sub:{"1":"Pelea: un aventurero aleatorio empieza con −1 HP.","2":"Festín: añade ficha de Provisiones al inventario.","3-4":"Historias salvajes: ganas 2 Renombre.","5-6":"Noche de juegos: apuesta ₲, lanza moneda, si ganas doblas."}}};
+const NAT_TABLE={"1":"¡Bandidos! −D6₲ de Reserva. Un aventurero pierde 2 objetos aleatorios. Puede pelear: −1 HP y −1 Habilidad para evitarlo.","2":"¡Animales salvajes! Un aventurero al azar: Dado Mágico → 1-3: Herido, 4-6: Envenenado.","3-4":"Mala noche. Dado Mágico por cada aventurero: 1-2: −1 HP, 3-4: −1 Habilidad, 5-6: −1 Magia.","5-6":"Noche tranquila. Sin efectos."};
+// === END MISSION ===
+function EM({camp,ms,advs,onCamp,onAdvs,onDone}){const[st,setSt]=useState(0);const[ans,setAns]=useState({});const[nr,setNr]=useState(null);const[exp,setExp]=useState(1);const[gold,setGold]=useState(0);const[res,setRes]=useState({});const[lodge,setLodge]=useState(null);const[dieResult,setDieResult]=useState(null);const[subDie,setSubDie]=useState(null);const[repairs,setRepairs]=useState([]);
+const mi=M[ms.mision_id];if(!mi)return null;const cs=mi.cons||[];const ua=(f,v)=>setAns(p=>({...p,[f]:v}));
+const apply=()=>{const r=calcNext(ms.mision_id,ans,camp);setNr(r);const nc={...camp,registro:{...camp.registro}};
+if(ans.parf)nc.registro.logros={...nc.registro.logros,parafernalia_oculta:true};if(ans.deuda)nc.registro.logros={...nc.registro.logros,deuda_de_favor:true};if(ans.rastro)nc.registro.logros={...nc.registro.logros,rastro_esqueletico:true};if(ans.invest)nc.registro.logros={...nc.registro.logros,investigacion_en_curso:true};if(ans.rel&&ms.mision_id==='I')nc.registro.logros={...nc.registro.logros,escudo_de_almas:true};if(ans.aDer)nc.registro.logros={...nc.registro.logros,aprendiz_derrotado:true};if(ans.aLib)nc.registro.logros={...nc.registro.logros,aprendiz_liberado:true};if(ans.troll)nc.registro.logros={...nc.registro.logros,troll_derrotado_logro:true};if(ans.ofer)nc.registro.recompensas={...nc.registro.recompensas,oferta_de_ayuda:true};if(ans.cont)nc.registro.recompensas={...nc.registro.recompensas,contactos_en_gremio:true};
+if(ans.rel&&ms.mision_id==='A')nc.registro.reliquias_encontradas=(nc.registro.reliquias_encontradas||0)+(ans.rel||0);if(ans.cad)nc.registro.cadaveres_examinados+=ans.cad||0;if(ans.sep)nc.registro.sepulturas_registradas+=ans.sep||0;if(ans.inv)nc.registro.invasores_escapados+=ans.inv||0;if(ans.sab)nc.registro.recompensas.sabiduria_de_mazmorra+=ans.sab||0;if(ans.dis)nc.registro.disminuir_horda=Math.max(nc.registro.disminuir_horda,ans.dis||0);if(ans.salas)nc.registro.salas_santificadas+=ans.salas||0;if(ans.ptos)nc.registro.puntos_entrada_mapeados=[...new Set([...nc.registro.puntos_entrada_mapeados,...(ans.ptos||[]).map(Number)])];
+if(r?.dem)nc.demora=Math.max(0,Math.min(12,nc.demora+(r.dem||0)));if(r?.next)nc.currentMission=r.next;onCamp(nc);setSt(2);};
+const NF2=(l,k,v,set)=>h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#0f172a',borderRadius:8,padding:'8px 12px',marginBottom:4}},h('span',{style:{color:'#d4b896',fontSize:12}},l),h('div',{style:{display:'flex',alignItems:'center',gap:6}},h('button',{onClick:()=>set(k,Math.max(0,v-1)),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'−'),h('span',{style:{color:'#d4b896',fontSize:16,fontWeight:700,width:28,textAlign:'center'}},v),h('button',{onClick:()=>set(k,v+1),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'+')));
+const setR=(k,v)=>setRes(p=>({...p,[k]:v}));
+const craftable=RECIPES.filter(r=>canCraft(r,res));
+const salary=advs.reduce((s,a)=>s+a.rango+1,0);
+const innCost=advs.length*2;
+// Step 0: consequences
+if(st===0)return h('div',{style:{padding:16}},h('div',{style:{textAlign:'center',marginBottom:16}},h('div',{style:{fontSize:32}},'🏁'),h('h2',{style:{color:'#d4b896',fontSize:20,fontWeight:800}},'Fin — '+mi.nombre),h('div',{style:{color:'#6b7280',fontSize:13}},mi.cons_texto)),cs.length>0&&cs.map((c,i)=>{
+if(c.t==='bool')return h('button',{key:i,onClick:()=>ua(c.f,!ans[c.f]),style:{width:'100%',display:'flex',alignItems:'center',gap:10,padding:12,borderRadius:8,background:'#1a1a2e',border:'none',marginBottom:8,cursor:'pointer',textAlign:'left'}},h('div',{style:{width:24,height:24,borderRadius:4,border:ans[c.f]?'2px solid #22c55e':'2px solid #4b5563',background:ans[c.f]?'#22c55e22':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#22c55e',fontSize:14,flexShrink:0}},ans[c.f]?'✓':''),h('span',{style:{color:'#d4b896',fontSize:13}},c.q));
+if(c.t==='num')return h('div',{key:i,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#1a1a2e',borderRadius:8,padding:12,marginBottom:8}},h('span',{style:{color:'#d4b896',fontSize:12,flex:1}},c.q),h('div',{style:{display:'flex',alignItems:'center',gap:6}},h('button',{onClick:()=>ua(c.f,Math.max(c.min||0,(ans[c.f]||0)-1)),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'−'),h('span',{style:{color:'#d4b896',fontSize:18,fontWeight:700,width:30,textAlign:'center'}},ans[c.f]||0),h('button',{onClick:()=>ua(c.f,Math.min(c.max||99,(ans[c.f]||0)+1)),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'+'))
+);if(c.t==='choice')return h('div',{key:i,style:{marginBottom:8}},h('div',{style:{color:'#d4b896',fontSize:13,marginBottom:6}},c.q),h('div',{style:{display:'flex',flexDirection:'column',gap:4}},(c.ops||[]).map(o=>h('button',{key:o,onClick:()=>ua(c.f,o),style:{padding:10,borderRadius:8,border:ans[c.f]===o?'2px solid #b91c1c':'1px solid #374151',background:ans[c.f]===o?'#b91c1c22':'#0f172a',color:'#d4b896',fontSize:13,cursor:'pointer',textAlign:'left'}},o))));
+if(c.t==='multi')return h('div',{key:i,style:{marginBottom:8}},h('div',{style:{color:'#d4b896',fontSize:13,marginBottom:6}},c.q),h('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},(c.ops||[]).map(o=>{const sel=(ans[c.f]||[]).includes(o);return h('button',{key:o,onClick:()=>{const cur=ans[c.f]||[];ua(c.f,sel?cur.filter(x=>x!==o):[...cur,o]);},style:{width:44,height:44,borderRadius:8,border:sel?'2px solid #22c55e':'1px solid #374151',background:sel?'#22c55e22':'#0f172a',color:sel?'#22c55e':'#6b7280',fontSize:18,fontWeight:700,cursor:'pointer'}},o);})));return null;}),
+h('button',{onClick:apply,style:{width:'100%',padding:14,borderRadius:10,border:'none',background:'#b91c1c',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8}},'Confirmar →'));
+// Step 2: next mission + EXP
+if(st===2)return h('div',{style:{padding:16}},nr&&h('div',{style:{background:'#1a1a2e',borderRadius:12,padding:16,border:'1px solid #2d2d44',marginBottom:16}},h('div',{style:{color:'#9ca3af',fontSize:11,textTransform:'uppercase',marginBottom:8}},'Siguiente'),nr.next?h('div',{style:{color:'#d4b896',fontSize:22,fontWeight:800}},nr.next==='IN'?'Interludio Necrótico':nr.next==='IA'?'Interludio Antorchas':nr.next==='MM'?'Misión M':'Misión '+nr.next):h('div',{style:{color:'#22c55e',fontSize:18,fontWeight:700}},'Campaña completada'),h('div',{style:{color:'#9ca3af',fontSize:13,marginTop:6}},nr.note),nr.dem&&h('div',{style:{color:nr.dem>0?'#ef4444':'#22c55e',fontSize:13,marginTop:6,fontWeight:700}},(nr.dem>0?'+':'')+nr.dem+' Demora')),
+h('div',{style:{color:'#9ca3af',fontSize:11,textTransform:'uppercase',letterSpacing:2,marginBottom:8}},'Fase de Avance'),
+h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#1a1a2e',borderRadius:8,padding:12,marginBottom:12}},h('span',{style:{color:'#d4b896',fontSize:13}},'EXP por aventurero:'),h('div',{style:{display:'flex',alignItems:'center',gap:8}},h('button',{onClick:()=>setExp(Math.max(0,exp-1)),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'−'),h('span',{style:{color:'#d4b896',fontSize:22,fontWeight:800}},exp),h('button',{onClick:()=>setExp(exp+1),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'+'))),
+h('button',{onClick:()=>{onAdvs(advs.map(a=>({...a,experiencia:a.experiencia+exp,salud_actual:a.salud_max,magia_actual:a.magia_max,habilidad_actual:a.habilidad_max,status_effects:[]})));setSt(3);},style:{width:'100%',padding:14,borderRadius:10,border:'none',background:'linear-gradient(135deg,#b91c1c,#991b1b)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer'}},'Aplicar EXP → Mercado'));
+// Step 3: Maintenance + Gold
+if(st===3)return h('div',{style:{padding:16}},
+h('h3',{style:{color:'#d4b896',fontSize:18,fontWeight:800,marginBottom:12}},'💰 Fase de Mercado'),
+h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:14,border:'1px solid #2d2d44',marginBottom:12}},
+h('div',{style:{color:'#9ca3af',fontSize:11,textTransform:'uppercase',marginBottom:8}},'Tu Reserva (Florines)'),
+h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',gap:12}},
+h('button',{onClick:()=>setGold(Math.max(0,gold-5)),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'−5'),
+h('button',{onClick:()=>setGold(Math.max(0,gold-1)),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'−'),
+h('div',{style:{color:'#eab308',fontSize:32,fontWeight:800,width:80,textAlign:'center'}},gold+'₲'),
+h('button',{onClick:()=>setGold(gold+1),style:{width:36,height:36,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'+'),
+h('button',{onClick:()=>setGold(gold+5),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:18,cursor:'pointer'}},'+5'))),
+h('div',{style:{background:'#7f1d1d22',borderRadius:10,padding:14,border:'1px solid #7f1d1d',marginBottom:12}},
+h('div',{style:{color:'#fca5a5',fontSize:13,fontWeight:700,marginBottom:6}},'Mantenimiento del Grupo'),
+h('div',{style:{color:'#d4b896',fontSize:12,marginBottom:8}},'Pago = 1₲ × rango + 1₲ si participó. Recién contratados: gratis.'),
+advs.map(a=>h('div',{key:a.id,style:{display:'flex',justifyContent:'space-between',padding:'4px 0',borderBottom:'1px solid #2d2d44'}},h('span',{style:{color:'#d4b896',fontSize:13}},a.nombre+' (R'+a.rango+')'),h('span',{style:{color:'#ef4444',fontSize:13,fontWeight:700}},(a.rango+1)+'₲'))),
+h('div',{style:{display:'flex',justifyContent:'space-between',marginTop:8,paddingTop:8,borderTop:'2px solid #b91c1c'}},h('span',{style:{color:'#fca5a5',fontSize:14,fontWeight:700}},'Total:'),h('span',{style:{color:'#ef4444',fontSize:18,fontWeight:800}},salary+'₲')),
+h('button',{onClick:()=>{setGold(Math.max(0,gold-salary));},style:{width:'100%',marginTop:8,padding:12,borderRadius:8,border:'none',background:'#b91c1c',color:'#fff',fontSize:14,fontWeight:700,cursor:'pointer'}},'Pagar Mantenimiento (−'+salary+'₲)')),
+h(Col,{title:'Reparaciones — Gremio de Artesanos',icon:'🔧'},
+h('div',{style:{color:'#d4b896',fontSize:13,marginBottom:8}},'¿Objetos rotos? Coste: Común 1₲, Poco Común 3₲, Raro 5₲.'),
+h('div',{style:{display:'flex',gap:6,flexWrap:'wrap'}},
+[{l:'Común (1₲)',v:1},{l:'Poco Común (3₲)',v:3},{l:'Raro (5₲)',v:5}].map(r=>h('button',{key:r.l,onClick:()=>setGold(Math.max(0,gold-r.v)),style:{padding:'8px 14px',borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:12,cursor:'pointer'}},r.l+' — Reparar')))),
+h(Col,{title:'Reglas de Compra/Venta',icon:'📋'},
+h('div',{style:{color:'#d4b896',fontSize:12,lineHeight:1.8}},
+'• Hasta 10₲: compra libre sin límite',h('br'),
+'• Cada aventurero puede comprar UN objeto de hasta 10× su rango',h('br'),
+'• Rango 5: puede comprar un objeto de cualquier valor',h('br'),
+'• 1 objeto raro al azar disponible por fase',h('br'),
+'• Vender objeto raro → comprar 1 adicional de cualquier valor',h('br'),
+'• Precio "−" = solo se encuentra, no se compra',h('br'),
+'• Objetos rotos: se venden a mitad (redondeando arriba)')),
+h('button',{onClick:()=>setSt(4),style:{width:'100%',padding:14,borderRadius:10,border:'2px solid #eab308',background:'#eab30815',color:'#eab308',fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8}},'→ Materiales y Crafteo'));
+// Step 4: Resources input + Crafting
+if(st===4)return h('div',{style:{padding:16}},
+h('h3',{style:{color:'#d4b896',fontSize:18,fontWeight:800,marginBottom:4}},'⚒️ Gremio de Artesanos'),
+h('div',{style:{color:'#9ca3af',fontSize:12,marginBottom:12}},'¿Qué materiales obtuviste en la misión?'),
+h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:12,border:'1px solid #2d2d44',marginBottom:12}},
+h('div',{style:{color:'#eab308',fontSize:14,fontWeight:700,textAlign:'center',marginBottom:8}},'Reserva: '+gold+'₲'),
+RES.map(r=>h('div',{key:r.s,style:{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 0',borderBottom:'1px solid #1e1e35'}},
+h('div',{style:{display:'flex',alignItems:'center',gap:8}},
+h('span',{style:{color:r.c>=13?'#3b82f6':r.c>=7?'#f97316':'#22c55e',fontSize:14,fontWeight:800,width:20}},r.s),
+h('span',{style:{color:'#d4b896',fontSize:12}},r.n),
+h('span',{style:{color:'#6b7280',fontSize:10}},'('+r.c+'₲)')),
+h('div',{style:{display:'flex',alignItems:'center',gap:4}},
+h('button',{onClick:()=>setR(r.s,Math.max(0,(res[r.s]||0)-1)),style:{width:28,height:28,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:14,cursor:'pointer'}},'−'),
+h('span',{style:{color:'#d4b896',fontSize:16,fontWeight:700,width:24,textAlign:'center'}},res[r.s]||0),
+h('button',{onClick:()=>setR(r.s,(res[r.s]||0)+1),style:{width:28,height:28,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:14,cursor:'pointer'}},'+'))
+))),
+h('div',{style:{color:'#22c55e',fontSize:14,fontWeight:700,marginBottom:8}},craftable.length>0?'✓ Puedes craftear '+craftable.length+' objeto'+(craftable.length>1?'s':'')+'!':'No puedes craftear nada con estos materiales.'),
+craftable.length>0&&h('div',{style:{marginBottom:12}},craftable.map((r,i)=>{
+const rarC=r.r==='C'?'#22c55e':r.r==='U'?'#3b82f6':r.r==='R'?'#a855f7':'#eab308';
+return h('div',{key:i,style:{background:'#0f172a',borderRadius:8,padding:10,marginBottom:6,border:'1px solid #2d2d44'}},
+h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},
+h('div',null,h('span',{style:{color:'#d4b896',fontSize:13,fontWeight:700}},r.n),h('span',{style:{color:'#6b7280',fontSize:11,marginLeft:6}},r.t+' · '+r.sz)),
+h('div',{style:{textAlign:'right'}},h('div',{style:{color:'#eab308',fontSize:14,fontWeight:700}},r.sell+'₲'),h('div',{style:{color:rarC,fontSize:10}},r.r==='C'?'Común':r.r==='U'?'Poco Común':'Raro'))),
+h('div',{style:{marginTop:4,display:'flex',gap:4,flexWrap:'wrap'}},r.ing.split('').map((c,j)=>{const rx=RES.find(x=>x.s===c);return h('span',{key:j,style:{padding:'2px 6px',borderRadius:4,background:'#1a1a2e',border:'1px solid #374151',color:'#d4b896',fontSize:11}},c+(rx?' '+rx.n.split(' ')[0]:''));})),
+h('button',{onClick:()=>{const need={};for(const c of r.ing)need[c]=(need[c]||0)+1;const nr2={...res};for(const[k,v]of Object.entries(need))nr2[k]=(nr2[k]||0)-v;setRes(nr2);setGold(Math.max(0,gold-r.sell));},style:{marginTop:6,width:'100%',padding:8,borderRadius:6,border:'1px solid #22c55e',background:'#22c55e18',color:'#22c55e',fontSize:12,fontWeight:700,cursor:'pointer'}},'Craftear (−'+r.sell+'₲ + materiales)'));})),
+h(Col,{title:'Todas las recetas ('+RECIPES.length+')',icon:'📖'},
+h('div',{style:{maxHeight:300,overflowY:'auto'}},RECIPES.map((r,i)=>{
+const miss=missingFor(r,res);const mc=missCost(miss);const ok=Object.keys(miss).length===0;
+return h('div',{key:i,style:{padding:'6px 0',borderBottom:'1px solid #1e1e35',opacity:ok?1:0.6}},
+h('div',{style:{display:'flex',justifyContent:'space-between'}},
+h('span',{style:{color:'#d4b896',fontSize:12}},r.n),
+h('span',{style:{color:'#eab308',fontSize:11}},r.sell+'₲')),
+h('div',{style:{fontSize:10,color:'#6b7280'}},r.ing.split('').join(' ')+' · '+r.t+' · '+r.sz+(ok?' ✅':' — faltan: '+Object.entries(miss).map(([k,v])=>v+k).join(',')+' ('+mc+'₲)')));}))),
+h('button',{onClick:()=>setSt(5),style:{width:'100%',padding:14,borderRadius:10,border:'2px solid #a855f7',background:'#a855f718',color:'#a855f7',fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8}},'→ Fase de Descanso'));
+// Step 5: Rest — Inn or Nature
+if(st===5)return h('div',{style:{padding:16}},
+h('h3',{style:{color:'#d4b896',fontSize:18,fontWeight:800,marginBottom:4}},'🛌 Fase de Descanso'),
+h('div',{style:{color:'#eab308',fontSize:16,fontWeight:700,textAlign:'center',marginBottom:12}},'Reserva: '+gold+'₲'),
+!lodge&&h('div',null,
+h('div',{style:{color:'#9ca3af',fontSize:12,marginBottom:12}},'¿Dónde pasa la noche tu grupo?'),
+h('button',{onClick:()=>{setGold(Math.max(0,gold-innCost));setLodge('inn');},style:{width:'100%',padding:14,borderRadius:10,border:'2px solid #eab308',background:'#eab30818',color:'#eab308',fontSize:15,fontWeight:700,cursor:'pointer',marginBottom:8}},'🏨 Posada ('+innCost+'₲ — '+advs.length+'×2₲)'),
+h('div',{style:{color:'#6b7280',fontSize:11,marginBottom:12,textAlign:'center'}},'Almacén Seguro disponible hasta el próximo Descanso'),
+h('button',{onClick:()=>setLodge('nature'),style:{width:'100%',padding:14,borderRadius:10,border:'2px solid #22c55e',background:'#22c55e18',color:'#22c55e',fontSize:15,fontWeight:700,cursor:'pointer'}},'🌲 Naturaleza (Gratis)'),
+h('div',{style:{color:'#6b7280',fontSize:11,marginTop:4,textAlign:'center'}},'Sin almacén seguro. Riesgo de eventos negativos.')),
+lodge&&!dieResult&&h('div',null,
+h('div',{style:{background:lodge==='inn'?'#eab30822':'#22c55e22',borderRadius:10,padding:14,border:'1px solid '+(lodge==='inn'?'#eab308':'#22c55e'),marginBottom:12,textAlign:'center'}},
+h('div',{style:{fontSize:24}},lodge==='inn'?'🏨':'🌲'),
+h('div',{style:{color:'#d4b896',fontSize:16,fontWeight:700}},lodge==='inn'?'Posada':'Naturaleza'),
+lodge==='inn'&&h('div',{style:{color:'#ef4444',fontSize:13}},'-'+innCost+'₲ pagados')),
+h('div',{style:{color:'#d4b896',fontSize:14,textAlign:'center',marginBottom:12}},'Lanza el Dado Mágico y selecciona el resultado:'),
+h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8}},
+[1,2,3,4,5,6].map(n=>h('button',{key:n,onClick:()=>setDieResult(n),style:{padding:14,borderRadius:10,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:22,fontWeight:800,cursor:'pointer'}},n)))),
+lodge&&dieResult&&h('div',null,
+h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:14,border:'1px solid #2d2d44',marginBottom:12}},
+h('div',{style:{color:'#eab308',fontSize:13,fontWeight:700,marginBottom:8}},'Dado: '+dieResult),
+lodge==='inn'?(()=>{
+const band=dieResult<=2?'1-2':dieResult<=4?'3-4':'5-6';const ev=INN_TABLE[band];
+if(band==='1-2')return h('div',null,h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700,marginBottom:8}},ev.n),ev.opts.map((o,i)=>h('div',{key:i,style:{padding:8,background:'#0f172a',borderRadius:6,marginBottom:4,color:'#d4b896',fontSize:12}},'• '+o)));
+if(band==='3-4'&&!subDie)return h('div',null,h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700,marginBottom:8}},ev.n+' — Lanza de nuevo:'),h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}},
+[1,2,3,4,5,6].map(n=>h('button',{key:n,onClick:()=>setSubDie(n),style:{padding:10,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:18,fontWeight:800,cursor:'pointer'}},n))));
+if(band==='3-4'&&subDie){const sb=subDie<=2?'1-2':subDie<=4?'3-4':'5-6';return h('div',null,h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700,marginBottom:8}},ev.n+' ('+subDie+')'),h('div',{style:{padding:8,background:'#0f172a',borderRadius:6,color:'#d4b896',fontSize:12}},ev.sub[sb]));}
+if(band==='5-6'&&!subDie)return h('div',null,h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700,marginBottom:8}},ev.n+' — Lanza de nuevo:'),h('div',{style:{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6}},
+[1,2,3,4,5,6].map(n=>h('button',{key:n,onClick:()=>setSubDie(n),style:{padding:10,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:18,fontWeight:800,cursor:'pointer'}},n))));
+if(band==='5-6'&&subDie){const sb=subDie<=1?'1':subDie<=2?'2':subDie<=4?'3-4':'5-6';return h('div',null,h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700,marginBottom:8}},ev.n+' ('+subDie+')'),h('div',{style:{padding:8,background:'#0f172a',borderRadius:6,color:'#d4b896',fontSize:12}},ev.sub[sb]));}
+return null;})():
+(()=>{const band=dieResult<=1?'1':dieResult<=2?'2':dieResult<=4?'3-4':'5-6';return h('div',null,h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700,marginBottom:8}},'Resultado:'),h('div',{style:{padding:8,background:'#0f172a',borderRadius:6,color:'#d4b896',fontSize:12,lineHeight:1.6}},NAT_TABLE[band]));})()),
+h('button',{onClick:()=>setSt(6),style:{width:'100%',padding:14,borderRadius:10,border:'none',background:'linear-gradient(135deg,#b91c1c,#991b1b)',color:'#fff',fontSize:15,fontWeight:700,cursor:'pointer',marginTop:8}},'→ Siguiente Día')));
+// Step 6: Done
+if(st===6)return h('div',{style:{padding:16}},
+h('div',{style:{textAlign:'center',marginBottom:16}},h('div',{style:{fontSize:40}},'⚔️'),h('h3',{style:{color:'#d4b896',fontSize:18,fontWeight:800,marginTop:8}},'El Día Siguiente')),
+h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:14,border:'1px solid #2d2d44',marginBottom:12,color:'#d4b896',fontSize:13,lineHeight:1.8}},
+'• Anotar efectos en curso como recordatorio',h('br'),
+'• Intercambiar equipo libremente entre inventarios',h('br'),
+'• Aventureros con efectos adversos pueden no participar'),
+h('button',{onClick:onDone,style:{width:'100%',padding:16,borderRadius:10,border:'none',background:'linear-gradient(135deg,#b91c1c,#991b1b)',color:'#fff',fontSize:16,fontWeight:800,cursor:'pointer'}},'✅ Ir a siguiente misión'));
+return null;}
+// === APP ===
+function App(){const[scr,setScr]=useState('loading');const[camps,setCamps]=useState([]);const[camp,setCamp]=useState(null);const[advs,setAdvs]=useState([]);const[ms,setMs]=useState(null);const[sub,setSub]=useState('hub');const[selA,setSelA]=useState(null);const[addA,setAddA]=useState(false);const[newC,setNewC]=useState(false);const[nn,setNn]=useState('');const[combat,setCombat]=useState(false);
+useEffect(()=>{(async()=>{const cl=await IDB.get('cl')||[];setCamps(cl);const li=await IDB.get('li');if(li){const c=await IDB.get('c_'+li);if(c){setCamp(c);setAdvs(await IDB.get('a_'+li)||[]);setMs(await IDB.get('m_'+li));setSub('hub');setScr('campaign');return;}}setScr('home');})();},[]);
+useEffect(()=>{if(!camp)return;IDB.set('c_'+camp.id,camp);IDB.set('li',camp.id);const l=camps.map(c=>c.id===camp.id?{id:c.id,name:camp.name,currentMission:camp.currentMission,demora:camp.demora}:c);if(!l.find(c=>c.id===camp.id))l.push({id:camp.id,name:camp.name,currentMission:camp.currentMission,demora:camp.demora});setCamps(l);IDB.set('cl',l);},[camp]);
+useEffect(()=>{if(camp)IDB.set('a_'+camp.id,advs);},[advs]);
+useEffect(()=>{if(camp&&ms)IDB.set('m_'+camp.id,ms);},[ms]);
+const cC=n=>{const c=dC(n);setCamp(c);setAdvs([]);setMs(null);setSub('hub');setScr('campaign');};
+const lC=async s=>{const c=await IDB.get('c_'+s.id);if(c){setCamp(c);setAdvs(await IDB.get('a_'+s.id)||[]);setMs(await IDB.get('m_'+s.id));setSub('hub');setScr('campaign');}};
+const gH=()=>{setCamp(null);setAdvs([]);setMs(null);setScr('home');IDB.del('li');};
+const W={minHeight:'100vh',background:'linear-gradient(180deg,#0c0c1d,#121225)',fontFamily:"'Cinzel',Georgia,serif",color:'#d4b896',maxWidth:500,margin:'0 auto',paddingBottom:80};
+if(scr==='loading')return h('div',{style:{display:'flex',alignItems:'center',justifyContent:'center',height:'100vh',background:'#0c0c1d'}},h('div',{style:{textAlign:'center'}},h('div',{style:{fontSize:48}},'⚔️'),h('div',null,'Cargando...')));
+if(scr==='home')return h('div',{style:W},h('div',{style:{padding:16}},h('div',{style:{textAlign:'center',marginBottom:32,paddingTop:24}},h('div',{style:{fontSize:42,marginBottom:8}},'⚔️'),h('h1',{style:{color:'#d4b896',fontSize:26,fontWeight:800,letterSpacing:2}},'MALADUM'),h('div',{style:{color:'#9ca3af',fontSize:13,marginTop:4,letterSpacing:3,textTransform:'uppercase'}},'Companion App')),camps.length>0&&h('div',{style:{marginBottom:20}},camps.map(c=>h('button',{key:c.id,onClick:()=>lC(c),style:{width:'100%',padding:14,borderRadius:10,border:'1px solid #2d2d44',background:'#1a1a2e',marginBottom:8,cursor:'pointer',textAlign:'left'}},h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700}},c.name),h('div',{style:{display:'flex',gap:12,marginTop:6,fontSize:12,color:'#9ca3af'}},h('span',null,'Misión: '+c.currentMission),h('span',null,'Demora: '+c.demora))))),!newC?h('button',{onClick:()=>setNewC(true),style:{width:'100%',padding:16,borderRadius:10,border:'2px solid #b91c1c',background:'#b91c1c22',color:'#fca5a5',fontSize:16,fontWeight:700,cursor:'pointer'}},'+ Nueva Campaña'):h('div',{style:{background:'#1a1a2e',borderRadius:12,padding:16,border:'1px solid #2d2d44'}},h('input',{value:nn,onChange:e=>setNn(e.target.value),placeholder:'Nombre',style:{width:'100%',padding:12,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:15,boxSizing:'border-box'}}),h('div',{style:{display:'flex',gap:8,marginTop:12}},h('button',{onClick:()=>setNewC(false),style:{flex:1,padding:12,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#9ca3af',cursor:'pointer'}},'Cancelar'),h('button',{onClick:()=>{if(nn.trim()){cC(nn.trim());setNn('');setNewC(false);}},style:{flex:1,padding:12,borderRadius:8,border:'none',background:'#b91c1c',color:'#fff',fontWeight:700,cursor:'pointer'}},'Crear')))));
+const BN=h('div',{style:{position:'fixed',bottom:0,left:'50%',transform:'translateX(-50%)',width:'100%',maxWidth:500,background:'#0c0c1dee',backdropFilter:'blur(10px)',borderTop:'1px solid #2d2d44',display:'flex',zIndex:100}},[{id:'hub',i:'🏠',l:'Hub'},{id:'adventurers',i:'🛡️',l:'Grupo'},{id:'board',i:'⚔️',l:'Partida'},{id:'registry',i:'📜',l:'Registro'}].map(t=>h('button',{key:t.id,onClick:()=>{setSelA(null);setSub(t.id);},style:{flex:1,padding:'10px 0',background:'none',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}},h('span',{style:{fontSize:20}},t.i),h('span',{style:{fontSize:9,color:sub===t.id?'#d4b896':'#4b5563',fontWeight:sub===t.id?700:400}},t.l))),h('button',{onClick:gH,style:{padding:'10px 16px',background:'none',border:'none',borderLeft:'1px solid #2d2d44',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:2}},h('span',{style:{fontSize:20}},'🚪'),h('span',{style:{fontSize:9,color:'#4b5563'}},'Salir')));
+if(sub==='hub'&&camp)return h('div',{style:W},h('div',{style:{padding:16}},h('div',{style:{textAlign:'center',marginBottom:16}},h('div',{style:{color:'#9ca3af',fontSize:11,textTransform:'uppercase',letterSpacing:2}},'Campaña'),h('h2',{style:{color:'#d4b896',fontSize:20,fontWeight:800,margin:'4px 0'}},camp.name)),h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}},h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:12,border:'1px solid #2d2d44',textAlign:'center'}},h('div',{style:{color:'#9ca3af',fontSize:10,textTransform:'uppercase'}},'Misión'),h('div',{style:{color:'#d4b896',fontSize:22,fontWeight:800}},camp.currentMission==='IN'?'Interl.':camp.currentMission==='IA'?'Interl.':camp.currentMission==='MM'?'M':camp.currentMission),h('div',{style:{color:'#6b7280',fontSize:10}},M[camp.currentMission]?.nombre||'')),h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:12,border:'1px solid #2d2d44',textAlign:'center'}},h('div',{style:{color:'#9ca3af',fontSize:10,textTransform:'uppercase'}},'Demora'),h('div',{style:{color:camp.demora>=7?'#ef4444':camp.demora>=4?'#eab308':'#22c55e',fontSize:22,fontWeight:800}},camp.demora+'/12'))),advs.length>0&&h('div',{style:{marginBottom:16}},h('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},advs.map(a=>h('div',{key:a.id,style:{background:'#1a1a2e',borderRadius:8,padding:'6px 12px',border:'1px solid #2d2d44',fontSize:12}},a.nombre+(a.clase?' ('+a.clase+')':''))))),
+[{i:'⚔️',l:'Comenzar Misión',t:'mission-setup',a:true},{i:'🛡️',l:'Gestionar Grupo',t:'adventurers'},{i:'📜',l:'Registro',t:'registry'}].map(b=>h('button',{key:b.t,onClick:()=>setSub(b.t),style:{display:'flex',alignItems:'center',gap:14,padding:14,borderRadius:10,width:'100%',marginBottom:8,border:b.a?'2px solid #b91c1c':'1px solid #2d2d44',background:b.a?'#b91c1c18':'#1a1a2e',cursor:'pointer',textAlign:'left'}},h('span',{style:{fontSize:24,width:40,textAlign:'center'}},b.i),h('div',null,h('div',{style:{color:b.a?'#fca5a5':'#d4b896',fontSize:15,fontWeight:700}},b.l))))),BN);
+if(sub==='adventurers'){if(selA){const a=advs.find(x=>x.id===selA);if(!a){setSelA(null);return null;}return h('div',{style:W},h('div',{style:{padding:16}},h('button',{onClick:()=>setSelA(null),style:{background:'none',border:'none',color:'#9ca3af',fontSize:13,cursor:'pointer',padding:0,marginBottom:12}},'← Volver'),h('div',{style:{textAlign:'center',marginBottom:16}},h('h2',{style:{color:'#d4b896',fontSize:22,fontWeight:800}},a.nombre),h('div',{style:{color:'#6b7280',fontSize:13}},a.especie+' · R'+a.rango+' · '+a.coste+'₲')),h('select',{value:a.clase,onChange:e=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,clase:e.target.value}:x)),style:{width:'100%',padding:10,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:14,marginBottom:12}},h('option',{value:''},'— Sin clase —'),CL.map(c=>h('option',{key:c,value:c},c))),h('div',{style:{background:'#1a1a2e',borderRadius:12,padding:14,border:'1px solid #2d2d44',marginBottom:12}},h(PB,{label:'Salud',icon:'♥',cur:a.salud_actual,max:a.salud_max,color:'#22c55e',onChange:v=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,salud_actual:v}:x))}),h(PB,{label:'Habilidad',icon:'◆',cur:a.habilidad_actual,max:a.habilidad_max,color:'#d946ef',onChange:v=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,habilidad_actual:v}:x))}),h(PB,{label:'Magia',icon:'✦',cur:a.magia_actual,max:a.magia_max,color:'#3b82f6',onChange:v=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,magia_actual:v}:x))})),a.innatas.length>0&&h(Col,{title:'Innatas',icon:'⭐'},h('div',{style:{display:'flex',flexWrap:'wrap',gap:6}},a.innatas.map(x=>h('span',{key:x,style:{padding:'4px 10px',borderRadius:6,background:'#d946ef22',border:'1px solid #d946ef44',color:'#d946ef',fontSize:12}},x)))),h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},['experiencia','renombre'].map(f=>h('div',{key:f,style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#0f172a',borderRadius:8,padding:'8px 10px'}},h('span',{style:{color:'#9ca3af',fontSize:12}},f.slice(0,3).toUpperCase()),h('div',{style:{display:'flex',alignItems:'center',gap:6}},h('button',{onClick:()=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,[f]:Math.max(0,x[f]-1)}:x)),style:{width:28,height:28,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'−'),h('span',{style:{color:'#d4b896',fontSize:16,fontWeight:700,width:24,textAlign:'center'}},a[f]),h('button',{onClick:()=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,[f]:x[f]+1}:x)),style:{width:28,height:28,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'+'))
+))),h('button',{onClick:()=>{setAdvs(p=>p.filter(x=>x.id!==a.id));setSelA(null);},style:{width:'100%',padding:12,marginTop:12,borderRadius:8,border:'1px solid #7f1d1d',background:'#7f1d1d22',color:'#fca5a5',fontSize:13,cursor:'pointer'}},'Retirar')),BN);}
+return h('div',{style:W},h('div',{style:{padding:16}},h('div',{style:{color:'#9ca3af',fontSize:11,textTransform:'uppercase',letterSpacing:2,marginBottom:12}},'Grupo'),advs.map(a=>h('button',{key:a.id,onClick:()=>setSelA(a.id),style:{width:'100%',display:'flex',alignItems:'center',gap:12,padding:12,borderRadius:10,border:'1px solid #2d2d44',background:'#1a1a2e',marginBottom:8,cursor:'pointer',textAlign:'left'}},h('div',{style:{flex:1}},h('div',{style:{color:'#d4b896',fontSize:15,fontWeight:700}},a.nombre),h('div',{style:{color:'#6b7280',fontSize:12}},a.clase||a.especie)),h('div',{style:{display:'flex',gap:6,fontSize:12}},h('span',{style:{color:'#22c55e'}},'♥'+a.salud_actual),h('span',{style:{color:'#d946ef'}},'◆'+a.habilidad_actual),h('span',{style:{color:'#3b82f6'}},'✦'+a.magia_actual)))),!addA?h('button',{onClick:()=>setAddA(true),style:{width:'100%',padding:14,borderRadius:10,border:'2px dashed #374151',background:'transparent',color:'#9ca3af',fontSize:14,cursor:'pointer'}},'+ Añadir'):h('div',{style:{background:'#1a1a2e',borderRadius:12,padding:12,border:'1px solid #2d2d44'}},h('div',{style:{maxHeight:260,overflowY:'auto'}},BC.map(ch=>h('button',{key:ch.nombre,onClick:()=>{setAdvs(p=>[...p,dA(camp.id,ch)]);setAddA(false);},style:{width:'100%',padding:10,borderRadius:8,border:'1px solid #2d2d44',background:'#0f172a',marginBottom:4,cursor:'pointer',textAlign:'left',display:'flex',justifyContent:'space-between'}},h('div',null,h('div',{style:{color:'#d4b896',fontSize:14,fontWeight:600}},ch.nombre),h('div',{style:{color:'#6b7280',fontSize:11}},ch.especie)),h('span',{style:{color:'#9ca3af',fontSize:11}},ch.coste+'₲')))),h('button',{onClick:()=>setAddA(false),style:{width:'100%',marginTop:8,padding:10,borderRadius:8,border:'1px solid #374151',background:'transparent',color:'#9ca3af',fontSize:13,cursor:'pointer'}},'Cancelar'))),BN);}
+if(sub==='mission-setup'){const mi=M[camp.currentMission];if(!mi)return h('div',{style:W},h('div',{style:{padding:16}},'Misión no disponible'),BN);
+return h('div',{style:W},h('div',{style:{padding:16}},h('button',{onClick:()=>setSub('hub'),style:{background:'none',border:'none',color:'#9ca3af',cursor:'pointer',padding:0,marginBottom:12,fontSize:13}},'← Volver'),h('div',{style:{textAlign:'center',marginBottom:16}},h('div',{style:{color:mi.tipo==='interlude'?'#a855f7':mi.tipo==='final'?'#eab308':'#b91c1c',fontSize:11,fontWeight:700,textTransform:'uppercase',letterSpacing:2}},mi.tipo==='interlude'?'Interludio':mi.tipo==='final'?'Misión Final':mi.tipo==='optional'?'Misión Opcional':'Misión '+mi.id),h('h2',{style:{color:'#d4b896',fontSize:20,fontWeight:800,margin:'4px 0'}},mi.nombre)),h(Col,{title:'Condición',icon:'🔑',open:true},h('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6}},mi.condicion)),h(Col,{title:'Objetivo Primario',icon:'🎯',open:true},h('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6}},mi.obj1)),mi.obj2&&h(Col,{title:'Objetivo Secundario',icon:'📌'},h('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6}},mi.obj2)),mi.reglas.length>0&&h(Col,{title:'Reglas Especiales ('+mi.reglas.length+')',icon:'📖'},mi.reglas.map((r,i)=>h('div',{key:i,style:{marginBottom:8}},h('div',{style:{color:'#fca5a5',fontSize:13,fontWeight:700}},r.n),h('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6}},r.d)))),mi.tipo!=='interlude'&&h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:14,border:'1px solid #2d2d44',marginBottom:8}},h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}},h('div',{style:{background:'#0f172a',borderRadius:8,padding:10}},h('div',{style:{color:'#6b7280',fontSize:10}},'Amenaza'),h('div',{style:{color:'#d4b896',fontSize:16,fontWeight:800}},'Cara '+mi.amenaza.cara+' · '+mi.amenaza.clav)),mi.mazo&&h('div',{style:{background:'#0f172a',borderRadius:8,padding:10}},h('div',{style:{color:'#6b7280',fontSize:10}},'Mazo'),h('div',{style:{color:'#d4b896',fontSize:11}},mi.mazo)))),h(Col,{title:'Consecuencias',icon:'🔮'},h('p',{style:{color:'#d4b896',fontSize:13,lineHeight:1.6}},mi.cons_texto)),mi.tipo!=='interlude'?h('button',{onClick:()=>{setMs(dM(camp.id,camp.currentMission));setSub('board');},style:{width:'100%',padding:16,borderRadius:10,border:'none',background:'linear-gradient(135deg,#b91c1c,#991b1b)',color:'#fff',fontSize:16,fontWeight:800,cursor:'pointer',marginTop:12}},'⚔️ Comenzar'):h('button',{onClick:()=>setSub('end-mission'),style:{width:'100%',padding:16,borderRadius:10,border:'none',background:'linear-gradient(135deg,#a855f7,#7c3aed)',color:'#fff',fontSize:16,fontWeight:800,cursor:'pointer',marginTop:12}},'Resolver Interludio')),BN);}
+if(sub==='board'&&ms){const mi=M[ms.mision_id];return h('div',{style:W},combat&&h(CR,{advs,onClose:()=>setCombat(false)}),h('div',{style:{padding:16}},h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:12}},h('button',{onClick:()=>setSub('hub'),style:{background:'none',border:'none',color:'#9ca3af',cursor:'pointer',fontSize:13}},'←'),h('div',{style:{textAlign:'center'}},h('div',{style:{color:'#b91c1c',fontSize:10,fontWeight:700}},'Misión '+ms.mision_id),h('div',{style:{color:'#d4b896',fontSize:13,fontWeight:700}},mi?.nombre||'')),h('div',{style:{background:'#1a1a2e',borderRadius:8,padding:'4px 12px',border:'1px solid #2d2d44'}},h('div',{style:{color:'#6b7280',fontSize:9}},'Ronda'),h('div',{style:{color:'#d4b896',fontSize:22,fontWeight:800,textAlign:'center'}},ms.ronda))),h(TT,{level:ms.amenaza_nivel,cara:ms.amenaza_cara,onCh:v=>setMs({...ms,amenaza_nivel:v})}),h('button',{onClick:()=>{const w=ms.magia_usada;setMs({...ms,magia_usada:!w,amenaza_nivel:!w?ms.amenaza_nivel+1:Math.max(0,ms.amenaza_nivel-1)});},style:{width:'100%',padding:10,borderRadius:8,marginTop:8,marginBottom:12,border:ms.magia_usada?'2px solid #3b82f6':'1px solid #374151',background:ms.magia_usada?'#3b82f622':'#1a1a2e',color:ms.magia_usada?'#60a5fa':'#6b7280',fontSize:13,cursor:'pointer',fontWeight:600}},'✦ '+(ms.magia_usada?'Magia usada (+1)':'¿Se usó magia?')),h('div',{style:{marginBottom:12}},h(PCL,{phases:TP,steps:ms.steps||{},onTog:(p,i)=>{const k=p+'_'+i;const w=ms.steps[k];const ns={...ms.steps,[k]:!w};const st={...ms,steps:ns};if(p==='dread'&&i===0&&!w)st.amenaza_nivel++;setMs(st);}})),h('button',{onClick:()=>setMs({...ms,ronda:ms.ronda+1,amenaza_nivel:ms.amenaza_nivel+1,magia_usada:false,steps:{}}),style:{width:'100%',padding:14,borderRadius:10,border:'2px solid #eab308',background:'#eab30815',color:'#eab308',fontSize:15,fontWeight:700,cursor:'pointer',marginBottom:12}},'▶ Ronda '+(ms.ronda+1)+' (+1 Amenaza)'),h('div',{style:{color:'#9ca3af',fontSize:11,fontWeight:600,textTransform:'uppercase',letterSpacing:2,marginBottom:8}},'Aventureros'),advs.map(a=>h('div',{key:a.id,style:{background:'#1a1a2e',borderRadius:10,padding:12,border:'1px solid #2d2d44',marginBottom:8}},h('div',{style:{display:'flex',justifyContent:'space-between',marginBottom:8}},h('span',{style:{color:'#d4b896',fontSize:14,fontWeight:700}},a.nombre+' '+(a.clase?'('+a.clase+')':'')),a.status_effects.length>0&&h('span',null,[...new Set(a.status_effects)].map(s=>{const x=SE.find(y=>y.id===s);return x?h('span',{key:s,style:{fontSize:14}},x.icon):null;}))),h(PB,{label:'HP',icon:'♥',cur:a.salud_actual,max:a.salud_max,color:'#22c55e',onChange:v=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,salud_actual:v}:x))}),h(PB,{label:'SP',icon:'◆',cur:a.habilidad_actual,max:a.habilidad_max,color:'#d946ef',onChange:v=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,habilidad_actual:v}:x))}),h(PB,{label:'MP',icon:'✦',cur:a.magia_actual,max:a.magia_max,color:'#3b82f6',onChange:v=>setAdvs(p=>p.map(x=>x.id===a.id?{...x,magia_actual:v}:x))}))),h('div',{style:{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginTop:8}},h('button',{onClick:()=>setCombat(true),style:{padding:12,borderRadius:8,border:'1px solid #ef4444',background:'#ef444418',color:'#fca5a5',fontSize:12,fontWeight:700,cursor:'pointer'}},'🎲 Combate'),h('button',{onClick:()=>window.open('https://xinix.github.io/maladum/','_blank'),style:{padding:12,borderRadius:8,border:'1px solid #2d2d44',background:'#1a1a2e',color:'#d4b896',fontSize:12,cursor:'pointer'}},'📦 Items'),mi?.reglas?.length>0&&h('button',{onClick:()=>{},style:{padding:12,borderRadius:8,border:'1px solid #a855f7',background:'#a855f722',color:'#a855f7',fontSize:12,cursor:'pointer',gridColumn:'1/-1'}},h(Col,{title:'📖 Reglas Especiales'},mi.reglas.map((r,i)=>h('div',{key:i,style:{marginBottom:8}},h('div',{style:{color:'#fca5a5',fontSize:12,fontWeight:700}},r.n),h('div',{style:{color:'#d4b896',fontSize:12}},r.d))))),h('button',{onClick:()=>setSub('end-mission'),style:{padding:12,borderRadius:8,border:'1px solid #7f1d1d',background:'#7f1d1d22',color:'#fca5a5',fontSize:12,fontWeight:700,cursor:'pointer',gridColumn:'1/-1'}},'🏁 Fin de Misión'))),BN);}
+if(sub==='end-mission'&&ms)return h('div',{style:W},h(EM,{camp,ms,advs,onCamp:setCamp,onAdvs:setAdvs,onDone:()=>{setMs(null);setSub('hub');}}),BN);
+if(sub==='registry'&&camp){const rg=camp.registro;const uf=(p,v)=>{const ps=p.split('.');const nr=JSON.parse(JSON.stringify(rg));let o=nr;for(let i=0;i<ps.length-1;i++)o=o[ps[i]];o[ps[ps.length-1]]=v;setCamp({...camp,registro:nr});};
+const NF=(l,p,v)=>h('div',{style:{display:'flex',alignItems:'center',justifyContent:'space-between',background:'#0f172a',borderRadius:8,padding:'8px 12px',marginBottom:4}},h('span',{style:{color:'#d4b896',fontSize:13}},l),h('div',{style:{display:'flex',alignItems:'center',gap:6}},h('button',{onClick:()=>uf(p,Math.max(0,v-1)),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'−'),h('span',{style:{color:'#d4b896',fontSize:16,fontWeight:700,width:28,textAlign:'center'}},v),h('button',{onClick:()=>uf(p,v+1),style:{width:32,height:32,borderRadius:6,border:'1px solid #374151',background:'transparent',color:'#d4b896',fontSize:16,cursor:'pointer'}},'+')));
+const BF=(l,p,v)=>h('button',{onClick:()=>uf(p,!v),style:{display:'flex',alignItems:'center',gap:10,width:'100%',padding:'8px 12px',borderRadius:8,background:'#0f172a',border:'none',marginBottom:4,cursor:'pointer',textAlign:'left'}},h('div',{style:{width:22,height:22,borderRadius:4,border:v?'2px solid #22c55e':'2px solid #4b5563',background:v?'#22c55e22':'transparent',display:'flex',alignItems:'center',justifyContent:'center',color:'#22c55e',fontSize:14,flexShrink:0}},v?'✓':''),h('span',{style:{color:v?'#d4b896':'#6b7280',fontSize:13}},l));
+return h('div',{style:W},h('div',{style:{padding:16}},h('h2',{style:{color:'#d4b896',fontSize:18,fontWeight:800,marginBottom:16}},'📜 Registro'),h('div',{style:{background:'#1a1a2e',borderRadius:10,padding:14,border:'1px solid #2d2d44',marginBottom:12}},h('div',{style:{display:'flex',justifyContent:'space-between',alignItems:'center'}},h('div',null,h('div',{style:{color:'#9ca3af',fontSize:10,textTransform:'uppercase'}},'Demora'),h('div',{style:{color:camp.demora>=7?'#ef4444':'#eab308',fontSize:28,fontWeight:800}},camp.demora)),h('div',{style:{display:'flex',gap:6}},h('button',{onClick:()=>setCamp({...camp,demora:Math.max(0,camp.demora-1)}),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:20,cursor:'pointer'}},'−'),h('button',{onClick:()=>setCamp({...camp,demora:Math.min(12,camp.demora+1)}),style:{width:44,height:44,borderRadius:8,border:'1px solid #374151',background:'#0f172a',color:'#d4b896',fontSize:20,cursor:'pointer'}},'+')))),h(Col,{title:'Contadores',icon:'🔢',open:true},NF('Reliquias',  'reliquias_encontradas',rg.reliquias_encontradas||0),NF('Malagaunt derrotado','malagauntDerrotado',rg.malagauntDerrotado),NF('Cadáveres','cadaveres_examinados',rg.cadaveres_examinados),NF('Sepulturas','sepulturas_registradas',rg.sepulturas_registradas),NF('Invasores','invasores_escapados',rg.invasores_escapados),NF('Disminuir horda','disminuir_horda',rg.disminuir_horda),NF('Salas santif.','salas_santificadas',rg.salas_santificadas)),h(Col,{title:'Logros',icon:'🏆'},BF('Deuda de Favor','logros.deuda_de_favor',rg.logros.deuda_de_favor),BF('Rastro Esquelético','logros.rastro_esqueletico',rg.logros.rastro_esqueletico),BF('Parafernalia Oculta','logros.parafernalia_oculta',rg.logros.parafernalia_oculta),BF('Aprendiz Derrotado','logros.aprendiz_derrotado',rg.logros.aprendiz_derrotado),BF('Aprendiz Liberado','logros.aprendiz_liberado',rg.logros.aprendiz_liberado),BF('Troll Derrotado','logros.troll_derrotado_logro',rg.logros.troll_derrotado_logro),BF('Investigación en Curso','logros.investigacion_en_curso',rg.logros.investigacion_en_curso),BF('Escudo de Almas','logros.escudo_de_almas',rg.logros.escudo_de_almas)),h(Col,{title:'Recompensas',icon:'🎁'},NF('Perspectiva Táctica','recompensas.perspectiva_tactica',rg.recompensas.perspectiva_tactica),NF('Sabiduría Mazmorra','recompensas.sabiduria_de_mazmorra',rg.recompensas.sabiduria_de_mazmorra),BF('Resistencia Veneno','recompensas.resistencia_al_veneno',rg.recompensas.resistencia_al_veneno),BF('Debilidad Objetivo','recompensas.debilidad_del_objetivo',rg.recompensas.debilidad_del_objetivo),BF('Exp. Combate','recompensas.experiencia_de_combate',rg.recompensas.experiencia_de_combate),BF('Saqueo Sepulturas','recompensas.saqueo_de_sepulturas',rg.recompensas.saqueo_de_sepulturas),BF('Signos Reveladores','recompensas.signos_reveladores',rg.recompensas.signos_reveladores),BF('Ritual Consagración','recompensas.ritual_de_consagracion',rg.recompensas.ritual_de_consagracion),BF('Oferta de Ayuda','recompensas.oferta_de_ayuda',rg.recompensas.oferta_de_ayuda),BF('Contactos Gremio','recompensas.contactos_en_gremio',rg.recompensas.contactos_en_gremio)),h(Col,{title:'Puntos Mapeados',icon:'🗺️'},h('div',{style:{display:'flex',gap:8,flexWrap:'wrap'}},[1,2,3,4,5,6].map(n=>{const mp=(rg.puntos_entrada_mapeados||[]).includes(n);return h('button',{key:n,onClick:()=>uf('puntos_entrada_mapeados',mp?rg.puntos_entrada_mapeados.filter(x=>x!==n):[...rg.puntos_entrada_mapeados,n]),style:{width:44,height:44,borderRadius:8,border:mp?'2px solid #22c55e':'1px solid #374151',background:mp?'#22c55e22':'#0f172a',color:mp?'#22c55e':'#6b7280',fontSize:18,fontWeight:700,cursor:'pointer'}},n);}))),h(Col,{title:'Misión Actual',icon:'📍'},h('div',{style:{display:'flex',flexWrap:'wrap',gap:4}},Object.keys(M).map(k=>h('button',{key:k,onClick:()=>setCamp({...camp,currentMission:k}),style:{minWidth:36,height:32,borderRadius:6,fontSize:10,fontWeight:700,cursor:'pointer',padding:'0 6px',border:camp.currentMission===k?'2px solid #b91c1c':'1px solid #374151',background:camp.currentMission===k?'#b91c1c33':'#0f172a',color:camp.currentMission===k?'#fca5a5':'#6b7280'}},k==='IN'?'I.N':k==='IA'?'I.A':k==='MM'?'M':k))))),BN);}
+return h('div',{style:W},h('div',{style:{padding:40,textAlign:'center',color:'#6b7280'}},'Selecciona opción'),BN);}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
+ReactDOM.createRoot(document.getElementById('root')).render(h(App));
+</script>
 </body>
 </html>
