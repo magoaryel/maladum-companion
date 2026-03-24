@@ -221,33 +221,33 @@ let officialItemCatalogCache = null;
 let officialItemCatalogPromise = null;
 
 const SKILL_DATA = {
-  "Acrobatics": { category: "Agilidad", tags: ["move","melee"], summary: "Movilidad agresiva: derribar, reposicionarse y entrar o salir del combate con ventaja." },
+  "Acrobatics": { category: "Agilidad", tags: ["move","reaction","defense"], summary: "Movimiento acrobatico, defensa reactiva y salida agresiva del combate." },
   "Ambush": { category: "Sigilo", tags: ["ranged","reaction"], summary: "Emboscadas desde cobertura con ataques y movimientos de reaccion." },
   "Barter": { category: "Apoyo", tags: ["market"], summary: "Mejora compras, ventas y costes durante la fase de Mercado." },
   "Bombast": { category: "Ciudadano", tags: ["support"], summary: "Gestiona Renombre y ayuda a exprimir resultados de taberna y descanso." },
   "Brutal Assault": { category: "Melee", tags: ["melee"], summary: "Golpes brutales que tiran al enemigo, lanzan objetivos o encadenan ataques." },
   "Bullseye": { category: "Distancia", tags: ["ranged"], summary: "Ataques a distancia precisos que ignoran parte de la cobertura y armadura." },
   "Camouflage": { category: "Sigilo", tags: ["move","reaction"], summary: "Ocultarse en terreno o cobertura para evitar ser objetivo y disparar desde las sombras." },
-  "Combat Arts": { category: "Agilidad", tags: ["melee"], summary: "Tecnicas ofensivas de cuerpo a cuerpo con desarmes, ataques extra y combos." },
+  "Combat Arts": { category: "Agilidad", tags: ["melee"], summary: "Barridos, ataques rapidos y reacciones de posicionamiento contra enemigos trabados." },
   "Counter Shot": { category: "Distancia", tags: ["ranged","reaction","magic"], summary: "Contraataques a distancia o con hechizos fuera del turno propio." },
   "Detect": { category: "Innata", tags: ["utility","search"], summary: "Permite mirar dentro de terreno buscable y retirar trampas si gastas magia adicional." },
   "Disarm": { category: "Melee", tags: ["melee","reaction"], summary: "Quita armas al rival y puede convertir la defensa en robo o represalia." },
   "Distraction": { category: "Astucia", tags: ["control"], summary: "Fatiga, reposiciona y desorganiza al objetivo para abrir huecos tacticos." },
   "Duck for Cover": { category: "Sigilo", tags: ["reaction","defense"], summary: "Moverse a cobertura para negar o reducir ataques a distancia." },
   "Entertainer": { category: "Ciudadano", tags: ["rest","support"], summary: "Potencia descanso, bendiciones y el uso alternativo de clavijas de magia." },
-  "Fleet of Foot": { category: "Agilidad", tags: ["move"], summary: "Velocidad pura: mas movimiento, ignorar oportunidades y mejorar desplazamientos." },
+  "Fleet of Foot": { category: "Agilidad", tags: ["move"], summary: "Velocidad directa: mover mejor, ganar Rapido y atravesar zonas de amenaza." },
   "Fortified Mind": { category: "Magia", tags: ["magic","defense","reaction"], summary: "Resistencia mental y apoyo defensivo con armadura magica y autoresistencia." },
-  "Frenzy": { category: "Melee", tags: ["melee"], summary: "Aumenta 2 dados en melee y puede repartir golpes entre varios enemigos." },
+  "Frenzy": { category: "Melee", tags: ["melee"], summary: "Antes de atacar en melee, anade dados al ataque y en alto nivel desata ataques demoledores." },
   "Hard to Hit": { category: "Sigilo", tags: ["defense"], summary: "Hace muy dificil ser impactado, sobre todo a distancia o tras moverse bien." },
   "Herbalism": { category: "Ciudadano", tags: ["rest","craft"], summary: "Mejora hierbas, pociones y fabricacion improvisada durante la mision." },
-  "Impervious": { category: "Resistencia", tags: ["defense","status","reaction"], summary: "Niega estados, absorbe dano y aguanta rondas enteras bajo presion." },
+  "Impervious": { category: "Resistencia", tags: ["defense","status","reaction"], summary: "Resiste estados, gana aguante extra y puede ignorar una ronda entera de castigo." },
   "Inspiring": { category: "Apoyo", tags: ["support"], summary: "Quita terror y fatiga, y permite acciones extra al grupo cercano." },
   "Intimidating": { category: "Apoyo", tags: ["control","reaction"], summary: "Controla objetivos enemigos, los aturde o redirige su conducta." },
   "Light Fingers": { category: "Astucia", tags: ["utility","move"], summary: "Robar, saquear o desordenar inventarios enemigos sin quedarte trabado." },
   "Loremaster": { category: "Ciudadano", tags: ["search","market"], summary: "Mejora busqueda, libros, hallazgos raros y aprendizaje auxiliar del grupo." },
   "Malacyte Mastery": { category: "Magia", tags: ["magic","spell"], summary: "Permite lanzar hechizos fuera de tu acceso normal y manipular mejor el dado magico." },
   "Natural Remedies": { category: "Supervivencia", tags: ["rest","heal"], summary: "Curacion, limpieza de veneno o heridas y apoyo de descanso." },
-  "Night Vision": { category: "Innata", tags: ["utility"], summary: "Resumen pendiente de verificar en la Reference Section." },
+  "Night Vision": { category: "Innata", tags: ["utility"], summary: "Ignora todos los efectos de la Oscuridad." },
   "One with Nature": { category: "Supervivencia", tags: ["beast","utility"], summary: "Forrajea y controla bestias errantes o evita que te ataquen." },
   "Onslaught": { category: "Resistencia", tags: ["melee"], summary: "Cadena ataques, remata enemigos y convierte el avance en presion ofensiva." },
   "Persuasion": { category: "Astucia", tags: ["support"], summary: "Refuerza tiradas de Persuasion y permite doblegar objetivos a traves de impactos sociales." },
@@ -257,14 +257,14 @@ const SKILL_DATA = {
   "Ready for Anything": { category: "Supervivencia", tags: ["reaction","utility"], summary: "Acciones fuera de secuencia y respuestas flexibles en casi cualquier momento." },
   "Reflexes": { category: "Agilidad", tags: ["reaction","defense"], summary: "Reacciones defensivas y movilidad contra ataques, enganches y oportunidades." },
   "Smithing": { category: "Ciudadano", tags: ["market","craft"], summary: "Repara y fabrica equipo durante la mision o en Mercado." },
-  "Steady": { category: "Resistencia", tags: ["defense"], summary: "Mantener la linea: evita control enemigo y premia el combate sin moverte." },
+  "Steady": { category: "Resistencia", tags: ["defense"], summary: "Aguanta la posicion, resiste control y castiga a quien intenta desplazarte." },
   "Tactical Gift": { category: "Ciudadano", tags: ["support"], summary: "Comparte acciones, reorganiza la escena y hasta compra tiempo frente al Dread." },
   "Tracking": { category: "Supervivencia", tags: ["spawn","move"], summary: "Lee entradas, anticipa llegadas enemigas y suaviza terreno dificil." },
   "Training": { category: "Apoyo", tags: ["support","campaign"], summary: "Duplica acciones utiles en mision y tambien reparte XP en Avance." },
   "Trick Shot": { category: "Distancia", tags: ["ranged"], summary: "Disparos especiales con rerolls, desarmes a distancia y division de impactos." },
   "Tricks of the Trade": { category: "Astucia", tags: ["search","trap"], summary: "Abrir o cerrar, buscar mejor y anular trampas al vuelo." },
   "Unlikely Hero": { category: "Ciudadano", tags: ["campaign","utility"], summary: "Talento comodin para modificar fases de campana, upkeep y eventos." },
-  "Weapons Master": { category: "Melee", tags: ["melee","defense"], summary: "Especialista en armas: ataques mejores, escudo agil y combos de equipo." },
+  "Weapons Master": { category: "Melee", tags: ["melee","defense"], summary: "Dominio tecnico del arma: relanzar, herir y combinar armas o escudo con precision." },
 };
 
 const SKILL_ALIASES = {
@@ -272,10 +272,15 @@ const SKILL_ALIASES = {
 };
 
 const SKILL_LEVEL_DATA = {
+  "Acrobatics": [
+    "Haz una accion de Movimiento usando Trepar 2/3. Pasiva: puedes Levantarte como accion sin esfuerzo.",
+    "Reaccion: cuando eres objetivo de un ataque, tira 3 dados de combate. Cada impacto anula 1 impacto enemigo; si no queda ningun impacto, ignoras tambien todos los demas efectos del ataque. Pasiva: tratas Terreno Dificil 1 como un valor mas bajo.",
+    "Sales del combate. Cada enemigo enfrentado contigo puede ser empujado hasta 2 casillas en la direccion que elijas, deteniendose si golpea pared u obstaculo. No hay ataques de oportunidad; cada enemigo desplazado sufre un ataque de 2 dados. Luego haces un Movimiento.",
+  ],
   "Brutal Assault": [
-    "Haz una accion melee usando solo esta skill con 1 dado extra. Si el objetivo sobrevive, queda Derribado.",
-    "Lanzas a un personaje trabado contigo que no sea mas grande que tu hacia una casilla a corto alcance y con LoS. Sufre un ataque segun tu Fuerza +1 y luego queda Derribado.",
-    "Pasiva: puedes ignorar la regla Cumbersome en armas melee.",
+    "Haz un Ataque Melee usando solo Combate sin Armas con 1 dado extra. Si el objetivo sobrevive, queda Derribado.",
+    "Elige un personaje enfrentado contigo que no sea mas grande que tu y muevelo a cualquier casilla a corto alcance y con LoS. No sufre ataques de oportunidad por ese movimiento. Sufre un ataque igual a tu Combate sin Armas +1, con 1 dado extra si una pared u otra pieza de terreno impidio lanzarlo del todo. Luego queda Derribado. Si la trayectoria fue bloqueada por un personaje, ese personaje tambien sufre ese ataque. Pasiva: puedes ignorar la regla Aparatoso en armas cuerpo a cuerpo.",
+    "Haz hasta 3 acciones de Ataque Melee usando solo Combate sin Armas +1. Si un objetivo sobrevive, Derribalo. Luego haz una accion de Mover.",
   ],
   "Disarm": [
     "Reaccion: tras sufrir un ataque melee sin dano, el arma usada por el atacante se quita de su tablero y queda dispersada.",
@@ -303,14 +308,14 @@ const SKILL_LEVEL_DATA = {
     "Reaccion: en cualquier momento, mueve a cobertura ignorando ataques de oportunidad y luego ataca. Mientras no te muevas de ahi, no pueden afectarte ataques a distancia hasta el final de la ronda.",
   ],
   "Combat Arts": [
-    "Estallas fuera del combate: empujas hasta 2 casillas a los enemigos trabados contigo, cada uno sufre un ataque de 2 dados, y luego haces un Movimiento.",
-    "Barres los pies del enemigo: un objetivo en contacto queda Derribado.",
-    "Pasiva: tus ataques ganan Quickstrike. Si usas un arma que ya tenga Quickstrike, puedes hacer Dash y Ataque.",
+    "Haz un Barrido a los pies de tu enemigo. Un enemigo en contacto queda Derribado. Pasiva: los ataques de este personaje ganan Quickstrike. Si usas un arma que tambien tenga Quickstrike, puedes Desplazarte y Atacar.",
+    "Reaccion: usala cuando un enemigo enfrentado vaya a atacar, y antes de que ataque. Su ataque no tiene ningun efecto. Intercambia posiciones con el enemigo y luego haz un Movimiento sin ataques de oportunidad o una accion de Empujar con +1 dado.",
+    "Salta desde un nivel superior, aumentando tu distancia segura en 3. Todos los personajes de tu mismo tamano o menores adyacentes a tu casilla de destino quedan Derribados. Luego realiza un Ataque Melee con dados adicionales iguales a la distancia del salto.",
   ],
   "Fleet of Foot": [
-    "Haz un Movimiento. Pasiva: ganas Fast 1.",
-    "Haz un Movimiento. Ese y todos tus otros Movimientos del turno ignoran ataques de oportunidad, y haces un ataque de 1 dado a cada enemigo tocado durante tus Movimientos; si impactas tambien lo Derribas.",
-    "Reaccion: cuando un enemigo te engancha, haces un Movimiento ignorando ataques de oportunidad.",
+    "Haz una accion de Movimiento.",
+    "Pasiva: ganas Rapido 1.",
+    "Haz una accion de Movimiento. Esta y todas tus otras acciones de movimiento de este turno ignoran ataques de oportunidad. Haz un ataque de 1 dado contra cada enemigo en contacto durante tus movimientos. Cualquier impacto tambien lo Derriba, aunque no causes dano.",
   ],
   "Camouflage": [
     "Mientras estes en contacto con una pared no puedes ser objetivo el resto de la ronda.",
@@ -318,14 +323,14 @@ const SKILL_LEVEL_DATA = {
     "Mientras no estes en contacto con un enemigo no puedes ser objetivo el resto de la ronda. Ademas, durante una ronda en la que estes camuflado puedes hacer un ataque a distancia como reaccion y quedar Fatigado.",
   ],
   "Malacyte Mastery": [
-    "Lanza cualquier hechizo no prohibido de nivel 1 aunque no tengas acceso normal a el, gastando accion o accion sin esfuerzo de forma normal.",
-    "Reaccion: despues de tirar el Dado Magico, vuelvelo a tirar y elige cual de los dos resultados aplicar.",
-    "Reaccion: tras obtener un resultado Imparable en tu turno, lanzas inmediatamente un hechizo al que tengas acceso con valor de lanzamiento 2, sin gastar clavijas. Eliges el resultado del dado y luego haces una accion gratis.",
+    "Lanza cualquier hechizo de nivel 1, tengas acceso a el o no, gastando una accion o una accion sin esfuerzo de forma normal.",
+    "Reaccion: usalo despues de lanzar el Dado Magico para lanzarlo de nuevo y elegir cual de los dos resultados aplicar.",
+    "Reaccion: despues de obtener un resultado de Imparable durante tu turno, lanza inmediatamente cualquier hechizo al que tengas acceso con valor de lanzamiento 2, sin gastar clavijas. En lugar de lanzar el Dado Magico, eliges que resultado aplicar a ese hechizo. Luego realizas cualquier accion de forma gratuita. Pasiva: obtienes Regeneracion 1 de Magia y restauras 1 clavija de Magia en la Fase de Evaluacion.",
   ],
   "Power Manipulation": [
-    "Pasiva: ganas Regeneration 1 y recuperas 1 clavija de Magia en la fase de Evaluacion.",
-    "Reaccion: uso magico avanzado segun la Reference Section. La transcripcion completa de este nivel sigue pendiente de pulido, pero la habilidad mejora el lanzamiento flexible de hechizos.",
-    "Pasiva: puedes gastar cualquier numero de clavijas de Habilidad al lanzar un hechizo para aumentar su valor de lanzamiento en esa misma cantidad, incluso superando tu rango. Tambien mejora el uso de objetos con Channel.",
+    "Reaccion: usalo en cualquier momento. Lanza cualquier hechizo al que tengas acceso.",
+    "Pasiva: puedes gastar cualquier cantidad de clavijas de Habilidad al lanzar un hechizo para aumentar su valor de lanzamiento en la cantidad de clavijas gastadas. Esto puede exceder tu rango.",
+    "Fuerzas una enorme explosion de energia a traves de uno de tus objetos magicos. Elige un arma con icono Channel y decide cuantas clavijas magicas gastar, minimo 1. Realiza un ataque a distancia a corto alcance usando una cantidad de dados igual a las clavijas gastadas +3. Todos los iconos del arma elegida se aplican al ataque. Los resultados de Sobrecarga Mental del Dado Magico se ignoran sin efecto. Pasiva: cuando usas un elemento con icono Channel, resuelves los efectos como si hubieras gastado 1 clavija adicional.",
   ],
   "Light Fingers": [
     "Reaccion: tras sufrir un ataque melee sin dano, robas cualquier objeto del inventario del atacante salvo el arma usada. Si no tienes espacio, sueltas otro objeto.",
@@ -340,7 +345,7 @@ const SKILL_LEVEL_DATA = {
   "Quick Recovery": [
     "Recupera 1 Salud.",
     "Antes de activarte, elimina Aturdido, Envenenado o Herido.",
-    "Reaccion: tras ser derrotado, dejas de estarlo, recuperas 1 Salud y te levantas.",
+    "Reaccion: tras ser derrotado, dejas de estarlo, recuperas 1 Salud y te levantas. Pasiva: al comienzo de tu turno puedes eliminar 1 contador de Fatiga.",
   ],
   "Onslaught": [
     "Reaccion: despues de causar 1 o mas impactos en melee, haces otra accion de Ataque Melee.",
@@ -350,17 +355,22 @@ const SKILL_LEVEL_DATA = {
   "Fortified Mind": [
     "Usa antes de lanzar un hechizo para poder lanzarlo aunque estes trabado en combate.",
     "Reaccion: cuando un aliado a corto alcance sufra un ataque, usa tu armadura magica para negar impactos. Puedes gastar Magia tuya y del objetivo para aumentarla.",
-    "Hasta fin de ronda, los hechizos sobre aliados a corto alcance se resisten automaticamente salvo Imparable, y sus ataques pueden negarse con tu armadura magica gastando Magia del grupo cercano.",
+    "Hasta fin de ronda, los hechizos dirigidos a aliados a corto alcance se resisten automaticamente sin gastar clavijas, salvo con Imparable. Los ataques contra aliados a corta distancia pueden anularse usando tu armadura magica y clavijas tuyas y del objetivo para aumentarla. Pasiva: cuando lanzas hechizos de nivel inferior a tu rango, no te Fatigas al sufrir Sobrecarga Mental.",
   ],
   "Frenzy": [
     "Usa antes de hacer un ataque melee: anades 2 dados al ataque.",
     "Usa antes de hacer un ataque melee: anades 3 dados al ataque.",
-    "Usa antes de hacer un ataque melee: anades 4 dados. Despues de tirar, puedes repartir los impactos entre varios enemigos al alcance del arma; otros efectos del arma se aplican a todos los enemigos que sufran al menos 1 impacto.",
+    "Usa antes de hacer un ataque melee: anades 4 dados. Despues de tirar, puedes repartir los impactos entre varios enemigos dentro del alcance del arma. Cualquier otro efecto, como Contundente, se aplica a todos los enemigos que sufran al menos 1 impacto. Pasiva: ganas First Strike.",
+  ],
+  "Impervious": [
+    "Reaccion: usalo siempre que sufras un contador de estado de cualquier tipo. Descarta ese contador sin efecto.",
+    "Ganas +2 a tu defensa indicada por la carta hasta el final de la ronda.",
+    "Restaura 1 de Salud, incluso por encima de tu valor inicial si tienes espacio en el tablero, y puedes descartar cualquier contador de estado que quieras. Ademas, hasta el final de la ronda ignoras todo el dano, resistes todos los hechizos sin gastar clavijas y descartas todos los contadores de estado sin efecto.",
   ],
   "Weapons Master": [
-    "Pasiva: ganas First Strike. Cuando entras a rango melee de un enemigo, obtienes una accion gratuita inmediata de Ataque Melee.",
-    "Haz un ataque melee con un arma. Puedes repetir 1 dado de combate.",
-    "Pasiva: puedes usar Shield Block como accion sin esfuerzo. Si lo usas fuera de tu turno sigues quedando Fatigado.",
+    "Haz un Ataque Melee con un arma. Puedes volver a lanzar 1 dado. Pasiva: puedes usar Shield Block como accion sin esfuerzo; si la usas fuera de tu turno aun quedas Fatigado.",
+    "Usalo despues de realizar un ataque melee con un arma. El objetivo queda Herido y Aturdido. Pasiva: puedes realizar un Ataque Melee como accion sin esfuerzo.",
+    "Usalo despues de lanzar un ataque melee con un arma. Puedes volver a lanzar para obtener un arma diferente de tu inventario, combinando golpes y efectos; los resultados de calavera se aplican a cada arma por separado. Luego realiza una accion de Derribar con +1 dado o una accion de Movimiento ignorando ataques de oportunidad. Pasiva: al realizar ataques cuerpo a cuerpo, los resultados del dado azul son golpes criticos.",
   ],
   "Bullseye": [
     "Haz un ataque a distancia a corto alcance que no tira dados: hace 1 impacto automatico e ignora cobertura.",
@@ -432,6 +442,11 @@ const SKILL_LEVEL_DATA = {
     "Reaccion: cuando un enemigo te engancha, haces un Movimiento ignorando ataques de oportunidad y un Ataque, en cualquier orden. Pasiva: puedes usar Parry tambien contra ataques a distancia.",
     "Reaccion: cuando un enemigo te engancha, el atacante queda Aturdido; luego haces dos Movimientos ignorando ataques de oportunidad y un Ataque, en cualquier orden. Pasiva: puedes ignorar un ataque de oportunidad usando una accion sin esfuerzo.",
   ],
+  "Steady": [
+    "Hasta el final de la ronda no puedes quedar Aturdido, Derribado ni Empujado.",
+    "No puedes moverte este turno, pero ganas 1 dado extra en todos tus ataques y Empujes hasta el final de la ronda. Pasiva: puedes ignorar la regla Aparatoso en cualquier turno en el que te muevas.",
+    "Hasta el final de la ronda no puedes quedar Fatigado, Aturdido, Empujado ni Derribado. Los enemigos no pueden salir del contacto contigo salvo que tu lo permitas. Despues de cualquier ataque cuerpo a cuerpo contra ti, puedes hacer una accion gratuita de Empujar al atacante. Si un enemigo se mueve dentro de 2 casillas, puedes hacer un desplazamiento gratuito para enfrentarlo y convertirte en su objetivo si aun no lo eres.",
+  ],
   "Herbalism": [
     "Reaccion: cuando un aliado cercano haga un ataque, puedes anadir Poison; si ya tenia Poison, anades Vicious.",
     "Pasiva: puedes aplicar Herbs, Fungus o Minerals como accion normal en vez de solo durante Descanso.",
@@ -456,16 +471,16 @@ const SKILL_LEVEL_DATA = {
 
 const ATTRIBUTE_DATA = {
   melee: { label: "Melee", summary: "Puede usarse como arma de cuerpo a cuerpo." },
-  balanced: { label: "Balanced", summary: "Si esta arma se lanza, tira 1 dado extra." },
-  quickstrike: { label: "Quickstrike", summary: "Si esta arma saca critico en un ataque melee, despues de resolver ese ataque puedes hacer gratis un Dash o un nuevo ataque con esta u otra arma." },
-  first_strike: { label: "First Strike", summary: "Cuando entras a rango melee de un enemigo, incluso al aparecer o abrirse una puerta, obtienes un Ataque Melee gratuito inmediato." },
-  parry: { label: "Parry", summary: "Cuando el usuario sufre un ataque melee, puedes tirar 1 dado de combate. Cada impacto anula 1 impacto enemigo como si fuera armadura fisica. Luego quedas Fatigado." },
+  balanced: { label: "Balanced", summary: "Equilibrada: esta arma lanza 1 dado extra cuando se lanza." },
+  quickstrike: { label: "Quickstrike", summary: "Ataque Rapido: si esta arma obtiene un golpe critico durante un ataque cuerpo a cuerpo, despues de resolver ese ataque puedes Desplazarte o realizar otro ataque gratis con esta u otra arma." },
+  first_strike: { label: "First Strike", summary: "Danar Primero: cuando este personaje entra dentro del alcance cuerpo a cuerpo de un enemigo, incluso al aparecer o al abrirse una puerta, obtiene una accion de Ataque Melee gratuita e inmediata." },
+  parry: { label: "Parry", summary: "Parada: cuando el usuario de este objeto es objetivo de un ataque cuerpo a cuerpo, puedes tirar 1 dado de combate. Cada impacto anula 1 impacto enemigo como si fuera armadura fisica. Luego quedas Fatigado." },
   reach: { label: "Reach", summary: "Permite atacar con mas alcance que un arma cuerpo a cuerpo normal." },
   channel: { label: "Channel", summary: "Necesita gastar al menos 1 clavija de Magia para activar o mejorar su efecto." },
   burning: { label: "Burning", summary: "En un critico puede aplicar Quemado; ademas se considera fuente de fuego." },
   sharp: { label: "Sharp", summary: "Si esta arma saca critico, el objetivo queda Herido aunque no haya sufrido dano." },
   forceful_melee: { label: "Forceful Melee", summary: "Golpe cuerpo a cuerpo con gran empuje o potencia." },
-  shield_block: { label: "Shield Block", summary: "Puedes gastar una accion para alzar el escudo y ganar su defensa hasta que hagas otra accion que no sea Mover o Dash, sufras dano o quedes Aturdido. Si te atacan fuera de tu turno puedes alzarlo antes de tirar dados, pero luego quedas Fatigado." },
+  shield_block: { label: "Shield Block", summary: "Bloqueo de Escudo: puedes gastar una accion para levantar el escudo y obtener los efectos mostrados en su icono. La ficha vuelve al inventario cuando haces una accion que no sea Mover o Desplazarte, sufres dano o quedas Aturdido. Fuera de tu turno puedes levantarlo antes del ataque, pero despues quedas Fatigado. Solo puede levantarse 1 escudo a la vez." },
   armour: { label: "Armour", summary: "Otorga proteccion adicional." },
   camouflage: { label: "Camouflage", summary: "Solo puede ser objetivo de ataques a distancia desde corto alcance." },
   ammo_arrow: { label: "Ammo Arrow", summary: "Necesita flechas para dispararse." },
@@ -488,10 +503,18 @@ const ATTRIBUTE_DATA = {
 };
 
 const TERM_GLOSSARY = [
-  { term: "First Strike", summary: "Cuando entras a rango melee de un enemigo, obtienes un Ataque Melee gratuito inmediato." },
-  { term: "Parry", summary: "Cuando sufres un ataque melee, puedes tirar 1 dado de combate; cada impacto anula 1 impacto enemigo y luego quedas Fatigado." },
-  { term: "Shield Block", summary: "Puedes alzar el escudo para ganar su defensa; fuera de tu turno puedes hacerlo antes del ataque, pero luego quedas Fatigado." },
-  { term: "Quickstrike", summary: "Si un ataque melee con esta regla saca critico, despues puedes hacer gratis un Dash o un nuevo ataque." },
+  { term: "First Strike", summary: "Danar Primero: al entrar en alcance melee de un enemigo obtienes un Ataque Melee gratuito inmediato." },
+  { term: "Parry", summary: "Parada: tiras 1 dado de combate; cada impacto anula 1 impacto enemigo como armadura fisica y despues quedas Fatigado." },
+  { term: "Shield Block", summary: "Bloqueo de Escudo: puedes levantar el escudo para aplicar su defensa; fuera de tu turno puedes hacerlo antes del ataque, pero luego quedas Fatigado." },
+  { term: "Quickstrike", summary: "Ataque Rapido: si el ataque melee obtiene un critico, puedes Desplazarte o hacer otro ataque gratis despues de resolver el primero." },
+  { term: "Ataque Rapido", summary: "Si el ataque melee obtiene un critico, puedes Desplazarte o hacer otro ataque gratis despues de resolver el primero." },
+  { term: "Danar Primero", summary: "Al entrar en alcance melee de un enemigo obtienes un Ataque Melee gratuito inmediato." },
+  { term: "Parada", summary: "Tiras 1 dado de combate; cada impacto anula 1 impacto enemigo como armadura fisica y despues quedas Fatigado." },
+  { term: "Bloqueo de Escudo", summary: "Puedes levantar el escudo para aplicar su defensa; fuera de tu turno puedes hacerlo antes del ataque, pero luego quedas Fatigado." },
+  { term: "Equilibrada", summary: "Si el arma se lanza, tira 1 dado extra." },
+  { term: "Vision Nocturna", summary: "Ignoras todos los efectos de la Oscuridad." },
+  { term: "Rapido", summary: "Al realizar una accion de Movimiento, este personaje puede mover X casillas adicionales. Si lo obtiene de varias fuentes, usa solo el valor mas alto." },
+  { term: "Relanzamiento Defensivo", summary: "Puedes obligar a repetir 1 solo dado de cualquier ataque contra ti, salvo si el ataque ignora la armadura fisica. Los criticos no se repiten." },
   { term: "Fatigado", summary: "Estado de Fatiga. Varias habilidades lo ponen o lo limpian; el personaje queda mas limitado hasta recuperarse." },
   { term: "Fatigued", summary: "Estado de Fatiga. Varias habilidades lo ponen o lo limpian; el personaje queda mas limitado hasta recuperarse." },
   { term: "Stunned", summary: "Estado de Aturdido. Normalmente impide actuar con normalidad hasta que se elimine." },
