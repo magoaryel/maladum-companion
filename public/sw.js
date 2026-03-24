@@ -1,8 +1,9 @@
-const CACHE_NAME = 'maladum-v4';
+const CACHE_NAME = 'maladum-v5';
 const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/crafting-data.json',
 ];
 
 self.addEventListener('install', (event) => {
