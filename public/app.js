@@ -813,6 +813,17 @@ function normalizeSkillLookupName(name) {
   return raw;
 }
 
+function parseSkillWithLevel(raw, fallbackLevel = 1) {
+  const value = String(raw || "").trim();
+  const match = value.match(/^(.*?)(?:\s+(\d+))?$/);
+  const baseName = normalizeSkillLookupName(match?.[1] || value);
+  const parsedLevel = Number(match?.[2]);
+  return {
+    name: baseName,
+    level: Math.max(1, Number.isFinite(parsedLevel) && parsedLevel > 0 ? parsedLevel : fallbackLevel),
+  };
+}
+
 function getSkillEntry(name, level, source) {
   const skillName = normalizeSkillLookupName(name);
   const normalizedLevel = Math.max(1, Number(level) || 1);
@@ -868,6 +879,20 @@ function getGrantedSkillsFromItem(item) {
   }).filter(Boolean);
 }
 
+function getInnateSkillEntries(adv) {
+  return (normalizeAdventurer(adv).innatas || []).map(raw => {
+    const parsed = parseSkillWithLevel(raw, 1);
+    return getSkillEntry(parsed.name, parsed.level, "Innata");
+  });
+}
+
+function getInnateSkillLevel(adv, skillName) {
+  const target = normalizeSkillLookupName(skillName);
+  return getInnateSkillEntries(adv)
+    .filter(entry => normalizeSkillLookupName(entry.name) === target)
+    .reduce((max, entry) => Math.max(max, Number(entry.level) || 0), 0);
+}
+
 function getGlossaryMatches(text) {
   const source = String(text || "");
   const lowered = source.toLowerCase();
@@ -878,7 +903,7 @@ function getGlossaryMatches(text) {
 function getLearnedSkills(adv) {
   const normalized = normalizeAdventurer(adv);
   const learned = [];
-  (normalized.innatas || []).forEach(name => learned.push(getSkillEntry(name, 1, "Innata")));
+  getInnateSkillEntries(normalized).forEach(entry => learned.push(entry));
   Object.entries(normalized.clase_habilidades || {}).forEach(([name, level]) => {
     if ((Number(level) || 0) > 0) learned.push(getSkillEntry(name, level, normalized.clase || "Clase"));
   });
@@ -3195,14 +3220,16 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
         <Collapsible title="Habilidades Innatas" icon="INN">
           <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>Toca una habilidad para ver que hace.</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {normalized.innatas.map(h => (
-              <button key={h} onClick={() => toggleSkillInfo(h, getSkillEntry(h, 1, "Innata").summary, "Innata")}
-                title={getSkillEntry(h, 1, "Innata").summary}
-                style={{ padding: "4px 10px", borderRadius: 6, background: activeSkillInfo?.name === h ? "#eab30833" : "#eab30822",
-                  border: "1px solid #eab30844", color: "#eab308", fontSize: 12, cursor: "pointer" }}>{h}</button>
+            {getInnateSkillEntries(normalized).map(entry => (
+              <button key={entry.name + "_" + entry.level} onClick={() => toggleSkillInfo(entry.name, entry.summary, "Innata")}
+                title={entry.summary}
+                style={{ padding: "4px 10px", borderRadius: 6, background: activeSkillInfo?.name === entry.name ? "#eab30833" : "#eab30822",
+                  border: "1px solid #eab30844", color: "#eab308", fontSize: 12, cursor: "pointer" }}>
+                {entry.name} {entry.level > 1 ? `N${entry.level}` : ""}
+              </button>
             ))}
           </div>
-          {activeSkillInfo && normalized.innatas.includes(activeSkillInfo.name) && (
+          {activeSkillInfo && getInnateSkillEntries(normalized).some(entry => entry.name === activeSkillInfo.name) && (
             <div style={{ marginTop: 8, background: "#0f172a", border: "1px solid #2d2d44", borderRadius: 8, padding: 10 }}>
               <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{activeSkillInfo.name}</div>
               <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{activeSkillInfo.summary}</div>
@@ -3243,10 +3270,12 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(CLASS_DATA[normalized.clase]?.skills || []).map(skillName => {
               const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
+              const innateLevel = getInnateSkillLevel(normalized, skillName);
               const meta = SKILL_DATA[skillName] || {};
               const levelDetails = getSkillLevelDetails(skillName);
-              const currentDetail = level > 0
-                ? (levelDetails[Math.min(level, levelDetails.length) - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.")
+              const currentShownLevel = Math.max(level, innateLevel);
+              const currentDetail = currentShownLevel > 0
+                ? (levelDetails[Math.min(currentShownLevel, levelDetails.length) - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.")
                 : (levelDetails[0] || meta.summary || "Resumen pendiente de verificar en manual oficial.");
               return (
                 <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
@@ -3258,12 +3287,18 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                           style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>{skillName}</button>
                         {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
                         <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
+                        {innateLevel > 0 && <span style={{ fontSize: 11, color: "#facc15", padding: "2px 8px", borderRadius: 999, border: "1px solid #a16207" }}>Innata {innateLevel}</span>}
                       </div>
                       <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{currentDetail}</div>
+                      {innateLevel > 0 && (
+                        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                          Ya la tienes por habilidad innata a nivel {innateLevel}. Esta pista sigue reflejando solo la PX invertida en la clase.
+                        </div>
+                      )}
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
                         {[1, 2, 3].map(n => {
-                          const unlocked = level >= n;
-                          const isNext = n === level + 1;
+                          const unlocked = currentShownLevel >= n;
+                          const isNext = n === currentShownLevel + 1;
                           const stateLabel = unlocked ? "Activa" : (isNext ? "Siguiente" : "Desactivada");
                           const text = levelDetails[n - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.";
                             return (
