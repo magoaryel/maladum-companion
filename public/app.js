@@ -202,7 +202,7 @@ function defaultCampaign(name) {
     id: "camp_" + Date.now(),
     name,
     createdAt: new Date().toISOString(),
-    currentMission: "A",
+    currentMission: "Intro",
     demora: 0,
     registro: {
       malagauntDerrotado: 0, troll_derrotado: false,
@@ -577,9 +577,13 @@ function NavButton({ icon, label, sub, onClick, accent }) {
 }
 
 // --- ADVENTURER MANAGEMENT ---
-function AdventurersScreen({ adventurers, campaign, onUpdate, onAdd, onRemove }) {
+function AdventurersScreen({ adventurers, campaign, onUpdate, onAdd, onRemove, onDone }) {
   const [selected, setSelected] = useState(null);
-  const [showAdd, setShowAdd] = useState(false);
+  const [showAdd, setShowAdd] = useState(adventurers.length === 0);
+
+  useEffect(() => {
+    if (adventurers.length === 0) setShowAdd(true);
+  }, [adventurers.length]);
 
   if (selected) {
     const adv = adventurers.find(a => a.id === selected);
@@ -597,6 +601,14 @@ function AdventurersScreen({ adventurers, campaign, onUpdate, onAdd, onRemove })
       <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
         Aventureros del Grupo
       </div>
+      {adventurers.length === 0 && (
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+          <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Arma tu grupo inicial</div>
+          <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>
+            Añade aventureros, revisa su ficha y pulsa "Grupo finalizado" cuando termines.
+          </div>
+        </div>
+      )}
       {adventurers.map(a => (
         <button key={a.id} onClick={() => setSelected(a.id)}
           style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 12,
@@ -625,7 +637,11 @@ function AdventurersScreen({ adventurers, campaign, onUpdate, onAdd, onRemove })
           <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Selecciona personaje</div>
           <div style={{ maxHeight: 300, overflowY: "auto" }}>
             {BASE_CHARACTERS.map(ch => (
-              <button key={ch.nombre} onClick={() => { onAdd(ch); setShowAdd(false); }}
+              <button key={ch.nombre} onClick={() => {
+                const created = onAdd(ch);
+                setShowAdd(false);
+                if (created?.id) setSelected(created.id);
+              }}
                 style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #2d2d44",
                   background: "#0f172a", marginBottom: 4, cursor: "pointer", textAlign: "left",
                   display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -642,6 +658,15 @@ function AdventurersScreen({ adventurers, campaign, onUpdate, onAdd, onRemove })
               background: "transparent", color: "#9ca3af", fontSize: 13, cursor: "pointer" }}>Cancelar</button>
         </div>
       )}
+
+      <button onClick={onDone} disabled={adventurers.length === 0}
+        style={{ width: "100%", padding: 14, marginTop: 12, borderRadius: 10,
+          border: adventurers.length === 0 ? "1px solid #374151" : "2px solid #b91c1c",
+          background: adventurers.length === 0 ? "#111827" : "#b91c1c22",
+          color: adventurers.length === 0 ? "#4b5563" : "#fca5a5",
+          fontSize: 14, fontWeight: 700, cursor: adventurers.length === 0 ? "not-allowed" : "pointer" }}>
+        Grupo finalizado
+      </button>
     </div>
   );
 }
@@ -717,6 +742,12 @@ function AdventurerSheet({ adv, onUpdate, onBack, onRemove }) {
           ))}
         </div>
       </Collapsible>
+
+      <button onClick={onBack}
+        style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "2px solid #b91c1c",
+          background: "#b91c1c22", color: "#fca5a5", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        Confirmar aventurero
+      </button>
 
       <button onClick={onRemove}
         style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "1px solid #7f1d1d",
@@ -1136,7 +1167,7 @@ function App() {
     setCampaign(c);
     setAdventurers([]);
     setMissionState(null);
-    setSubScreen("hub");
+    setSubScreen("adventurers");
     setScreen("campaign");
   };
 
@@ -1156,6 +1187,7 @@ function App() {
   const addAdventurer = (charData) => {
     const adv = defaultAdventurer(campaign.id, charData);
     setAdventurers(prev => [...prev, adv]);
+    return adv;
   };
 
   const updateAdventurer = (updated) => {
@@ -1217,7 +1249,8 @@ function App() {
 
       {screen === "campaign" && subScreen === "adventurers" && (
         <AdventurersScreen campaign={campaign} adventurers={adventurers}
-          onUpdate={updateAdventurer} onAdd={addAdventurer} onRemove={removeAdventurer}/>
+          onUpdate={updateAdventurer} onAdd={addAdventurer} onRemove={removeAdventurer}
+          onDone={() => setSubScreen("hub")}/>
       )}
 
       {screen === "campaign" && subScreen === "mission-setup" && (
