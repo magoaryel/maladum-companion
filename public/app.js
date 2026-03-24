@@ -267,6 +267,81 @@ const SKILL_DATA = {
   "Weapons Master": { category: "Melee", tags: ["melee","defense"], summary: "Especialista en armas: ataques mejores, escudo agil y combos de equipo." },
 };
 
+const SKILL_ALIASES = {
+  nature: "One with Nature",
+};
+
+const SKILL_LEVEL_DATA = {
+  "Barter": [
+    "Mercado: compra un objeto de cualquier valor, o roba un raro adicional, o vende un objeto por su valor de compra hasta 10 x tu rango.",
+    "Mercado: reduce hasta 2 al precio de compra o suma 2 al de venta en hasta tres objetos, en cualquier combinacion.",
+    "Pasiva: reduce hasta 2 el coste de un objeto o del mantenimiento de un aventurero en cada Mercado. Ademas, los beneficios de objetivos de mision aumentan un 50%, redondeando hacia arriba.",
+  ],
+  "Distraction": [
+    "Un personaje a media distancia y en LoS queda Fatigado.",
+    "Haz un ataque a distancia o lanza un objeto. El objetivo, u otro enemigo a corto alcance de este, sufre dos Fatigas ademas del dano. Luego haces un Movimiento.",
+    "Puedes mover a un personaje a media distancia y en LoS sin ponerlo en dano directo; sufre dos Fatigas. Antes o despues puedes hacer tu propio Movimiento y Ataque en cualquier orden.",
+  ],
+  "Persuasion": [
+    "Antes de una tirada de Persuadir, anade dos impactos automaticos.",
+    "Haz una accion de Persuadir contra un aventurero de otra partida para disuadirle. Sufre una Fatiga por cada impacto no bloqueado.",
+    "Pasiva: ganas un dado extra al Persuadir. Ademas puedes hacer una accion de Persuadir contra cualquier personaje con tres impactos automaticos; los aventureros de otras partidas no se uniran a ti.",
+  ],
+  "Duck for Cover": [
+    "Reaccion: tras ser objetivo de un ataque a distancia o hechizo, si estas a 4 casillas o menos de cobertura, te mueves a cobertura.",
+    "Reaccion: como nivel 1, pero ignoras todos los efectos de ese ataque.",
+    "Reaccion: en cualquier momento, mueve a cobertura ignorando ataques de oportunidad y luego ataca. Mientras no te muevas de ahi, no pueden afectarte ataques a distancia hasta el final de la ronda.",
+  ],
+  "Camouflage": [
+    "Mientras estes en contacto con una pared no puedes ser objetivo el resto de la ronda.",
+    "Haz un Movimiento o Ataque a Distancia. Mientras estes en contacto con terreno no puedes ser objetivo el resto de la ronda.",
+    "Mientras no estes en contacto con un enemigo no puedes ser objetivo el resto de la ronda. Ademas, durante una ronda en la que estes camuflado puedes hacer un ataque a distancia como reaccion y quedar Fatigado.",
+  ],
+  "Malacyte Mastery": [
+    "Lanza cualquier hechizo no prohibido de nivel 1 aunque no tengas acceso normal a el, gastando accion o accion sin esfuerzo de forma normal.",
+    "Reaccion: despues de tirar el Dado Magico, vuelvelo a tirar y elige cual de los dos resultados aplicar.",
+    "Reaccion: tras obtener un resultado Imparable en tu turno, lanzas inmediatamente un hechizo al que tengas acceso con valor de lanzamiento 2, sin gastar clavijas. Eliges el resultado del dado y luego haces una accion gratis.",
+  ],
+  "Power Manipulation": [
+    "Pasiva: ganas Regeneration 1 y recuperas 1 clavija de Magia en la fase de Evaluacion.",
+    "Reaccion: uso magico avanzado segun la Reference Section. La transcripcion completa de este nivel sigue pendiente de pulido, pero la habilidad mejora el lanzamiento flexible de hechizos.",
+    "Pasiva: puedes gastar cualquier numero de clavijas de Habilidad al lanzar un hechizo para aumentar su valor de lanzamiento en esa misma cantidad, incluso superando tu rango. Tambien mejora el uso de objetos con Channel.",
+  ],
+};
+
+const ATTRIBUTE_DATA = {
+  melee: { label: "Melee", summary: "Puede usarse como arma de cuerpo a cuerpo." },
+  balanced: { label: "Balanced", summary: "Cuando se lanza, esta arma tira +1 dado." },
+  quickstrike: { label: "Quickstrike", summary: "Golpea muy rapido; atributo ofensivo de arma pensado para resolver ataques rapidos antes de que el rival estabilice la situacion." },
+  first_strike: { label: "First Strike", summary: "Ventaja al golpear primero en el intercambio." },
+  parry: { label: "Parry", summary: "Ayuda a desviar o bloquear ataques en combate cercano." },
+  reach: { label: "Reach", summary: "Permite atacar con mas alcance que un arma cuerpo a cuerpo normal." },
+  channel: { label: "Channel", summary: "Necesita gastar al menos 1 clavija de Magia para activar o mejorar su efecto." },
+  burning: { label: "Burning", summary: "En un critico puede aplicar Quemado; ademas se considera fuente de fuego." },
+  sharp: { label: "Sharp", summary: "Arma cortante con mejor capacidad ofensiva." },
+  forceful_melee: { label: "Forceful Melee", summary: "Golpe cuerpo a cuerpo con gran empuje o potencia." },
+  shield_block: { label: "Shield Block", summary: "Aporta capacidad defensiva tipo escudo." },
+  armour: { label: "Armour", summary: "Otorga proteccion adicional." },
+  camouflage: { label: "Camouflage", summary: "Solo puede ser objetivo de ataques a distancia desde corto alcance." },
+  ammo_arrow: { label: "Ammo Arrow", summary: "Necesita flechas para dispararse." },
+  ammo_bullet: { label: "Ammo Bullet", summary: "Necesita municion de bala para dispararse." },
+  restore_health: { label: "Restore Health", summary: "Recupera Salud." },
+  restore_magic: { label: "Restore Magic", summary: "Recupera Magia." },
+  restore_skill: { label: "Restore Skill", summary: "Recupera Habilidad." },
+  restore_action: { label: "Restore Action", summary: "Permite recuperar o ganar una accion." },
+  discard: { label: "Discard", summary: "Normalmente se descarta tras usarse." },
+  effortless: { label: "Effortless", summary: "Puede usarse como accion sin esfuerzo." },
+  cleave: { label: "Cleave", summary: "Si derrotas a un enemigo en melee puedes encadenar el mismo ataque contra otro objetivo valido reduciendo impactos." },
+  entangling: { label: "Entangling", summary: "Ayuda a trabar o limitar el movimiento del objetivo." },
+  piercing: { label: "Piercing", summary: "Mejora la capacidad de atravesar defensas." },
+  range_plus_1: { label: "Range +1", summary: "Aumenta en 1 el alcance del arma o efecto." },
+  magical_armour: { label: "Magical Armour", summary: "Aporta defensa magica." },
+  magical_armour_1: { label: "Magical Armour 1", summary: "Aporta defensa magica de nivel 1." },
+  magical_armour_2: { label: "Magical Armour 2", summary: "Aporta defensa magica de nivel 2." },
+  vicious: { label: "Vicious", summary: "Hace el ataque especialmente peligroso o castigador." },
+  retaliation: { label: "Retaliation", summary: "Puede devolver dano o efectos al atacante." },
+};
+
 const MISSIONS = {
   Intro: {
     id: "Intro", nombre: "De Moneda y Gloria", pagina: 4,
@@ -567,12 +642,56 @@ function getSkillEntry(name, level, source) {
   };
 }
 
+function resolveSkillNameFromToken(token) {
+  const cleaned = String(token || "").replace(/^skill_/, "").replace(/_level_/g, "_").replace(/_\d+$/, "");
+  const alias = SKILL_ALIASES[cleaned];
+  if (alias) return alias;
+  const normalized = cleaned.replace(/_/g, " ");
+  return Object.keys(SKILL_DATA).find(name => slugKey(name) === slugKey(normalized)) || titleCaseToken(normalized);
+}
+
+function getSkillLevelDetails(name) {
+  return SKILL_LEVEL_DATA[name] || [];
+}
+
+function getAttributeEntry(attr) {
+  if (!attr) return null;
+  const skillMatch = String(attr).match(/^skill_(.+?)(?:_level)?_(\d+)$/);
+  if (skillMatch) {
+    const skillName = resolveSkillNameFromToken("skill_" + skillMatch[1]);
+    const level = Number(skillMatch[2]) || 1;
+    return {
+      label: `Skill ${skillName} ${level}`,
+      summary: `Otorga ${skillName} nivel ${level} mientras el objeto este equipado.`,
+    };
+  }
+  const meta = ATTRIBUTE_DATA[attr];
+  if (meta) return meta;
+  return {
+    label: titleCaseToken(attr),
+    summary: "Atributo oficial del catalogo. Su detalle completo aun no esta transcrito en esta app.",
+  };
+}
+
+function getGrantedSkillsFromItem(item) {
+  return (item?.attributes || []).map(attr => {
+    const match = String(attr).match(/^skill_(.+?)(?:_level)?_(\d+)$/);
+    if (!match) return null;
+    const name = resolveSkillNameFromToken("skill_" + match[1]);
+    const level = Number(match[2]) || 1;
+    return getSkillEntry(name, level, item?.name ? `Item: ${item.name}` : "Item");
+  }).filter(Boolean);
+}
+
 function getLearnedSkills(adv) {
   const normalized = normalizeAdventurer(adv);
   const learned = [];
   (normalized.innatas || []).forEach(name => learned.push(getSkillEntry(name, 1, "Innata")));
   Object.entries(normalized.clase_habilidades || {}).forEach(([name, level]) => {
     if ((Number(level) || 0) > 0) learned.push(getSkillEntry(name, level, normalized.clase || "Clase"));
+  });
+  (normalized.inventario || []).filter(item => item.equipped).forEach(item => {
+    getGrantedSkillsFromItem(item).forEach(skill => learned.push(skill));
   });
   return learned;
 }
@@ -1203,9 +1322,22 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                   </div>
                   <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 6 }}>{summarizeCatalogEntry(item)}</div>
                   {!!item.attributes?.length && (
-                    <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5 }}>
-                      {item.attributes.slice(0, 6).map(titleCaseToken).join(", ")}
-                    </div>
+                    <details style={{ marginTop: 6 }}>
+                      <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>
+                        Ver atributos y efectos
+                      </summary>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                        {item.attributes.slice(0, 8).map(attr => {
+                          const meta = getAttributeEntry(attr);
+                          return (
+                            <div key={attr} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                              <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{meta?.label || titleCaseToken(attr)}</div>
+                              <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{meta?.summary || "Detalle pendiente."}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </details>
                   )}
                 </div>
               ))}
@@ -1237,6 +1369,23 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                 <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
                   {summarizeCatalogEntry(item)}
                 </div>
+              )}
+
+              {!!item.attributes?.length && (
+                <details style={{ marginBottom: 8 }}>
+                  <summary style={{ color: "#9ca3af", fontSize: 11, cursor: "pointer" }}>Atributos y habilidades del objeto</summary>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                    {item.attributes.map(attr => {
+                      const meta = getAttributeEntry(attr);
+                      return (
+                        <div key={attr} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                          <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{meta?.label || titleCaseToken(attr)}</div>
+                          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{meta?.summary || "Detalle pendiente."}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
               )}
 
               <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
@@ -1442,6 +1591,145 @@ function SpellbookEditor({ adv, onUpdate }) {
   );
 }
 
+SpellbookEditor = function SpellbookEditorPatched({ adv, onUpdate }) {
+  const [draft, setDraft] = useState({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
+  const rank = Math.max(1, Number(adv?.rango) || 1);
+  const remainingXP = getRemainingXP(adv);
+  const officialOptions = getAvailableOfficialSpells(adv);
+  const selectedOfficial = officialOptions.find(spell => spell.id === draft.spellId) || null;
+
+  const resetDraft = () => setDraft({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
+
+  const addOfficial = () => {
+    if (!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)) return;
+    onUpdate({
+      ...adv,
+      hechizos: [...getKnownSpells(adv), normalizeSpell(selectedOfficial)],
+    });
+    resetDraft();
+  };
+
+  const addManual = () => {
+    const name = draft.name.trim();
+    if (!name || !canLearnSpell(adv, draft.level)) return;
+    onUpdate({
+      ...adv,
+      hechizos: [...getKnownSpells(adv), normalizeSpell({
+        id: "sp_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name,
+        level: Math.max(1, Math.min(rank, Number(draft.level) || 1)),
+        school: draft.school || "Manual",
+        notes: draft.notes.trim(),
+      })],
+    });
+    resetDraft();
+  };
+
+  const removeSpell = (spellId) => {
+    onUpdate({
+      ...adv,
+      hechizos: getKnownSpells(adv).filter(spell => spell.id !== spellId),
+    });
+  };
+
+  return (
+    <Collapsible title="Libro de Hechizos" icon="SPL" defaultOpen>
+      <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
+        Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo es tu rango actual.
+      </div>
+      <div style={{ color: "#c4b5fd", fontSize: 12, marginBottom: 10 }}>
+        Rango actual: {rank} | PX libre: {remainingXP}
+      </div>
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Hechizos oficiales de tu clase</div>
+        <select value={draft.spellId} onChange={e => setDraft(prev => ({ ...prev, spellId: e.target.value }))}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8 }}>
+          <option value="">{officialOptions.length ? "Selecciona un hechizo oficial" : "No hay hechizos oficiales disponibles a este rango"}</option>
+          {officialOptions.map(spell => (
+            <option key={spell.id} value={spell.id}>Nivel {spell.level} | {spell.name}</option>
+          ))}
+        </select>
+        {selectedOfficial && (
+          <div style={{ background: "#0f172a", borderRadius: 8, border: "1px solid #2d2d44", padding: 10, marginBottom: 8 }}>
+            <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+              Nivel {selectedOfficial.level} | {selectedOfficial.name}
+            </div>
+            <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: selectedOfficial.notes ? 6 : 0, lineHeight: 1.5 }}>
+              {selectedOfficial.summary || "Texto oficial pendiente de transcribir."}
+            </div>
+            {selectedOfficial.notes && (
+              <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{selectedOfficial.notes}</div>
+            )}
+          </div>
+        )}
+        <details style={{ marginBottom: 8 }}>
+          <summary style={{ color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>Vista rapida de hechizos disponibles</summary>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
+            {officialOptions.map(spell => (
+              <button key={spell.id} onClick={() => setDraft(prev => ({ ...prev, spellId: spell.id }))}
+                style={{ textAlign: "left", background: selectedOfficial?.id === spell.id ? "#132034" : "#0f172a", border: "1px solid #2d2d44", borderRadius: 8, padding: 10, cursor: "pointer" }}>
+                <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Nivel {spell.level} | {spell.name}</div>
+                <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{spell.summary || spell.notes || "Texto oficial pendiente de transcribir."}</div>
+              </button>
+            ))}
+          </div>
+        </details>
+        <button onClick={addOfficial} disabled={!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
+            background: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#1d4ed8" : "#1e293b",
+            color: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#dbeafe" : "#64748b",
+            fontWeight: 700, cursor: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "pointer" : "default" }}>
+          Aprender hechizo oficial (1 PX)
+        </button>
+      </div>
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Carga manual de respaldo</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: 8, marginBottom: 8 }}>
+          <input value={draft.name} onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="Nombre del hechizo"
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+          <input type="number" min="1" max={rank} value={draft.level} onChange={e => setDraft(prev => ({ ...prev, level: Number(e.target.value) || 1 }))}
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+        </div>
+        <input value={draft.school} onChange={e => setDraft(prev => ({ ...prev, school: e.target.value }))}
+          placeholder="Escuela o clase"
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8, boxSizing: "border-box" }}/>
+        <textarea value={draft.notes} onChange={e => setDraft(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Resumen del hechizo"
+          rows={3}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box", resize: "vertical" }}/>
+        <button onClick={addManual} disabled={!draft.name.trim() || !canLearnSpell(adv, draft.level)}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
+            background: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#7f1d1d" : "#1e293b",
+            color: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#fff" : "#64748b",
+            fontWeight: 700, cursor: draft.name.trim() && canLearnSpell(adv, draft.level) ? "pointer" : "default" }}>
+          Agregar hechizo manual (1 PX)
+        </button>
+      </div>
+
+      {getKnownSpells(adv).length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {getKnownSpells(adv).map(spell => (
+            <div key={spell.id} style={{ background: "#0f172a", border: "1px solid #2d2d44", borderRadius: 10, padding: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                <div>
+                  <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{spell.name}</div>
+                  <div style={{ color: "#6b7280", fontSize: 11 }}>Nivel {spell.level} | {spell.school}</div>
+                </div>
+                <button onClick={() => removeSpell(spell.id)}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>x</button>
+              </div>
+              <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{spell.summary || spell.notes || "Resumen pendiente."}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Collapsible>
+  );
+};
+
 function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
   const [filter, setFilter] = useState("all");
   const learnedSkills = getLearnedSkills(adv);
@@ -1637,6 +1925,7 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
             {(CLASS_DATA[normalized.clase]?.skills || []).map(skillName => {
               const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
               const meta = SKILL_DATA[skillName] || {};
+              const levelDetails = getSkillLevelDetails(skillName);
               return (
                 <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
@@ -2582,7 +2871,21 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                         {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
                         <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
                       </div>
-                      <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{meta.summary || "Resumen pendiente de verificar en manual oficial."}</div>
+                      <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{meta.summary || "Resumen pendiente de verificar en manual oficial."}</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {[1, 2, 3].map(n => {
+                          const unlocked = level >= n;
+                          const text = levelDetails[n - 1] || "Detalle de este nivel pendiente de transcribir del manual.";
+                          return (
+                            <div key={n} style={{ borderRadius: 8, border: unlocked ? "1px solid #166534" : "1px solid #374151", background: unlocked ? "#16653418" : "#111827", padding: 8 }}>
+                              <div style={{ color: unlocked ? "#bbf7d0" : "#9ca3af", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+                                Nivel {n} {unlocked ? "| Disponible" : "| No disponible"}
+                              </div>
+                              <div style={{ color: unlocked ? "#dbeafe" : "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button onClick={() => updateSkillLevel(skillName, -1)}
