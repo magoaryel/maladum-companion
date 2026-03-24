@@ -307,6 +307,31 @@ const SKILL_LEVEL_DATA = {
     "Reaccion: uso magico avanzado segun la Reference Section. La transcripcion completa de este nivel sigue pendiente de pulido, pero la habilidad mejora el lanzamiento flexible de hechizos.",
     "Pasiva: puedes gastar cualquier numero de clavijas de Habilidad al lanzar un hechizo para aumentar su valor de lanzamiento en esa misma cantidad, incluso superando tu rango. Tambien mejora el uso de objetos con Channel.",
   ],
+  "Light Fingers": [
+    "Reaccion: tras sufrir un ataque melee sin dano, robas cualquier objeto del inventario del atacante salvo el arma usada. Si no tienes espacio, sueltas otro objeto.",
+    "Muevete al contacto y haz Pickpocket: puedes dispersar un objeto al azar o robar uno del objetivo segun el resultado del dado. Luego haces otro Movimiento sin ataques de oportunidad.",
+    "Pasiva: ganas acceso permanente a la accion Pickpocket.",
+  ],
+  "Tricks of the Trade": [
+    "Puedes bloquear o desbloquear una puerta o terreno en contacto; o al Buscar ignorar las fichas de trampa robadas.",
+    "Reaccion: si una carta o ficha de trampa te apunta a ti o a un aliado cercano con LoS, desactivas el disparador y la descartas sin efecto.",
+    "Pasiva: puedes hacer Busqueda General como accion sin esfuerzo. Ademas, al Buscar robas una ficha extra y 1 objeto uncommon aleatorio, sin resolver trampas de esas robadas extra.",
+  ],
+  "Quick Recovery": [
+    "Recupera 1 Salud.",
+    "Antes de activarte, elimina Aturdido, Envenenado o Herido.",
+    "Reaccion: tras ser derrotado, dejas de estarlo, recuperas 1 Salud y te levantas.",
+  ],
+  "Onslaught": [
+    "Reaccion: despues de causar 1 o mas impactos en melee, haces otra accion de Ataque Melee.",
+    "Reaccion: despues de causar 1 o mas impactos con cualquier ataque, puedes moverte y luego hacer otra accion de Ataque Melee.",
+    "Usa durante un Movimiento: ignoras ataques de oportunidad durante ese Movimiento y haces un ataque melee contra cada enemigo con el que entres en contacto.",
+  ],
+  "Fortified Mind": [
+    "Usa antes de lanzar un hechizo para poder lanzarlo aunque estes trabado en combate.",
+    "Reaccion: cuando un aliado a corto alcance sufra un ataque, usa tu armadura magica para negar impactos. Puedes gastar Magia tuya y del objetivo para aumentarla.",
+    "Hasta fin de ronda, los hechizos sobre aliados a corto alcance se resisten automaticamente salvo Imparable, y sus ataques pueden negarse con tu armadura magica gastando Magia del grupo cercano.",
+  ],
   "Frenzy": [
     "Usa antes de hacer un ataque melee: anades 2 dados al ataque.",
     "Usa antes de hacer un ataque melee: anades 3 dados al ataque.",
@@ -316,6 +341,86 @@ const SKILL_LEVEL_DATA = {
     "Pasiva: ganas First Strike.",
     "Haz un ataque melee con un arma. Puedes repetir 1 dado de combate.",
     "Pasiva: puedes usar Shield Block como accion sin esfuerzo. Si lo usas fuera de tu turno sigues quedando Fatigado.",
+  ],
+  "Bullseye": [
+    "Haz un ataque a distancia a corto alcance que no tira dados: hace 1 impacto automatico e ignora cobertura.",
+    "Haz un ataque a distancia hasta media distancia con 1 impacto automatico que ignora cobertura y armadura fisica. Pasiva: tus ataques a distancia ignoran cobertura a corto alcance.",
+    "Haz un ataque a distancia hasta media distancia con 2 impactos automaticos que ignoran cobertura y armadura fisica. Pasiva: tus ataques a distancia ignoran cobertura a media distancia.",
+  ],
+  "Counter Shot": [
+    "Reaccion: despues de ser objetivo de un ataque a distancia o un hechizo, y antes de resolverlo, haces un ataque a distancia o lanzas un hechizo contra el atacante.",
+    "Reaccion: despues de que un enemigo objetivo haga su primera accion de la ronda, haces un ataque a distancia o lanzas un hechizo contra el.",
+    "Reaccion: en cualquier momento, haces un ataque a distancia o lanzas un hechizo con 1 dado extra y luego haces un Movimiento.",
+  ],
+  "Ranged Expert": [
+    "Cuando harias un ataque melee puedes usar un arma a distancia en su lugar, usando el perfil de corto alcance y con 1 dado extra. Pasiva: preparar un arma con Preparation puede hacerse como accion sin esfuerzo.",
+    "Puedes lanzar cualquier arma melee con 2 dados extra, o lanzar cualquier otro objeto como si fuera un arma tirando 2 dados. Pasiva: puedes hacer un ataque a distancia como accion sin esfuerzo.",
+    "Haz un ataque con un arma de tipo Shot: ignora Unreliable y anade Bludgeoning, Sharp y Piercing. Pasiva: en ataques a distancia o lanzados, el dado azul hace critico.",
+  ],
+  "Trick Shot": [
+    "Haz un ataque a distancia y puedes repetir 1 dado.",
+    "Disparas un objeto de la mano del enemigo: si logras al menos 1 impacto no haces dano, pero mueves un objeto elegido de su inventario hasta 6 casillas.",
+    "Haz un ataque a distancia con 3 dados extra. Despues de tirar, puedes repartir los impactos entre varios objetivos validos dentro del alcance y cerca unos de otros.",
+  ],
+  "Ambush": [
+    "Reaccion: cuando un enemigo termina un movimiento a 4 casillas o menos y estas en cobertura parcial o total, haces un ataque a distancia. Puedes hacer Dash antes o despues.",
+    "Reaccion: en la misma situacion, haces un Movimiento y luego un Ataque. Puedes hacer un Dash antes o despues de cualquiera de esas acciones.",
+    "Reaccion: en la misma situacion, haces Movimiento, un Ataque contra cualquier enemigo y otro Movimiento. Puedes hacer un Dash antes o despues de cualquiera de esas acciones.",
+  ],
+  "Hard to Hit": [
+    "Mientras estes en cobertura, no puedes ser afectado por ataques a distancia hasta final de ronda, aunque si puedes ser objetivo.",
+    "Mientras estes en cobertura o a mas de corto alcance, no puedes ser afectado por ataques a distancia hasta final de ronda.",
+    "Haz un Movimiento ignorando ataques de oportunidad. Hasta final de ronda no puedes ser afectado por ataques a distancia enemigos, aunque si pueden elegirte como objetivo.",
+  ],
+  "Inspiring": [
+    "Quita 1 contador de Aterrorizado a un aliado a corto alcance.",
+    "Reaccion: al derrotar un enemigo, los demas aliados a corto alcance pueden quitarse Aterrorizado o hacer 1 accion.",
+    "Pasiva: cualquier aliado que empiece turno a corto alcance y con LoS quita 1 Aterrorizado antes de activarse. Ademas, puedes limpiar todo Terror y Fatiga del grupo cercano y cada uno hace 1 accion.",
+  ],
+  "Intimidating": [
+    "Reaccion: cuando un enemigo con LoS se activa, eliges su objetivo de la ronda entre los personajes validos que vea.",
+    "Reaccion: cuando un enemigo entra en LoS o empieza turno en LoS, su turno termina inmediatamente y queda Aturdido.",
+    "Todos los enemigos de rango igual o menor al tuyo a corto alcance y con LoS quedan Aturdidos y Aterrorizados. Pasiva: ganas Terrifying.",
+  ],
+  "Training": [
+    "Despues de hacer una accion, otro aventurero del grupo a corto alcance y con LoS hace gratis la misma accion si puede.",
+    "Fase de Avance: da 1 PX a otro aventurero del grupo. Esa PX solo puede ir a Agilidad, Resistencia, Melee, Distancia o Sigilo. El alumno no puede superar tu limite de rango X.",
+    "Fase de Avance: da 1 PX a dos aventureros. Uno puede ser de cualquier rango; el otro no puede superar tu limite de rango X.",
+  ],
+  "Natural Remedies": [
+    "Al descansar, tu y los aliados que tambien descansen recuperais 1 Salud extra y 1 Magia extra.",
+    "Tu o un aliado en contacto elimina Herido o Envenenado y recupera 1 Salud.",
+    "Tu y todos los aliados en contacto quedais Benditos y podeis hacer 1 accion adicional esta ronda.",
+  ],
+  "One with Nature": [
+    "Durante una Busqueda General forrajeas y robas recursos extra segun el Dado Magico. Pasiva: en Descanso en la Naturaleza puedes hacer esa tirada una vez por personaje con esta skill.",
+    "Al inicio de tu turno, eliges una bestia errante no Otherworldly a media distancia y con LoS; puedes usar tus acciones de este turno para controlarla.",
+    "Eliges una bestia errante no Otherworldly aleatoria de rango 1-3; entra por el punto que elijas y la controlas el resto de la partida. Pasiva: las bestias errantes no Otherworldly nunca te eligen como objetivo.",
+  ],
+  "Ready for Anything": [
+    "Reaccion: en cualquier momento, haces 1 accion.",
+    "Pasiva: una vez por ronda, en cualquier momento, haces 1 accion y luego quedas Fatigado.",
+    "Reaccion: en cualquier momento, incluso en mitad del movimiento enemigo, puedes hacer hasta 2 acciones y 1 accion sin esfuerzo.",
+  ],
+  "Tracking": [
+    "Mira las 3 primeras cartas del mazo de Eventos.",
+    "Segun el Dread actual, tiras la llegada de todos los NPC de esta ronda y los colocas junto a sus Entry Points; luego puedes mover los de un Entry Point a otro. Pasiva: si el Staging Point se intercambia al azar, tiras dos veces el Dado Magico y eliges.",
+    "Reaccion: antes o despues de que un enemigo entre en LoS o en mesa, este personaje hace un turno gratis inmediato y todos los aliados cercanos hacen 1 accion; las acciones contra ese enemigo ganan 1 dado extra. Pasiva: tratas Rough Ground como 2 menor.",
+  ],
+  "Smithing": [
+    "Durante una mision, gastas 1 accion para reparar un objeto roto gratis como si estuvieras en el gremio. Con X determinas que rarezas puedes reparar. En Mercado haces lo mismo gratis.",
+    "Durante una mision, gastas 2 acciones en la misma ronda para fabricar un arma o armadura gratis como en el gremio, con limite de recursos segun X. En Mercado haces lo mismo gratis.",
+    "Resumen pendiente de completar con una transcripcion mas fina del manual oficial.",
+  ],
+  "Tactical Gift": [
+    "Gasta 1 accion para crear una Barricada en una casilla adyacente.",
+    "Reaccion: Teamwork. Cuando este personaje o un aliado cercano hace un ataque, por cada aliado en contacto con el atacante o el objetivo puedes anadir 1 dado o Vicious, hasta el maximo X.",
+    "Reaccion: We Trained for This. Tras robar una Event Card o tras tirar llegadas en un Entry Point con LoS, este personaje y los aliados cercanos hacen 1 accion gratis y pueden fatigarse para una segunda; luego se reanuda la resolucion. Pasiva: entre acciones de un aliado, otro no activado puede fatigarse para hacer 1 accion si ambos estan cerca de esta skill.",
+  ],
+  "Unlikely Hero": [
+    "En una sala sin enemigos puedes cerrar puertas, voltear Entry Points cercanos, recolocar personajes y convertir pegs del Dread en verdes temporales.",
+    "En fases de campana puedes gastar hasta X clavijas: modificar Left for Dead, dar 1 PX a un aventurero, ignorar Upkeep o repetir resultados de posada/naturaleza.",
+    "Pasiva: no te eligen como objetivo salvo que seas el unico en LoS, y puedes gastar el Renombre del grupo como si fueran clavijas de Skill. Reaccion: tras una tirada de ataque a favor o en contra, si atacas haces +1 dano y critico; si te atacan ignoras todo y Aturdes al atacante. Luego robas y resuelves una Event Card.",
   ],
 };
 
@@ -3084,6 +3189,10 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
               const meta = SKILL_DATA[skillName] || {};
               const levelDetails = getSkillLevelDetails(skillName);
               const currentDetail = level > 0 ? (levelDetails[Math.min(level, levelDetails.length) - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.") : (meta.summary || "Resumen pendiente de verificar en manual oficial.");
+              const previewLevels = Array.from(new Set(
+                (level > 0 ? [level, Math.min(3, level + 1)] : [1, 2])
+                  .filter(n => n >= 1 && n <= 3)
+              ));
               return (
                 <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
@@ -3096,16 +3205,18 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                         <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
                       </div>
                       <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{currentDetail}</div>
-                      {level > 0 ? (
+                      {previewLevels.length > 0 ? (
                         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {Array.from({ length: level }, (_, idx) => idx + 1).map(n => {
-                            const text = levelDetails[n - 1] || "Detalle de este nivel pendiente de transcribir del manual.";
+                          {previewLevels.map(n => {
+                            const unlocked = level >= n;
+                            const isNext = level > 0 ? n === level + 1 : n === 1;
+                            const text = levelDetails[n - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.";
                             return (
-                              <div key={n} style={{ borderRadius: 8, border: "1px solid #166534", background: "#16653418", padding: 8 }}>
-                                <div style={{ color: "#bbf7d0", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
-                                  Nivel {n} | Disponible
+                              <div key={n} style={{ borderRadius: 8, border: unlocked ? "1px solid #166534" : "1px solid #374151", background: unlocked ? "#16653418" : "#111827", padding: 8 }}>
+                                <div style={{ color: unlocked ? "#bbf7d0" : "#9ca3af", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+                                  Nivel {n} | {unlocked ? "Actual" : (isNext ? "Siguiente" : "Vista previa")}
                                 </div>
-                                <div style={{ color: "#dbeafe", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
+                                <div style={{ color: unlocked ? "#dbeafe" : "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
                               </div>
                             );
                           })}
