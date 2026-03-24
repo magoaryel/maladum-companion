@@ -81,6 +81,183 @@ const CLASSES = [
   "Maestro","Rook","Paladin","Prymorist","Eudaemon","Ranger","Druid","Magus","Rambler"
 ];
 
+const CLASS_DATA = {
+  Barbarian: { spell: false, skills: ["Frenzy","Reflexes","Brutal Assault","Onslaught","Impervious","Combat Arts","Intimidating"] },
+  Rogue: { spell: false, skills: ["Light Fingers","Reflexes","Tricks of the Trade","Distraction","Persuasion","Camouflage","Duck for Cover","Tracking"] },
+  Sellsword: { spell: false, skills: ["Reflexes","Frenzy","Weapons Master","Counter Shot","Bullseye","Training","Quick Recovery","Ambush"] },
+  Assassin: { spell: false, skills: ["Reflexes","Combat Arts","Acrobatics","Hard to Hit","Disarm","Trick Shot","Quick Recovery","Malacyte Mastery"] },
+  Scavenger: { spell: false, skills: ["Acrobatics","Fleet of Foot","Combat Arts","Tricks of the Trade","Light Fingers","Hard to Hit","Barter","Ready for Anything"] },
+  Swindler: { spell: false, skills: ["Bombast","Disarm","Light Fingers","Distraction","Reflexes","Bullseye","Trick Shot","Entertainer"] },
+  Marksman: { spell: false, skills: ["Trick Shot","Ranged Expert","Counter Shot","Bullseye","Ambush","Duck for Cover","Fleet of Foot","Reflexes"] },
+  Guardian: { spell: false, skills: ["Onslaught","Quick Recovery","Steady","Impervious","Weapons Master","Frenzy","Brutal Assault","Ready for Anything"] },
+  Blacksmith: { spell: false, skills: ["Smithing","Weapons Master","Steady","Impervious","Ranged Expert","Barter","Tricks of the Trade","Duck for Cover"] },
+  Curator: { spell: false, skills: ["Loremaster","Herbalism","Unlikely Hero","Smithing","Tactical Gift","Duck for Cover","Barter","Tracking","Natural Remedies","Malacyte Mastery"] },
+  Contender: { spell: false, skills: ["Acrobatics","Bombast","Steady","Tactical Gift","Weapons Master","Intimidating","Reflexes","Onslaught"] },
+  Strategist: { spell: false, skills: ["Tactical Gift","Bombast","Training","Ready for Anything","Ranged Expert","Counter Shot","Distraction"] },
+  Maestro: { spell: false, skills: ["Entertainer","Unlikely Hero","Inspiring","Barter","Hard to Hit","Persuasion","Quick Recovery","Malacyte Mastery"] },
+  Rook: { spell: true, skills: ["Power Manipulation","Malacyte Mastery","Distraction","Persuasion","Barter","Duck for Cover"] },
+  Paladin: { spell: true, skills: ["Inspiring","Barter","Steady","Impervious","Weapons Master","Disarm","Persuasion"] },
+  Prymorist: { spell: true, skills: ["Power Manipulation","Malacyte Mastery","Hard to Hit","Fortified Mind","Natural Remedies","Counter Shot"] },
+  Eudaemon: { spell: true, skills: ["Malacyte Mastery","Impervious","Inspiring","Fortified Mind","Reflexes","Onslaught"] },
+  Ranger: { spell: false, skills: ["Ambush","Camouflage","Tracking","Ranged Expert","Reflexes","Quick Recovery","One with Nature","Ready for Anything"] },
+  Druid: { spell: true, skills: ["Tracking","Distraction","One with Nature","Reflexes","Fortified Mind","Natural Remedies","Ambush"] },
+  Magus: { spell: true, skills: ["Quick Recovery","Power Manipulation","Reflexes","Intimidating","Fortified Mind","Ready for Anything","Frenzy"] },
+  Rambler: { spell: false, skills: ["Herbalism","Tracking","Fleet of Foot","Quick Recovery","Tricks of the Trade","Hard to Hit","One with Nature"] },
+};
+
+const OFFICIAL_SPELLS = {
+  Rook: [
+    { name: "Bendicion", level: 1 }, { name: "Reflejar", level: 1 }, { name: "Mentes Nubladas", level: 1 },
+    { name: "Concentracion", level: 1 }, { name: "Energia Concentrada", level: 1 }, { name: "Telequinesis", level: 1 },
+    { name: "Nauseas", level: 2 }, { name: "Encantamiento", level: 2 }, { name: "Ilusion", level: 2 },
+    { name: "Perspicacia", level: 2 }, { name: "Debilitar Armadura", level: 2 }, { name: "Sensibilidad Magica", level: 3 },
+    { name: "Aturdido", level: 3 }, { name: "Hervir la Sangre", level: 3 }, { name: "Alterar Apariencia", level: 3 },
+    { name: "Ilusion Avanzada", level: 4 }, { name: "Rafaga de Energia", level: 4 }, { name: "Encantamiento Avanzado", level: 5 },
+  ],
+  Paladin: [
+    { name: "Curacion", level: 1 }, { name: "Concentracion", level: 1 }, { name: "Fuerza", level: 1 },
+    { name: "Piel Endurecida", level: 1 }, { name: "Bendicion", level: 1 }, { name: "Calma", level: 1 },
+    { name: "Fortaleza", level: 1 }, { name: "Perspicacia", level: 2 }, { name: "Fortalecer", level: 2 },
+    { name: "Aturdido", level: 3 }, { name: "Despertar", level: 3 }, { name: "Resistencia Remota", level: 4 },
+  ],
+  Prymorist: [
+    { name: "Energia Concentrada", level: 1 }, { name: "Abrir Puerta", level: 1 }, { name: "Telequinesis", level: 1 },
+    { name: "Extinguir", level: 1 }, { name: "Detectar", level: 1 }, { name: "Proteger", level: 1 },
+    { name: "Invisibilidad", level: 2 }, { name: "Telequinesis Avanzada", level: 2 }, { name: "Empujar", level: 2 },
+    { name: "Barricada", level: 2 }, { name: "Deteccion Avanzada", level: 2 }, { name: "Percepcion Magica", level: 3 },
+    { name: "Bola de Fuego", level: 3 }, { name: "Torrente", level: 3 }, { name: "Capullo", level: 3 },
+    { name: "Rafaga de Energia", level: 4 }, { name: "Reconstruir", level: 4 }, { name: "Portal", level: 5 },
+  ],
+  Eudaemon: [
+    { name: "Curacion", level: 1 }, { name: "Concentracion", level: 1 }, { name: "Fuerza", level: 1 },
+    { name: "Velocidad", level: 1 }, { name: "Recuperacion", level: 1 }, { name: "Calma", level: 1 },
+    { name: "Escudo Magico", level: 2 }, { name: "HiperConciencia", level: 2 }, { name: "Saltar", level: 2 },
+    { name: "Fortalecer", level: 2 }, { name: "Manos Sanadoras", level: 2 }, { name: "Aura Magica", level: 3 },
+    { name: "Curacion Avanzada", level: 3 }, { name: "Levitacion", level: 3 }, { name: "Capullo", level: 3 },
+    { name: "Desfasamiento", level: 4 }, { name: "Resistencia Remota", level: 4 }, { name: "Reorganizar Celulas", level: 5 },
+  ],
+  Druid: [
+    { name: "Curacion", level: 1 }, { name: "Fuerza", level: 1 }, { name: "Velocidad", level: 1 },
+    { name: "Proteger", level: 1 }, { name: "Extinguir", level: 1 }, { name: "HiperConciencia", level: 2 },
+    { name: "Invisibilidad", level: 2 }, { name: "Manos Sanadoras", level: 2 }, { name: "Barricada", level: 2 },
+    { name: "Alterar Apariencia", level: 3 }, { name: "Torrente", level: 3 }, { name: "Reorganizar Celulas", level: 4 },
+  ],
+  Magus: [
+    { name: "Concentracion", level: 1 }, { name: "Fuerza", level: 1 }, { name: "Piel Endurecida", level: 1 },
+    { name: "Velocidad", level: 1 }, { name: "Recuperacion", level: 1 }, { name: "Mentes Nubladas", level: 1 },
+    { name: "HiperConciencia", level: 2 }, { name: "Saltar", level: 2 }, { name: "Aturdido", level: 3 },
+    { name: "Hervir la Sangre", level: 3 }, { name: "Bola de Fuego", level: 3 }, { name: "Rafaga de Energia", level: 4 },
+  ],
+};
+
+const OFFICIAL_SPELL_DETAILS = {
+  "Abrir Puerta": { summary: "Abrir o cerrar una puerta desbloqueada, o bloquear o desbloquear una puerta o pieza de terreno." },
+  "Alterar Apariencia": { summary: "Te haces pasar por otro tipo de personaje de tamano similar usando contadores de recordatorio." },
+  "Aturdido": { summary: "El objetivo sufre X contadores de Fatiga." },
+  "Aura Magica": { summary: "Pasiva: los hechizos proximos de nivel 1-3 pueden repartirse entre aliados adyacentes." },
+  "Barricada": { summary: "Crea una barricada o cubre hasta X casillas de foso." },
+  "Bendicion": { summary: "El objetivo gana X contadores de Bendicion." },
+  "Bola de Fuego": { summary: "Ataque a distancia con X dados desde una fuente de fuego, con explosion y quemadura." },
+  "Calma": { summary: "El objetivo elimina un contador de Aterrorizado." },
+  "Capullo": { summary: "Descanso magico incluso con enemigos cerca; puede afectar a X aliados en radio X." },
+  "Concentracion": { summary: "Gana X contadores de Bendicion." },
+  "Curacion": { summary: "Restaura hasta X puntos de Salud, maximo 3." },
+  "Curacion Avanzada": { summary: "Combina restaurar Salud, Habilidad y quitar un estado." },
+  "Debilitar Armadura": { summary: "Reduce la Proteccion del objetivo en X hasta el final de la ronda." },
+  "Desfasamiento": { summary: "Mueve hasta X casillas ignorando muros, terreno y ataques de oportunidad." },
+  "Despertar": { summary: "El objetivo elimina un contador de Aturdido." },
+  "Detectar": { summary: "Mejora la busqueda general: coger objetos extra, resolver trampas y dispersar otros." },
+  "Deteccion Avanzada": { summary: "Mira dentro de terreno de hasta X casillas; puede retirar trampas gastando magia extra." },
+  "Empujar": { summary: "Mueve un objeto, personaje o terreno hasta X casillas sin ataques de oportunidad." },
+  "Encantamiento": { summary: "El objetivo es movido X casillas." },
+  "Encantamiento Avanzado": { summary: "El objetivo realiza hasta X acciones bajo tu control, maximo 3." },
+  "Energia Concentrada": { summary: "Ataque a distancia con X dados de energia." },
+  "Escudo Magico": { summary: "Aumenta la Proteccion en X, con maximo 1." },
+  "Extinguir": { summary: "Elimina un contador de Quemado, Antorcha o Brasero." },
+  "Fortalecer": { summary: "El objetivo elimina X contadores de Fatiga." },
+  "Fortaleza": { summary: "El objetivo no puede sufrir estados hasta el final de la ronda." },
+  "Fuerza": { summary: "Gana +X de Fuerza hasta el final de la ronda." },
+  "Hervir la Sangre": { summary: "El objetivo sufre un ataque de 1 dado y dano directo." },
+  "HiperConciencia": { summary: "Te vuelves Bendito y puedes descartar un recordatorio para hacer una accion." },
+  "Ilusion": { summary: "Coloca una Ilusion en linea de vision; el enemigo elegido queda distraido." },
+  "Ilusion Avanzada": { summary: "Coloca hasta X ilusiones y puedes mover una de ellas." },
+  "Invisibilidad": { summary: "Obtienes distintos niveles de invisibilidad segun X y mejoras el movimiento." },
+  "Levitacion": { summary: "Durante el Movimiento ignoras terreno, personajes y ataques de oportunidad." },
+  "Manos Sanadoras": { summary: "El objetivo recupera X puntos de Salud, maximo 3." },
+  "Mentes Nubladas": { summary: "Coloca recordatorios que castigan actuar fuera de turno." },
+  "Nauseas": { summary: "El objetivo queda Envenenado." },
+  "Percepcion Magica": { summary: "Pasiva: hechizos elementales pueden afectar objetos cercanos sin linea de vision." },
+  "Perspicacia": { summary: "+X impactos a Persuadir hasta el final de la ronda." },
+  "Piel Endurecida": { summary: "Obtienes +X de Proteccion hasta el final de la ronda." },
+  "Portal": { summary: "Coloca un Portal en una casilla vacia." },
+  "Proteger": { summary: "El objetivo obtiene +X de Proteccion hasta el final de la ronda." },
+  "Rafaga de Energia": { summary: "Aleja personajes o terreno y puede derribarlos." },
+  "Recuperacion": { summary: "Elimina Fatiga y Envenenado." },
+  "Reconstruir": { summary: "Mueve un muro de hasta longitud X dentro del corto alcance." },
+  "Reflejar": { summary: "El objetivo aumenta su Proteccion en X, maximo 1, hasta el final de la ronda." },
+  "Reorganizar Celulas": { summary: "Mutacion temporal: sube estadisticas y puede anadir iconos de ataque." },
+  "Resistencia Remota": { summary: "Pasiva: puedes resistir hechizos lanzados a corta distancia." },
+  "Saltar": { summary: "Se aleja X+1 casillas." },
+  "Sensibilidad Magica": { summary: "Pasiva: hechizos vicarios pueden lanzarse a corta distancia y sin linea de vision." },
+  "Telequinesis": { summary: "Mueve objetos, permite recogerlos o lanzarlos, y puede propagar fuego." },
+  "Telequinesis Avanzada": { summary: "Mueve terreno, personajes u objetos; puede empujar o convertir armas en lanzamiento." },
+  "Torrente": { summary: "Con agua cerca puede retirar fuego, derribar personajes o lanzar dados de fatiga/ataque." },
+  "Velocidad": { summary: "Durante el Movimiento ganas X+1 casillas adicionales." },
+};
+
+const CLASS_SPELL_NOTES = {
+  Druid: {
+    "Reorganizar Celulas": "La carta de Druid indica que este hechizo puede dominarse a un rango mas bajo de lo normal.",
+  },
+};
+
+const SKILL_DATA = {
+  "Acrobatics": { category: "Agilidad", tags: ["move","melee"], summary: "Movilidad agresiva: derribar, reposicionarse y entrar o salir del combate con ventaja." },
+  "Ambush": { category: "Sigilo", tags: ["ranged","reaction"], summary: "Emboscadas desde cobertura con ataques y movimientos de reaccion." },
+  "Barter": { category: "Apoyo", tags: ["market"], summary: "Mejora compras, ventas y costes durante la fase de Mercado." },
+  "Bombast": { category: "Ciudadano", tags: ["support"], summary: "Gestiona Renombre y ayuda a exprimir resultados de taberna y descanso." },
+  "Brutal Assault": { category: "Melee", tags: ["melee"], summary: "Golpes brutales que tiran al enemigo, lanzan objetivos o encadenan ataques." },
+  "Bullseye": { category: "Distancia", tags: ["ranged"], summary: "Ataques a distancia precisos que ignoran parte de la cobertura y armadura." },
+  "Camouflage": { category: "Sigilo", tags: ["move","reaction"], summary: "Ocultarse en terreno o cobertura para evitar ser objetivo y disparar desde las sombras." },
+  "Combat Arts": { category: "Agilidad", tags: ["melee"], summary: "Tecnicas ofensivas de cuerpo a cuerpo con desarmes, ataques extra y combos." },
+  "Counter Shot": { category: "Distancia", tags: ["ranged","reaction","magic"], summary: "Contraataques a distancia o con hechizos fuera del turno propio." },
+  "Detect": { category: "Innata", tags: ["utility","search"], summary: "Permite mirar dentro de terreno buscable y retirar trampas si gastas magia adicional." },
+  "Disarm": { category: "Melee", tags: ["melee","reaction"], summary: "Quita armas al rival y puede convertir la defensa en robo o represalia." },
+  "Distraction": { category: "Astucia", tags: ["control"], summary: "Fatiga, reposiciona y desorganiza al objetivo para abrir huecos tacticos." },
+  "Duck for Cover": { category: "Sigilo", tags: ["reaction","defense"], summary: "Moverse a cobertura para negar o reducir ataques a distancia." },
+  "Entertainer": { category: "Ciudadano", tags: ["rest","support"], summary: "Potencia descanso, bendiciones y el uso alternativo de clavijas de magia." },
+  "Fleet of Foot": { category: "Agilidad", tags: ["move"], summary: "Velocidad pura: mas movimiento, ignorar oportunidades y mejorar desplazamientos." },
+  "Fortified Mind": { category: "Magia", tags: ["magic","defense","reaction"], summary: "Resistencia mental y apoyo defensivo con armadura magica y autoresistencia." },
+  "Frenzy": { category: "Melee", tags: ["melee"], summary: "Aumenta dados en melee y puede repartir golpes entre varios enemigos." },
+  "Hard to Hit": { category: "Sigilo", tags: ["defense"], summary: "Hace muy dificil ser impactado, sobre todo a distancia o tras moverse bien." },
+  "Herbalism": { category: "Ciudadano", tags: ["rest","craft"], summary: "Mejora hierbas, pociones y fabricacion improvisada durante la mision." },
+  "Impervious": { category: "Resistencia", tags: ["defense","status","reaction"], summary: "Niega estados, absorbe dano y aguanta rondas enteras bajo presion." },
+  "Inspiring": { category: "Apoyo", tags: ["support"], summary: "Quita terror y fatiga, y permite acciones extra al grupo cercano." },
+  "Intimidating": { category: "Apoyo", tags: ["control","reaction"], summary: "Controla objetivos enemigos, los aturde o redirige su conducta." },
+  "Light Fingers": { category: "Astucia", tags: ["utility","move"], summary: "Robar, saquear o desordenar inventarios enemigos sin quedarte trabado." },
+  "Loremaster": { category: "Ciudadano", tags: ["search","market"], summary: "Mejora busqueda, libros, hallazgos raros y aprendizaje auxiliar del grupo." },
+  "Malacyte Mastery": { category: "Magia", tags: ["magic","spell"], summary: "Permite lanzar hechizos fuera de tu acceso normal y manipular mejor el dado magico." },
+  "Natural Remedies": { category: "Supervivencia", tags: ["rest","heal"], summary: "Curacion, limpieza de veneno o heridas y apoyo de descanso." },
+  "Night Vision": { category: "Innata", tags: ["utility"], summary: "Resumen pendiente de verificar en la Reference Section." },
+  "One with Nature": { category: "Supervivencia", tags: ["beast","utility"], summary: "Forrajea y controla bestias errantes o evita que te ataquen." },
+  "Onslaught": { category: "Resistencia", tags: ["melee"], summary: "Cadena ataques, remata enemigos y convierte el avance en presion ofensiva." },
+  "Persuasion": { category: "Astucia", tags: ["support"], summary: "Refuerza tiradas de Persuasion y permite doblegar objetivos a traves de impactos sociales." },
+  "Power Manipulation": { category: "Magia", tags: ["magic","spell"], summary: "Recupera magia, mejora hechizos y descarga objetos canalizados con mas fuerza." },
+  "Quick Recovery": { category: "Resistencia", tags: ["heal","status"], summary: "Recupera vida, limpia estados y permite levantarse tras caer." },
+  "Ranged Expert": { category: "Distancia", tags: ["ranged"], summary: "Mejora uso de armas a distancia, disparos sin esfuerzo y criticos con dado azul." },
+  "Ready for Anything": { category: "Supervivencia", tags: ["reaction","utility"], summary: "Acciones fuera de secuencia y respuestas flexibles en casi cualquier momento." },
+  "Reflexes": { category: "Agilidad", tags: ["reaction","defense"], summary: "Reacciones defensivas y movilidad contra ataques, enganches y oportunidades." },
+  "Smithing": { category: "Ciudadano", tags: ["market","craft"], summary: "Repara y fabrica equipo durante la mision o en Mercado." },
+  "Steady": { category: "Resistencia", tags: ["defense"], summary: "Mantener la linea: evita control enemigo y premia el combate sin moverte." },
+  "Tactical Gift": { category: "Ciudadano", tags: ["support"], summary: "Comparte acciones, reorganiza la escena y hasta compra tiempo frente al Dread." },
+  "Tracking": { category: "Supervivencia", tags: ["spawn","move"], summary: "Lee entradas, anticipa llegadas enemigas y suaviza terreno dificil." },
+  "Training": { category: "Apoyo", tags: ["support","campaign"], summary: "Duplica acciones utiles en mision y tambien reparte XP en Avance." },
+  "Trick Shot": { category: "Distancia", tags: ["ranged"], summary: "Disparos especiales con rerolls, desarmes a distancia y division de impactos." },
+  "Tricks of the Trade": { category: "Astucia", tags: ["search","trap"], summary: "Abrir o cerrar, buscar mejor y anular trampas al vuelo." },
+  "Unlikely Hero": { category: "Ciudadano", tags: ["campaign","utility"], summary: "Talento comodin para modificar fases de campana, upkeep y eventos." },
+  "Weapons Master": { category: "Melee", tags: ["melee","defense"], summary: "Especialista en armas: ataques mejores, escudo agil y combos de equipo." },
+};
+
 const MISSIONS = {
   Intro: {
     id: "Intro", nombre: "De Moneda y Gloria", pagina: 4,
@@ -248,7 +425,8 @@ function defaultAdventurer(campId, charData) {
     status_effects: [],
     inventario: [],
     habilidades: [],
-    renombre: 0,
+    clase_habilidades: {},
+    hechizos: [],
     vivo: true,
   };
 }
@@ -268,6 +446,157 @@ function defaultMissionState(campId, missionId) {
     steps_completados: {},
     notas: "",
   };
+}
+
+function slugKey(value) {
+  return (value || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function createEmptyClassSkills(cls) {
+  const skills = {};
+  (CLASS_DATA[cls]?.skills || []).forEach(skill => {
+    skills[skill] = 0;
+  });
+  return skills;
+}
+
+function normalizeSpell(spell) {
+  if (typeof spell === "string") {
+    return {
+      id: "sp_" + slugKey(spell),
+      name: spell,
+      level: 1,
+      school: "Manual",
+      notes: "",
+      summary: "",
+    };
+  }
+  return {
+    id: spell?.id || ("sp_" + Math.random().toString(36).slice(2, 10)),
+    name: spell?.name || "Hechizo",
+    level: Math.max(1, Number(spell?.level) || 1),
+    school: spell?.school || "Manual",
+    notes: spell?.notes || "",
+    summary: spell?.summary || "",
+  };
+}
+
+function normalizeInventoryItem(item) {
+  return {
+    id: item?.id || ("it_" + Math.random().toString(36).slice(2, 10)),
+    name: item?.name || "Item",
+    summary: item?.summary || "",
+    type: item?.type || "",
+    meleeDice: Math.max(0, Number(item?.meleeDice) || 0),
+    rangedDice: Math.max(0, Number(item?.rangedDice) || 0),
+    shield: Math.max(0, Number(item?.shield) || 0),
+    armor: Math.max(0, Number(item?.armor) || 0),
+    magic: !!item?.magic,
+    equipped: !!item?.equipped,
+  };
+}
+
+function normalizeAdventurer(adv) {
+  const currentClass = adv?.clase || "";
+  const fallbackSkills = currentClass ? createEmptyClassSkills(currentClass) : {};
+  const hasSkillMap = adv?.clase_habilidades && Object.keys(adv.clase_habilidades).length > 0;
+  return {
+    ...adv,
+    clase_habilidades: hasSkillMap ? { ...fallbackSkills, ...adv.clase_habilidades } : fallbackSkills,
+    hechizos: (adv?.hechizos || []).map(normalizeSpell),
+    inventario: (adv?.inventario || []).map(normalizeInventoryItem),
+  };
+}
+
+function updateAdventurerClass(adv, cls) {
+  const normalized = normalizeAdventurer(adv);
+  if (!cls) {
+    return { ...normalized, clase: "", clase_habilidades: {}, hechizos: [] };
+  }
+  if (normalized.clase === cls && Object.keys(normalized.clase_habilidades || {}).length > 0) {
+    return { ...normalized, clase: cls };
+  }
+  return {
+    ...normalized,
+    clase: cls,
+    clase_habilidades: createEmptyClassSkills(cls),
+    hechizos: CLASS_DATA[cls]?.spell ? normalized.hechizos : [],
+  };
+}
+
+function getSpentXP(adv) {
+  const normalized = normalizeAdventurer(adv);
+  const skillPoints = Object.values(normalized.clase_habilidades || {}).reduce((sum, level) => sum + (Number(level) || 0), 0);
+  return skillPoints + (normalized.hechizos?.length || 0);
+}
+
+function getRemainingXP(adv) {
+  return Math.max(0, (Number(adv?.experiencia) || 0) - getSpentXP(adv));
+}
+
+function getSkillEntry(name, level, source) {
+  const meta = SKILL_DATA[name] || {};
+  return {
+    name,
+    level: Math.max(1, Number(level) || 1),
+    source: source || meta.category || "Habilidad",
+    summary: meta.summary || "Resumen pendiente de verificar en manual oficial.",
+    tags: meta.tags || [],
+  };
+}
+
+function getLearnedSkills(adv) {
+  const normalized = normalizeAdventurer(adv);
+  const learned = [];
+  (normalized.innatas || []).forEach(name => learned.push(getSkillEntry(name, 1, "Innata")));
+  Object.entries(normalized.clase_habilidades || {}).forEach(([name, level]) => {
+    if ((Number(level) || 0) > 0) learned.push(getSkillEntry(name, level, normalized.clase || "Clase"));
+  });
+  return learned;
+}
+
+function getKnownSpells(adv) {
+  return normalizeAdventurer(adv).hechizos || [];
+}
+
+function getOfficialSpellsForClass(adv) {
+  const cls = adv?.clase;
+  return (OFFICIAL_SPELLS[cls] || []).map(spell => normalizeSpell({
+    ...spell,
+    id: "off_" + slugKey(cls) + "_" + slugKey(spell.name),
+    school: "Oficial",
+    ...(OFFICIAL_SPELL_DETAILS[spell.name] || {}),
+    ...((CLASS_SPELL_NOTES[cls] || {})[spell.name] ? { notes: CLASS_SPELL_NOTES[cls][spell.name] } : {}),
+  }));
+}
+
+function getAvailableOfficialSpells(adv) {
+  const learned = new Set(getKnownSpells(adv).map(spell => slugKey(spell.name)));
+  const rank = Math.max(1, Number(adv?.rango) || 1);
+  return getOfficialSpellsForClass(adv).filter(spell => spell.level <= rank && !learned.has(slugKey(spell.name)));
+}
+
+function canLearnSpell(adv, spellLevel) {
+  return !!CLASS_DATA[adv?.clase]?.spell && Number(spellLevel) <= Math.max(1, Number(adv?.rango) || 1) && getRemainingXP(adv) > 0;
+}
+
+function summarizeEquippedItems(adv) {
+  return (normalizeAdventurer(adv).inventario || []).filter(item => item.equipped);
+}
+
+function getEquipmentStats(adv) {
+  return summarizeEquippedItems(adv).reduce((stats, item) => ({
+    meleeDice: stats.meleeDice + item.meleeDice,
+    rangedDice: stats.rangedDice + item.rangedDice,
+    shield: stats.shield + item.shield,
+    armor: stats.armor + item.armor,
+    magicItems: stats.magicItems + (item.magic ? 1 : 0),
+  }), { meleeDice: 0, rangedDice: 0, shield: 0, armor: 0, magicItems: 0 });
 }
 
 // ========== COMPONENTS ==========
@@ -449,6 +778,620 @@ function Collapsible({ title, icon, children, defaultOpen }) {
   );
 }
 
+function ModalSheet({ title, subtitle, onClose, children }) {
+  return (
+    <div onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 250,
+        display: "flex", alignItems: "flex-end", justifyContent: "center" }}>
+      <div style={{ width: "100%", maxWidth: 500, maxHeight: "90vh", overflowY: "auto",
+        background: "#121225", borderTop: "2px solid #b91c1c", borderRadius: "16px 16px 0 0", padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+          <div>
+            <div style={{ color: "#d4b896", fontSize: 18, fontWeight: 800 }}>{title}</div>
+            {subtitle && <div style={{ color: "#6b7280", fontSize: 12, marginTop: 2 }}>{subtitle}</div>}
+          </div>
+          <button onClick={onClose}
+            style={{ width: 36, height: 36, borderRadius: 8, border: "1px solid #374151",
+              background: "transparent", color: "#9ca3af", fontSize: 18, cursor: "pointer" }}>x</button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function InventoryEditor({ adv, onUpdate }) {
+  const [draft, setDraft] = useState({
+    name: "",
+    summary: "",
+    type: "",
+    meleeDice: 0,
+    rangedDice: 0,
+    shield: 0,
+    armor: 0,
+    magic: false,
+    equipped: false,
+  });
+
+  const updateItem = (id, field, value) => {
+    onUpdate({
+      ...adv,
+      inventario: normalizeAdventurer(adv).inventario.map(item => item.id === id ? normalizeInventoryItem({ ...item, [field]: value }) : item),
+    });
+  };
+
+  const removeItem = (id) => {
+    onUpdate({
+      ...adv,
+      inventario: normalizeAdventurer(adv).inventario.filter(item => item.id !== id),
+    });
+  };
+
+  const addItem = () => {
+    if (!draft.name.trim()) return;
+    onUpdate({
+      ...adv,
+      inventario: [...normalizeAdventurer(adv).inventario, normalizeInventoryItem(draft)],
+    });
+    setDraft({
+      name: "",
+      summary: "",
+      type: "",
+      meleeDice: 0,
+      rangedDice: 0,
+      shield: 0,
+      armor: 0,
+      magic: false,
+      equipped: false,
+    });
+  };
+
+  return (
+    <Collapsible title="Inventario y Equipo" icon="📦">
+      <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
+        Registra aqui lo que lleva el aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
+      </div>
+
+      {(normalizeAdventurer(adv).inventario || []).length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+          {normalizeAdventurer(adv).inventario.map(item => (
+            <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <input value={item.name} onChange={e => updateItem(item.id, "name", e.target.value)}
+                    style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, marginBottom: 6, boxSizing: "border-box" }}/>
+                  <input value={item.summary} onChange={e => updateItem(item.id, "summary", e.target.value)}
+                    placeholder="Que hace o que recordar"
+                    style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#9ca3af", fontSize: 12, boxSizing: "border-box" }}/>
+                </div>
+                <button onClick={() => removeItem(item.id)}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>x</button>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
+                {[
+                  ["meleeDice", "Melee"],
+                  ["rangedDice", "Dist"],
+                  ["shield", "Escudo"],
+                  ["armor", "Prot"],
+                ].map(([field, label]) => (
+                  <div key={field}>
+                    <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>{label}</div>
+                    <input type="number" min="0" value={item[field]} onChange={e => updateItem(item.id, field, Number(e.target.value) || 0)}
+                      style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
+                  style={{ padding: "8px 10px", borderRadius: 999, border: item.equipped ? "1px solid #22c55e" : "1px solid #374151",
+                    background: item.equipped ? "#16653422" : "transparent", color: item.equipped ? "#bbf7d0" : "#9ca3af",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {item.equipped ? "Equipado" : "No equipado"}
+                </button>
+                <button onClick={() => updateItem(item.id, "magic", !item.magic)}
+                  style={{ padding: "8px 10px", borderRadius: 999, border: item.magic ? "1px solid #3b82f6" : "1px solid #374151",
+                    background: item.magic ? "#1d4ed822" : "transparent", color: item.magic ? "#bfdbfe" : "#9ca3af",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {item.magic ? "Magico" : "No magico"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 12 }}>Todavia no hay objetos registrados.</div>
+      )}
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar item manualmente</div>
+        <input value={draft.name} onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
+          placeholder="Nombre del item"
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8, boxSizing: "border-box" }}/>
+        <input value={draft.summary} onChange={e => setDraft(prev => ({ ...prev, summary: e.target.value }))}
+          placeholder="Resumen corto"
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box" }}/>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
+          {[
+            ["meleeDice", "Melee"],
+            ["rangedDice", "Dist"],
+            ["shield", "Escudo"],
+            ["armor", "Prot"],
+          ].map(([field, label]) => (
+            <div key={field}>
+              <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>{label}</div>
+              <input type="number" min="0" value={draft[field]} onChange={e => setDraft(prev => ({ ...prev, [field]: Number(e.target.value) || 0 }))}
+                style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <button onClick={() => setDraft(prev => ({ ...prev, equipped: !prev.equipped }))}
+            style={{ flex: 1, padding: 10, borderRadius: 8, border: draft.equipped ? "1px solid #22c55e" : "1px solid #374151",
+              background: draft.equipped ? "#16653422" : "transparent", color: draft.equipped ? "#bbf7d0" : "#9ca3af", cursor: "pointer", fontSize: 12 }}>
+            {draft.equipped ? "Se agrega equipado" : "Agregar sin equipar"}
+          </button>
+          <button onClick={() => setDraft(prev => ({ ...prev, magic: !prev.magic }))}
+            style={{ flex: 1, padding: 10, borderRadius: 8, border: draft.magic ? "1px solid #3b82f6" : "1px solid #374151",
+              background: draft.magic ? "#1d4ed822" : "transparent", color: draft.magic ? "#bfdbfe" : "#9ca3af", cursor: "pointer", fontSize: 12 }}>
+            {draft.magic ? "Es magico" : "No es magico"}
+          </button>
+        </div>
+        <button onClick={addItem}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: "#7f1d1d", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Agregar item
+        </button>
+      </div>
+    </Collapsible>
+  );
+}
+
+function SpellbookEditor({ adv, onUpdate }) {
+  const [draft, setDraft] = useState({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
+  const rank = Math.max(1, Number(adv?.rango) || 1);
+  const remainingXP = getRemainingXP(adv);
+  const officialOptions = getAvailableOfficialSpells(adv);
+  const selectedOfficial = officialOptions.find(spell => spell.id === draft.spellId) || null;
+
+  const resetDraft = () => setDraft({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
+
+  const addOfficial = () => {
+    if (!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)) return;
+    onUpdate({
+      ...adv,
+      hechizos: [...getKnownSpells(adv), normalizeSpell(selectedOfficial)],
+    });
+    resetDraft();
+  };
+
+  const addManual = () => {
+    const name = draft.name.trim();
+    if (!name || !canLearnSpell(adv, draft.level)) return;
+    onUpdate({
+      ...adv,
+      hechizos: [...getKnownSpells(adv), normalizeSpell({
+        id: "sp_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name,
+        level: Math.max(1, Math.min(rank, Number(draft.level) || 1)),
+        school: draft.school || "Manual",
+        notes: draft.notes.trim(),
+      })],
+    });
+    resetDraft();
+  };
+
+  const removeSpell = (spellId) => {
+    onUpdate({
+      ...adv,
+      hechizos: getKnownSpells(adv).filter(spell => spell.id !== spellId),
+    });
+  };
+
+  return (
+    <Collapsible title="Libro de Hechizos" icon="📘" defaultOpen>
+      <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
+        Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo es tu rango actual.
+      </div>
+      <div style={{ color: "#c4b5fd", fontSize: 12, marginBottom: 10 }}>
+        Rango actual: {rank} · PX libre: {remainingXP}
+      </div>
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Hechizos oficiales de tu clase</div>
+        <select value={draft.spellId} onChange={e => setDraft(prev => ({ ...prev, spellId: e.target.value }))}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8 }}>
+          <option value="">{officialOptions.length ? "Selecciona un hechizo oficial" : "No hay hechizos oficiales disponibles a este rango"}</option>
+          {officialOptions.map(spell => (
+            <option key={spell.id} value={spell.id}>Nivel {spell.level} · {spell.name}</option>
+          ))}
+        </select>
+        {selectedOfficial && (
+          <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 8, lineHeight: 1.5 }}>
+            {selectedOfficial.summary || selectedOfficial.notes || "Texto oficial pendiente de transcribir."}
+          </div>
+        )}
+        <button onClick={addOfficial} disabled={!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
+            background: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#1d4ed8" : "#1e293b",
+            color: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#dbeafe" : "#64748b",
+            fontWeight: 700, cursor: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "pointer" : "default" }}>
+          Aprender hechizo oficial (1 PX)
+        </button>
+      </div>
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Carga manual de respaldo</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: 8, marginBottom: 8 }}>
+          <input value={draft.name} onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="Nombre del hechizo"
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+          <input type="number" min="1" max={rank} value={draft.level} onChange={e => setDraft(prev => ({ ...prev, level: Math.max(1, Math.min(rank, Number(e.target.value) || 1)) }))}
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+        </div>
+        <input value={draft.school} onChange={e => setDraft(prev => ({ ...prev, school: e.target.value }))}
+          placeholder="Escuela"
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box" }}/>
+        <textarea value={draft.notes} onChange={e => setDraft(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Resumen o nota oficial"
+          rows={3}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, resize: "vertical", boxSizing: "border-box" }}/>
+        <button onClick={addManual} disabled={!draft.name.trim() || !canLearnSpell(adv, draft.level)}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
+            background: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#7f1d1d" : "#1e293b",
+            color: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#ffe4e6" : "#64748b",
+            fontWeight: 700, cursor: draft.name.trim() && canLearnSpell(adv, draft.level) ? "pointer" : "default" }}>
+          Agregar hechizo manual (1 PX)
+        </button>
+      </div>
+
+      {(getKnownSpells(adv) || []).length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {getKnownSpells(adv).map(spell => (
+            <div key={spell.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: (spell.summary || spell.notes) ? 6 : 0 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+                  <span style={{ color: "#93c5fd", fontSize: 14, fontWeight: 700 }}>{spell.name}</span>
+                  <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{spell.school}</span>
+                  <span style={{ fontSize: 11, color: "#d4b896", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {spell.level}</span>
+                </div>
+                <button onClick={() => removeSpell(spell.id)}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>x</button>
+              </div>
+              {(spell.summary || spell.notes) && (
+                <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{spell.summary || spell.notes}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: "#6b7280", fontSize: 12 }}>Todavia no hay hechizos aprendidos.</div>
+      )}
+    </Collapsible>
+  );
+}
+
+function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
+  const [filter, setFilter] = useState("all");
+  const learnedSkills = getLearnedSkills(adv);
+  const spells = getKnownSpells(adv);
+  const filters = [
+    { id: "all", label: "Todo" },
+    { id: "magic", label: "Magia" },
+    { id: "reaction", label: "Reaccion" },
+    { id: "melee", label: "Melee" },
+    { id: "ranged", label: "Distancia" },
+    { id: "defense", label: "Defensa" },
+    { id: "support", label: "Apoyo" },
+  ];
+
+  const entries = [
+    ...spells.map(spell => ({
+      id: "spell_" + spell.id,
+      name: spell.name,
+      level: spell.level,
+      source: "Hechizo",
+      summary: spell.summary || spell.notes || "Texto oficial pendiente de transcribir desde la carta.",
+      tags: ["magic","spell", (spell.school || "oficial").toLowerCase()],
+      accent: "#93c5fd",
+      meta: spell.school || "Oficial",
+      magic: true,
+    })),
+    ...learnedSkills.map((skill, index) => ({
+      id: "skill_" + slugKey(skill.name) + "_" + index,
+      name: skill.name,
+      level: skill.level,
+      source: skill.source,
+      summary: skill.summary,
+      tags: skill.tags || [],
+      accent: "#d4b896",
+      meta: skill.tags?.length ? skill.tags.join(" · ") : skill.source,
+      magic: (skill.tags || []).includes("magic") || (skill.tags || []).includes("spell"),
+    })),
+  ];
+
+  const visible = entries.filter(entry => filter === "all" || (entry.tags || []).includes(filter));
+
+  const markFirstMagicUse = () => {
+    if (!missionState || missionState.magia_usada_esta_ronda) return;
+    onUpdateMission({ ...missionState, magia_usada_esta_ronda: true, amenaza_nivel: missionState.amenaza_nivel + 1 });
+  };
+
+  return (
+    <ModalSheet title="Habilidades" subtitle={adv.nombre + (adv.clase ? " · " + adv.clase : "")} onClose={onClose}>
+      {adv.magia_max > 0 && (
+        <button onClick={markFirstMagicUse} disabled={!missionState || missionState.magia_usada_esta_ronda}
+          style={{ width: "100%", padding: 12, borderRadius: 8, marginBottom: 12,
+            border: missionState?.magia_usada_esta_ronda ? "1px solid #1d4ed8" : "1px solid #3b82f6",
+            background: missionState?.magia_usada_esta_ronda ? "#1d4ed822" : "#3b82f622",
+            color: missionState?.magia_usada_esta_ronda ? "#93c5fd" : "#dbeafe",
+            fontSize: 13, fontWeight: 700, cursor: missionState?.magia_usada_esta_ronda ? "default" : "pointer" }}>
+          {missionState?.magia_usada_esta_ronda ? "Magia ya marcada esta ronda" : "Marcar primer uso de magia (+1 Amenaza)"}
+        </button>
+      )}
+
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
+        {filters.map(filterOption => (
+          <button key={filterOption.id} onClick={() => setFilter(filterOption.id)}
+            style={{ padding: "8px 10px", borderRadius: 999,
+              border: filter === filterOption.id ? "1px solid #eab308" : "1px solid #374151",
+              background: filter === filterOption.id ? "#eab30822" : "#0f172a",
+              color: filter === filterOption.id ? "#fde68a" : "#9ca3af",
+              fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            {filterOption.label}
+          </button>
+        ))}
+      </div>
+
+      {visible.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {visible.map(entry => (
+            <div key={entry.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                    <span style={{ color: entry.accent, fontSize: 14, fontWeight: 700 }}>{entry.name}</span>
+                    <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{entry.source}</span>
+                    <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Nivel {entry.level}</span>
+                    {entry.meta && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{entry.meta}</span>}
+                  </div>
+                  {entry.tags?.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                      {entry.tags.map(tag => (
+                        <span key={tag} style={{ fontSize: 10, color: "#9ca3af", padding: "2px 6px", borderRadius: 999, border: "1px solid #374151", textTransform: "capitalize" }}>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{entry.summary}</div>
+                </div>
+                {entry.magic && !missionState?.magia_usada_esta_ronda && (
+                  <button onClick={markFirstMagicUse}
+                    style={{ minWidth: 44, minHeight: 44, padding: "0 8px", borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f622", color: "#dbeafe", cursor: "pointer", fontSize: 12 }}>
+                    + Amenaza
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: "#6b7280", fontSize: 13 }}>No hay entradas para este filtro.</div>
+      )}
+    </ModalSheet>
+  );
+}
+
+function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
+  const normalized = normalizeAdventurer(adv);
+  const update = (field, value) => onUpdate(normalizeAdventurer({ ...normalized, [field]: value }));
+  const learnedSkills = getLearnedSkills(normalized);
+  const spentXP = getSpentXP(normalized);
+  const freeXP = getRemainingXP(normalized);
+  const isMagicalClass = !!CLASS_DATA[normalized.clase]?.spell;
+
+  const updateSkillLevel = (skillName, delta) => {
+    const current = Number(normalized.clase_habilidades?.[skillName]) || 0;
+    const next = Math.max(0, current + delta);
+    if (delta > 0 && freeXP <= 0) return;
+    onUpdate(normalizeAdventurer({
+      ...normalized,
+      clase_habilidades: {
+        ...normalized.clase_habilidades,
+        [skillName]: next,
+      },
+    }));
+  };
+
+  return (
+    <div style={{ padding: 16 }}>
+      <button onClick={onBack}
+        style={{ background: "none", border: "none", color: "#9ca3af", fontSize: 13,
+          cursor: "pointer", marginBottom: 12, padding: 0 }}>â† Volver al grupo</button>
+
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <h2 style={{ color: "#d4b896", fontSize: 22, fontWeight: 800, margin: 0 }}>{normalized.nombre}</h2>
+        <div style={{ color: "#6b7280", fontSize: 13 }}>{normalized.especie} Â· Rango {normalized.rango} Â· {normalized.coste}â‚²</div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, marginBottom: 6, textTransform: "uppercase" }}>Clase</div>
+        <select value={normalized.clase} onChange={e => onUpdate(updateAdventurerClass(normalized, e.target.value))}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151",
+            background: "#0f172a", color: "#d4b896", fontSize: 14 }}>
+          <option value="">â€” Sin clase â€”</option>
+          {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 12, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <PegBar label="Salud" icon="â™¥" current={normalized.salud_actual} max={normalized.salud_max}
+          color="#22c55e" onChange={v => update("salud_actual", v)}/>
+        <PegBar label="Magia" icon="âœ¦" current={normalized.magia_actual} max={normalized.magia_max}
+          color="#3b82f6" onChange={v => update("magia_actual", v)}/>
+        <PegBar label="Habilidad" icon="â—†" current={normalized.habilidad_actual} max={normalized.habilidad_max}
+          color="#eab308" onChange={v => update("habilidad_actual", v)}/>
+      </div>
+
+      <Collapsible title="Estados" icon="ðŸ’€" defaultOpen={normalized.status_effects.length > 0}>
+        <StatusEffects effects={normalized.status_effects} onChange={v => update("status_effects", v)}/>
+      </Collapsible>
+
+      {normalized.innatas.length > 0 && (
+        <Collapsible title="Habilidades Innatas" icon="â­">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {normalized.innatas.map(h => (
+              <span key={h} style={{ padding: "4px 10px", borderRadius: 6, background: "#eab30822",
+                border: "1px solid #eab30844", color: "#eab308", fontSize: 12 }}>{h}</span>
+            ))}
+          </div>
+        </Collapsible>
+      )}
+
+      {normalized.clase && (
+        <Collapsible title="Progresion de Clase" icon="🗡️" defaultOpen>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+              <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase" }}>PX gastada</div>
+              <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{spentXP}</div>
+            </div>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+              <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase" }}>PX libre</div>
+              <div style={{ color: freeXP > 0 ? "#22c55e" : "#9ca3af", fontSize: 20, fontWeight: 800 }}>{freeXP}</div>
+            </div>
+          </div>
+          <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
+            Aqui puedes reflejar lo aprendido gastando PX. No impongo topes automaticos porque aun nos faltan cartas completas de avance por validar.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(CLASS_DATA[normalized.clase]?.skills || []).map(skillName => {
+              const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
+              const meta = SKILL_DATA[skillName] || {};
+              return (
+                <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+                        <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{skillName}</span>
+                        {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
+                        <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>}
+                      </div>
+                      <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{meta.summary || "Resumen pendiente de verificar en manual oficial."}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button onClick={() => updateSkillLevel(skillName, -1)}
+                        style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: "#d4b896", cursor: "pointer" }}>-</button>
+                      <div style={{ minWidth: 26, textAlign: "center", color: "#d4b896", fontWeight: 700 }}>{level}</div>
+                      <button onClick={() => updateSkillLevel(skillName, 1)} disabled={freeXP <= 0}
+                        style={{ width: 32, height: 32, borderRadius: 8, border: freeXP > 0 ? "1px solid #166534" : "1px solid #374151",
+                          background: freeXP > 0 ? "#16653422" : "transparent", color: freeXP > 0 ? "#bbf7d0" : "#4b5563", cursor: freeXP > 0 ? "pointer" : "default" }}>+</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Collapsible>
+      )}
+
+      {learnedSkills.length > 0 && (
+        <Collapsible title="Habilidades Aprendidas" icon="✨">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {learnedSkills.map((skill, index) => (
+              <div key={skill.name + "_" + index} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+                  <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{skill.name}</span>
+                  <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{skill.source}</span>
+                  <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {skill.level}</span>
+                </div>
+                <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{skill.summary}</div>
+              </div>
+            ))}
+          </div>
+        </Collapsible>
+      )}
+
+      {isMagicalClass && <SpellbookEditor adv={normalized} onUpdate={onUpdate}/>}
+
+      <InventoryEditor adv={normalized} onUpdate={onUpdate}/>
+
+      <Collapsible title="Estadisticas" icon="ðŸ“Š">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+          {[
+            { label: "Experiencia", field: "experiencia" },
+            { label: "Rango", field: "rango" },
+          ].map(({ label, field }) => (
+            <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "#0f172a", borderRadius: 8, padding: "8px 10px" }}>
+              <span style={{ color: "#9ca3af", fontSize: 12 }}>{label}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => update(field, Math.max(field === "rango" ? 1 : 0, normalized[field] - 1))}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
+                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+                <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 24, textAlign: "center" }}>{normalized[field]}</span>
+                <button onClick={() => update(field, normalized[field] + 1)}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
+                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Collapsible>
+
+      <button onClick={onBack}
+        style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "2px solid #166534",
+          background: "#16653422", color: "#bbf7d0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        Confirmar aventurero
+      </button>
+
+      <button onClick={onRemove}
+        style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "1px solid #7f1d1d",
+          background: "#7f1d1d22", color: "#fca5a5", fontSize: 13, cursor: "pointer" }}>
+        Retirar del grupo
+      </button>
+    </div>
+  );
+}
+
+function InventoryModal({ adv, missionState, onUpdateMission, onClose }) {
+  const items = normalizeAdventurer(adv).inventario || [];
+
+  const markFirstMagicUse = () => {
+    if (!missionState || missionState.magia_usada_esta_ronda) return;
+    onUpdateMission({ ...missionState, magia_usada_esta_ronda: true, amenaza_nivel: missionState.amenaza_nivel + 1 });
+  };
+
+  return (
+    <ModalSheet title="Items" subtitle={adv.nombre + " · " + items.length + " registrados"} onClose={onClose}>
+      {items.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {items.map(item => (
+            <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 }}>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</span>
+                {item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>}
+                {item.magic && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Magico</span>}
+                {item.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{item.meleeDice}</span>}
+                {item.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{item.rangedDice}</span>}
+                {item.shield > 0 && <span style={{ fontSize: 11, color: "#93c5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {item.shield}</span>}
+                {item.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot {item.armor}</span>}
+              </div>
+              {item.summary && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: item.magic ? 8 : 0 }}>{item.summary}</div>}
+              {item.magic && !missionState?.magia_usada_esta_ronda && (
+                <button onClick={markFirstMagicUse}
+                  style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f622", color: "#dbeafe", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                  Marcar primer uso magico (+1 Amenaza)
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: "#6b7280", fontSize: 13 }}>Este aventurero todavia no tiene items registrados.</div>
+      )}
+    </ModalSheet>
+  );
+}
+
 // ========== SCREENS ==========
 
 // --- HOME SCREEN ---
@@ -589,7 +1532,7 @@ function AdventurersScreen({ adventurers, campaign, onUpdate, onAdd, onRemove, o
     const adv = adventurers.find(a => a.id === selected);
     if (!adv) { setSelected(null); return null; }
     return (
-      <AdventurerSheet adv={adv}
+      <AdventurerSheetV2 adv={adv}
         onUpdate={updated => onUpdate(updated)}
         onBack={() => setSelected(null)}
         onRemove={() => { onRemove(adv.id); setSelected(null); }}/>
@@ -721,10 +1664,9 @@ function AdventurerSheet({ adv, onUpdate, onBack, onRemove }) {
       )}
 
       <Collapsible title="Estadísticas" icon="📊">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
           {[
             { label: "Experiencia", field: "experiencia" },
-            { label: "Renombre", field: "renombre" },
           ].map(({ label, field }) => (
             <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
               background: "#0f172a", borderRadius: 8, padding: "8px 10px" }}>
@@ -744,8 +1686,8 @@ function AdventurerSheet({ adv, onUpdate, onBack, onRemove }) {
       </Collapsible>
 
       <button onClick={onBack}
-        style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "2px solid #b91c1c",
-          background: "#b91c1c22", color: "#fca5a5", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "2px solid #166534",
+          background: "#16653422", color: "#bbf7d0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
         Confirmar aventurero
       </button>
 
@@ -966,6 +1908,176 @@ function MainBoard({ missionState, adventurers, campaign, onUpdateMission, onUpd
   );
 }
 
+function MainBoardV2({ missionState, adventurers, campaign, onUpdateMission, onUpdateAdventurer, onEndMission, onBack }) {
+  const mission = MISSIONS[missionState.mision_id];
+  const mName = mission?.nombre || missionState.mision_id;
+  const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
+  const [activeItemAdv, setActiveItemAdv] = useState(null);
+
+  const handleThreatChange = (newLevel) => {
+    onUpdateMission({ ...missionState, amenaza_nivel: newLevel });
+  };
+
+  const toggleMagic = () => {
+    onUpdateMission({ ...missionState, magia_usada_esta_ronda: !missionState.magia_usada_esta_ronda });
+  };
+
+  const toggleStep = (phaseId, stepIdx) => {
+    const key = `${phaseId}_${stepIdx}`;
+    onUpdateMission({
+      ...missionState,
+      steps_completados: { ...missionState.steps_completados, [key]: !missionState.steps_completados[key] }
+    });
+  };
+
+  const advanceRound = () => {
+    onUpdateMission({
+      ...missionState,
+      ronda: missionState.ronda + 1,
+      magia_usada_esta_ronda: false,
+      steps_completados: {},
+    });
+  };
+
+  const selectedAbilityAdv = adventurers.find(a => a.id === activeAbilityAdv) || null;
+  const selectedItemAdv = adventurers.find(a => a.id === activeItemAdv) || null;
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, fontSize: 13 }}>â† Hub</button>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ color: "#b91c1c", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>MisiÃ³n {missionState.mision_id}</div>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{mName}</div>
+        </div>
+        <div style={{ background: "#1a1a2e", borderRadius: 8, padding: "4px 12px", border: "1px solid #2d2d44" }}>
+          <div style={{ color: "#6b7280", fontSize: 9, textTransform: "uppercase" }}>Ronda</div>
+          <div style={{ color: "#d4b896", fontSize: 22, fontWeight: 800, textAlign: "center" }}>{missionState.ronda}</div>
+        </div>
+      </div>
+
+      <ThreatTracker level={missionState.amenaza_nivel} cara={missionState.amenaza_cara} onLevelChange={handleThreatChange}/>
+
+      <button onClick={toggleMagic}
+        style={{ width: "100%", padding: 10, borderRadius: 8, marginTop: 8, marginBottom: 12,
+          border: missionState.magia_usada_esta_ronda ? "2px solid #3b82f6" : "1px solid #374151",
+          background: missionState.magia_usada_esta_ronda ? "#3b82f622" : "#1a1a2e",
+          color: missionState.magia_usada_esta_ronda ? "#60a5fa" : "#6b7280",
+          fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+        âœ¦ {missionState.magia_usada_esta_ronda ? "Magia usada esta ronda (+1 Amenaza)" : "Â¿Se usÃ³ magia esta ronda?"}
+      </button>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
+          letterSpacing: 2, marginBottom: 8 }}>Fases del turno</div>
+        <PhaseChecklist phases={TURN_PHASES}
+          completedPhases={missionState.fases_completadas || {}}
+          completedSteps={missionState.steps_completados || {}}
+          onTogglePhase={() => {}}
+          onToggleStep={toggleStep}/>
+      </div>
+
+      <button onClick={advanceRound}
+        style={{ width: "100%", padding: 14, borderRadius: 10, border: "2px solid #eab308",
+          background: "#eab30815", color: "#eab308", fontSize: 15, fontWeight: 700,
+          cursor: "pointer", marginBottom: 12 }}>
+        â–¶ Avanzar a Ronda {missionState.ronda + 1}
+      </button>
+
+      <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
+        letterSpacing: 2, marginBottom: 8 }}>Aventureros</div>
+      {adventurers.map(a => {
+        const normalized = normalizeAdventurer(a);
+        const equipment = getEquipmentStats(normalized);
+        const equipped = summarizeEquippedItems(normalized);
+        return (
+          <div key={a.id} style={{ background: "#1a1a2e", borderRadius: 10, padding: 12,
+            border: "1px solid #2d2d44", marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div>
+                <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{normalized.nombre}</span>
+                <span style={{ color: "#6b7280", fontSize: 12, marginLeft: 8 }}>{normalized.clase || normalized.especie}</span>
+              </div>
+              {normalized.status_effects.length > 0 && (
+                <div style={{ display: "flex", gap: 2 }}>
+                  {[...new Set(normalized.status_effects)].map(se => {
+                    const status = STATUS_EFFECTS.find(x => x.id === se);
+                    return status ? <span key={se} title={status.name} style={{ fontSize: 14 }}>{status.icon}</span> : null;
+                  })}
+                </div>
+              )}
+            </div>
+
+            <PegBar label="HP" icon="â™¥" current={normalized.salud_actual} max={normalized.salud_max}
+              color="#22c55e" onChange={v => onUpdateAdventurer({ ...normalized, salud_actual: v })}/>
+            <PegBar label="MP" icon="âœ¦" current={normalized.magia_actual} max={normalized.magia_max}
+              color="#3b82f6" onChange={v => onUpdateAdventurer({ ...normalized, magia_actual: v })}/>
+            <PegBar label="SP" icon="â—†" current={normalized.habilidad_actual} max={normalized.habilidad_max}
+              color="#eab308" onChange={v => onUpdateAdventurer({ ...normalized, habilidad_actual: v })}/>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+              {equipment.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{equipment.meleeDice}</span>}
+              {equipment.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{equipment.rangedDice}</span>}
+              {equipment.shield > 0 && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {equipment.shield}</span>}
+              {equipment.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot +{equipment.armor}</span>}
+              {getKnownSpells(normalized).length > 0 && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{getKnownSpells(normalized).length} hechizos</span>}
+            </div>
+
+            {equipped.length > 0 && (
+              <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.4, marginBottom: 8 }}>
+                Equipo: {equipped.map(item => item.name).join(", ")}
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button onClick={() => setActiveAbilityAdv(normalized.id)}
+                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                Habilidades
+              </button>
+              <button onClick={() => setActiveItemAdv(normalized.id)}
+                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                Items
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+        {mission?.reglas_especiales?.length > 0 && (
+          <button onClick={() => {}}
+            style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#1a1a2e",
+              color: "#d4b896", fontSize: 12, cursor: "pointer" }}>ðŸ“‹ Reglas Especiales</button>
+        )}
+        <button onClick={() => window.open("https://xinix.github.io/maladum/", "_blank")}
+          style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#1a1a2e",
+            color: "#d4b896", fontSize: 12, cursor: "pointer" }}>ðŸ“¦ Items DB</button>
+        <button onClick={onEndMission}
+          style={{ padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22",
+            color: "#fca5a5", fontSize: 12, cursor: "pointer", gridColumn: "1 / -1" }}>âœ… Fin de MisiÃ³n</button>
+      </div>
+
+      {selectedAbilityAdv && (
+        <CombatAbilitiesModal
+          adv={selectedAbilityAdv}
+          missionState={missionState}
+          onUpdateMission={onUpdateMission}
+          onClose={() => setActiveAbilityAdv(null)}
+        />
+      )}
+
+      {selectedItemAdv && (
+        <InventoryModal
+          adv={selectedItemAdv}
+          missionState={missionState}
+          onUpdateMission={onUpdateMission}
+          onClose={() => setActiveItemAdv(null)}
+        />
+      )}
+    </div>
+  );
+}
+
 // --- CAMPAIGN REGISTRY ---
 function RegistryScreen({ campaign, onUpdate, onBack }) {
   const reg = campaign.registro;
@@ -1126,7 +2238,7 @@ function App() {
         const c = await DB.load("campaign_" + lastCampId);
         if (c) {
           setCampaign(c);
-          const advs = await DB.load("adventurers_" + lastCampId) || [];
+          const advs = (await DB.load("adventurers_" + lastCampId) || []).map(normalizeAdventurer);
           setAdventurers(advs);
           const ms = await DB.load("mission_state_" + lastCampId);
           if (ms) setMissionState(ms);
@@ -1175,7 +2287,7 @@ function App() {
     const c = await DB.load("campaign_" + summary.id);
     if (c) {
       setCampaign(c);
-      const advs = await DB.load("adventurers_" + summary.id) || [];
+      const advs = (await DB.load("adventurers_" + summary.id) || []).map(normalizeAdventurer);
       setAdventurers(advs);
       const ms = await DB.load("mission_state_" + summary.id);
       setMissionState(ms || null);
@@ -1185,13 +2297,14 @@ function App() {
   };
 
   const addAdventurer = (charData) => {
-    const adv = defaultAdventurer(campaign.id, charData);
+    const adv = normalizeAdventurer(defaultAdventurer(campaign.id, charData));
     setAdventurers(prev => [...prev, adv]);
     return adv;
   };
 
   const updateAdventurer = (updated) => {
-    setAdventurers(prev => prev.map(a => a.id === updated.id ? updated : a));
+    const normalized = normalizeAdventurer(updated);
+    setAdventurers(prev => prev.map(a => a.id === normalized.id ? normalized : a));
   };
 
   const removeAdventurer = (id) => {
@@ -1260,7 +2373,7 @@ function App() {
       )}
 
       {screen === "campaign" && subScreen === "board" && missionState && (
-        <MainBoard missionState={missionState} adventurers={adventurers} campaign={campaign}
+        <MainBoardV2 missionState={missionState} adventurers={adventurers} campaign={campaign}
           onUpdateMission={setMissionState}
           onUpdateAdventurer={updateAdventurer}
           onEndMission={() => { setMissionState(null); setSubScreen("hub"); }}
