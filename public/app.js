@@ -307,20 +307,30 @@ const SKILL_LEVEL_DATA = {
     "Reaccion: uso magico avanzado segun la Reference Section. La transcripcion completa de este nivel sigue pendiente de pulido, pero la habilidad mejora el lanzamiento flexible de hechizos.",
     "Pasiva: puedes gastar cualquier numero de clavijas de Habilidad al lanzar un hechizo para aumentar su valor de lanzamiento en esa misma cantidad, incluso superando tu rango. Tambien mejora el uso de objetos con Channel.",
   ],
+  "Frenzy": [
+    "Usa antes de hacer un ataque melee: anades 2 dados al ataque.",
+    "Usa antes de hacer un ataque melee: anades 3 dados al ataque.",
+    "Usa antes de hacer un ataque melee: anades 4 dados. Despues de tirar, puedes repartir los impactos entre varios enemigos al alcance del arma; otros efectos del arma se aplican a todos los enemigos que sufran al menos 1 impacto.",
+  ],
+  "Weapons Master": [
+    "Pasiva: ganas First Strike.",
+    "Haz un ataque melee con un arma. Puedes repetir 1 dado de combate.",
+    "Pasiva: puedes usar Shield Block como accion sin esfuerzo. Si lo usas fuera de tu turno sigues quedando Fatigado.",
+  ],
 };
 
 const ATTRIBUTE_DATA = {
   melee: { label: "Melee", summary: "Puede usarse como arma de cuerpo a cuerpo." },
-  balanced: { label: "Balanced", summary: "Cuando se lanza, esta arma tira +1 dado." },
-  quickstrike: { label: "Quickstrike", summary: "Golpea muy rapido; atributo ofensivo de arma pensado para resolver ataques rapidos antes de que el rival estabilice la situacion." },
+  balanced: { label: "Balanced", summary: "Si esta arma se lanza, tira 1 dado extra." },
+  quickstrike: { label: "Quickstrike", summary: "Si esta arma saca critico en un ataque melee, despues de resolver ese ataque puedes hacer gratis un Dash o un nuevo ataque con esta u otra arma." },
   first_strike: { label: "First Strike", summary: "Ventaja al golpear primero en el intercambio." },
-  parry: { label: "Parry", summary: "Ayuda a desviar o bloquear ataques en combate cercano." },
+  parry: { label: "Parry", summary: "Cuando el usuario sufre un ataque melee, puedes tirar 1 dado de combate. Cada impacto anula 1 impacto enemigo como si fuera armadura fisica. Luego quedas Fatigado." },
   reach: { label: "Reach", summary: "Permite atacar con mas alcance que un arma cuerpo a cuerpo normal." },
   channel: { label: "Channel", summary: "Necesita gastar al menos 1 clavija de Magia para activar o mejorar su efecto." },
   burning: { label: "Burning", summary: "En un critico puede aplicar Quemado; ademas se considera fuente de fuego." },
-  sharp: { label: "Sharp", summary: "Arma cortante con mejor capacidad ofensiva." },
+  sharp: { label: "Sharp", summary: "Si esta arma saca critico, el objetivo queda Herido aunque no haya sufrido dano." },
   forceful_melee: { label: "Forceful Melee", summary: "Golpe cuerpo a cuerpo con gran empuje o potencia." },
-  shield_block: { label: "Shield Block", summary: "Aporta capacidad defensiva tipo escudo." },
+  shield_block: { label: "Shield Block", summary: "Puedes gastar una accion para alzar el escudo y ganar su defensa hasta que hagas otra accion que no sea Mover o Dash, sufras dano o quedes Aturdido. Si te atacan fuera de tu turno puedes alzarlo antes de tirar dados, pero luego quedas Fatigado." },
   armour: { label: "Armour", summary: "Otorga proteccion adicional." },
   camouflage: { label: "Camouflage", summary: "Solo puede ser objetivo de ataques a distancia desde corto alcance." },
   ammo_arrow: { label: "Ammo Arrow", summary: "Necesita flechas para dispararse." },
@@ -333,7 +343,7 @@ const ATTRIBUTE_DATA = {
   effortless: { label: "Effortless", summary: "Puede usarse como accion sin esfuerzo." },
   cleave: { label: "Cleave", summary: "Si derrotas a un enemigo en melee puedes encadenar el mismo ataque contra otro objetivo valido reduciendo impactos." },
   entangling: { label: "Entangling", summary: "Ayuda a trabar o limitar el movimiento del objetivo." },
-  piercing: { label: "Piercing", summary: "Mejora la capacidad de atravesar defensas." },
+  piercing: { label: "Piercing", summary: "La armadura fisica no puede anular impactos de esta arma." },
   range_plus_1: { label: "Range +1", summary: "Aumenta en 1 el alcance del arma o efecto." },
   magical_armour: { label: "Magical Armour", summary: "Aporta defensa magica." },
   magical_armour_1: { label: "Magical Armour 1", summary: "Aporta defensa magica de nivel 1." },
@@ -631,13 +641,24 @@ function getRemainingXP(adv) {
   return Math.max(0, (Number(adv?.experiencia) || 0) - getSpentXP(adv));
 }
 
+function normalizeSkillLookupName(name) {
+  const raw = String(name || "").trim();
+  if (SKILL_DATA[raw] || SKILL_LEVEL_DATA[raw]) return raw;
+  const stripped = raw.replace(/\s+\d+$/, "");
+  if (SKILL_DATA[stripped] || SKILL_LEVEL_DATA[stripped]) return stripped;
+  return raw;
+}
+
 function getSkillEntry(name, level, source) {
-  const meta = SKILL_DATA[name] || {};
+  const skillName = normalizeSkillLookupName(name);
+  const normalizedLevel = Math.max(1, Number(level) || 1);
+  const meta = SKILL_DATA[skillName] || {};
+  const levelSummary = getSkillLevelDetails(skillName)[normalizedLevel - 1];
   return {
-    name,
-    level: Math.max(1, Number(level) || 1),
+    name: skillName,
+    level: normalizedLevel,
     source: source || meta.category || "Habilidad",
-    summary: meta.summary || "Resumen pendiente de verificar en manual oficial.",
+    summary: levelSummary || meta.summary || "Resumen pendiente de verificar en manual oficial.",
     tags: meta.tags || [],
   };
 }
@@ -651,7 +672,7 @@ function resolveSkillNameFromToken(token) {
 }
 
 function getSkillLevelDetails(name) {
-  return SKILL_LEVEL_DATA[name] || [];
+  return SKILL_LEVEL_DATA[normalizeSkillLookupName(name)] || [];
 }
 
 function getAttributeEntry(attr) {
@@ -1427,20 +1448,35 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                 </details>
               )}
 
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
-                {[
-                  ["meleeDice", "Melee"],
-                  ["rangedDice", "Dist"],
-                  ["shield", "Escudo"],
-                  ["armor", "Prot"],
-                ].map(([field, label]) => (
-                  <div key={field}>
-                    <div title={EQUIPMENT_FIELD_HELP[field]} style={{ color: "#6b7280", fontSize: 10, marginBottom: 4, cursor: "help" }}>{label}</div>
-                    <input type="number" min="0" value={item[field]} onChange={e => updateItem(item.id, field, Number(e.target.value) || 0)}
-                      style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
-                  </div>
-                ))}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                {item.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{item.meleeDice}</span>}
+                {item.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{item.rangedDice}</span>}
+                {item.shield > 0 && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {item.shield}</span>}
+                {item.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot +{item.armor}</span>}
+                {!item.meleeDice && !item.rangedDice && !item.shield && !item.armor && (
+                  <span style={{ color: "#6b7280", fontSize: 11 }}>Sin valores de combate cargados.</span>
+                )}
               </div>
+              <details style={{ marginBottom: 8 }}>
+                <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>Ajuste manual de combate</summary>
+                <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginTop: 8, marginBottom: 8 }}>
+                  Solo toca estos valores si quieres corregir o completar un item. Lo normal es dejar el autocompletado del catalogo.
+                </div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6 }}>
+                  {[
+                    ["meleeDice", "Melee"],
+                    ["rangedDice", "Dist"],
+                    ["shield", "Escudo"],
+                    ["armor", "Prot"],
+                  ].map(([field, label]) => (
+                    <div key={field}>
+                      <div title={EQUIPMENT_FIELD_HELP[field]} style={{ color: "#6b7280", fontSize: 10, marginBottom: 4, cursor: "help" }}>{label}</div>
+                      <input type="number" min="0" value={item[field]} onChange={e => updateItem(item.id, field, Number(e.target.value) || 0)}
+                        style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+                    </div>
+                  ))}
+                </div>
+              </details>
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {autoEquippedWeapon ? (
@@ -3047,32 +3083,40 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
               const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
               const meta = SKILL_DATA[skillName] || {};
               const levelDetails = getSkillLevelDetails(skillName);
+              const currentDetail = level > 0 ? (levelDetails[Math.min(level, levelDetails.length) - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.") : (meta.summary || "Resumen pendiente de verificar en manual oficial.");
               return (
                 <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
-                        <button onClick={() => toggleSkillInfo(skillName, meta.summary || "Resumen pendiente de verificar en manual oficial.", normalized.clase || "Clase")}
-                          title={meta.summary || "Resumen pendiente de verificar en manual oficial."}
+                        <button onClick={() => toggleSkillInfo(skillName, currentDetail, normalized.clase || "Clase")}
+                          title={currentDetail}
                           style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>{skillName}</button>
                         {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
                         <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
                       </div>
-                      <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{meta.summary || "Resumen pendiente de verificar en manual oficial."}</div>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                        {[1, 2, 3].map(n => {
-                          const unlocked = level >= n;
-                          const text = levelDetails[n - 1] || "Detalle de este nivel pendiente de transcribir del manual.";
-                          return (
-                            <div key={n} style={{ borderRadius: 8, border: unlocked ? "1px solid #166534" : "1px solid #374151", background: unlocked ? "#16653418" : "#111827", padding: 8 }}>
-                              <div style={{ color: unlocked ? "#bbf7d0" : "#9ca3af", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
-                                Nivel {n} {unlocked ? "| Disponible" : "| No disponible"}
+                      <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{currentDetail}</div>
+                      {level > 0 ? (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                          {Array.from({ length: level }, (_, idx) => idx + 1).map(n => {
+                            const text = levelDetails[n - 1] || "Detalle de este nivel pendiente de transcribir del manual.";
+                            return (
+                              <div key={n} style={{ borderRadius: 8, border: "1px solid #166534", background: "#16653418", padding: 8 }}>
+                                <div style={{ color: "#bbf7d0", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+                                  Nivel {n} | Disponible
+                                </div>
+                                <div style={{ color: "#dbeafe", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
                               </div>
-                              <div style={{ color: unlocked ? "#dbeafe" : "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ borderRadius: 8, border: "1px solid #374151", background: "#111827", padding: 8 }}>
+                          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                            Sin niveles comprados todavia. Usa + para reflejar lo aprendido en mesa; aqui se mostrara solo el texto oficial de los niveles que ya tenga esta habilidad.
+                          </div>
+                        </div>
+                      )}
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button onClick={() => updateSkillLevel(skillName, -1)}
