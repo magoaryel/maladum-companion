@@ -2085,6 +2085,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
   const spentXP = getSpentXP(normalized);
   const freeXP = getRemainingXP(normalized);
   const isMagicalClass = !!CLASS_DATA[normalized.clase]?.spell;
+  const [activeSkillInfo, setActiveSkillInfo] = useState(null);
 
   const updateSkillLevel = (skillName, delta) => {
     const current = Number(normalized.clase_habilidades?.[skillName]) || 0;
@@ -2097,6 +2098,10 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
         [skillName]: next,
       },
     }));
+  };
+
+  const toggleSkillInfo = (name, summary, source) => {
+    setActiveSkillInfo(prev => prev?.name === name ? null : { name, summary, source });
   };
 
   return (
@@ -2137,13 +2142,12 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
         <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
           {[
             { label: "Experiencia", field: "experiencia" },
-            { label: "Rango", field: "rango" },
           ].map(({ label, field }) => (
             <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
               background: "#0f172a", borderRadius: 8, padding: "8px 10px" }}>
               <span style={{ color: "#9ca3af", fontSize: 12 }}>{label}</span>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button onClick={() => update(field, Math.max(field === "rango" ? 1 : 0, normalized[field] - 1))}
+                <button onClick={() => update(field, Math.max(0, normalized[field] - 1))}
                   style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
                     background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
                 <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 24, textAlign: "center" }}>{normalized[field]}</span>
@@ -2158,12 +2162,21 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
 
       {normalized.innatas.length > 0 && (
         <Collapsible title="Habilidades Innatas" icon="INN">
+          <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>Toca una habilidad para ver que hace.</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {normalized.innatas.map(h => (
-              <span key={h} style={{ padding: "4px 10px", borderRadius: 6, background: "#eab30822",
-                border: "1px solid #eab30844", color: "#eab308", fontSize: 12 }}>{h}</span>
+              <button key={h} onClick={() => toggleSkillInfo(h, getSkillEntry(h, 1, "Innata").summary, "Innata")}
+                title={getSkillEntry(h, 1, "Innata").summary}
+                style={{ padding: "4px 10px", borderRadius: 6, background: activeSkillInfo?.name === h ? "#eab30833" : "#eab30822",
+                  border: "1px solid #eab30844", color: "#eab308", fontSize: 12, cursor: "pointer" }}>{h}</button>
             ))}
           </div>
+          {activeSkillInfo && normalized.innatas.includes(activeSkillInfo.name) && (
+            <div style={{ marginTop: 8, background: "#0f172a", border: "1px solid #2d2d44", borderRadius: 8, padding: 10 }}>
+              <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{activeSkillInfo.name}</div>
+              <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{activeSkillInfo.summary}</div>
+            </div>
+          )}
         </Collapsible>
       )}
 
@@ -2182,6 +2195,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
           <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
             Aqui puedes reflejar lo aprendido gastando PX. No impongo topes automaticos porque aun nos faltan cartas completas de avance por validar.
           </div>
+          <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>En movil puedes tocar el nombre de una habilidad para resaltarla y ver su resumen.</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(CLASS_DATA[normalized.clase]?.skills || []).map(skillName => {
               const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
@@ -2191,11 +2205,13 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
-                        <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{skillName}</span>
+                        <button onClick={() => toggleSkillInfo(skillName, meta.summary || "Resumen pendiente de verificar en manual oficial.", normalized.clase || "Clase")}
+                          title={meta.summary || "Resumen pendiente de verificar en manual oficial."}
+                          style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>{skillName}</button>
                         {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
                         <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
                       </div>
-                      <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{meta.summary || "Resumen pendiente de verificar en manual oficial."}</div>
+                      <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{meta.summary || "Resumen pendiente de verificar en manual oficial."}</div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button onClick={() => updateSkillLevel(skillName, -1)}
@@ -2215,15 +2231,19 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
 
       {learnedSkills.length > 0 && (
         <Collapsible title="Habilidades Aprendidas" icon="HAB">
+          <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>Puedes tocar una habilidad aprendida para destacar su explicacion.</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {learnedSkills.map((skill, index) => (
-              <div key={skill.name + "_" + index} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+              <div key={skill.name + "_" + index}
+                onClick={() => toggleSkillInfo(skill.name, skill.summary, skill.source)}
+                title={skill.summary}
+                style={{ background: activeSkillInfo?.name === skill.name ? "#132034" : "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10, cursor: "pointer" }}>
                 <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
                   <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{skill.name}</span>
                   <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{skill.source}</span>
                   <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {skill.level}</span>
                 </div>
-                <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{skill.summary}</div>
+                <div style={{ color: activeSkillInfo?.name === skill.name ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{skill.summary}</div>
               </div>
             ))}
           </div>
