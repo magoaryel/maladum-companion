@@ -272,6 +272,16 @@ const SKILL_ALIASES = {
 };
 
 const SKILL_LEVEL_DATA = {
+  "Brutal Assault": [
+    "Haz una accion melee usando solo esta skill con 1 dado extra. Si el objetivo sobrevive, queda Derribado.",
+    "Lanzas a un personaje trabado contigo que no sea mas grande que tu hacia una casilla a corto alcance y con LoS. Sufre un ataque segun tu Fuerza +1 y luego queda Derribado.",
+    "Pasiva: puedes ignorar la regla Cumbersome en armas melee.",
+  ],
+  "Disarm": [
+    "Reaccion: tras sufrir un ataque melee sin dano, el arma usada por el atacante se quita de su tablero y queda dispersada.",
+    "Reaccion: como nivel 1, pero el arma robada pasa a tu tablero. Si no tienes espacio, debes soltarla o soltar otro objeto.",
+    "Reaccion: como nivel 2, y ademas haces inmediatamente un Ataque Melee con el arma robada seguido de un Movimiento sin ataques de oportunidad.",
+  ],
   "Barter": [
     "Mercado: compra un objeto de cualquier valor, o roba un raro adicional, o vende un objeto por su valor de compra hasta 10 x tu rango.",
     "Mercado: reduce hasta 2 al precio de compra o suma 2 al de venta en hasta tres objetos, en cualquier combinacion.",
@@ -291,6 +301,16 @@ const SKILL_LEVEL_DATA = {
     "Reaccion: tras ser objetivo de un ataque a distancia o hechizo, si estas a 4 casillas o menos de cobertura, te mueves a cobertura.",
     "Reaccion: como nivel 1, pero ignoras todos los efectos de ese ataque.",
     "Reaccion: en cualquier momento, mueve a cobertura ignorando ataques de oportunidad y luego ataca. Mientras no te muevas de ahi, no pueden afectarte ataques a distancia hasta el final de la ronda.",
+  ],
+  "Combat Arts": [
+    "Estallas fuera del combate: empujas hasta 2 casillas a los enemigos trabados contigo, cada uno sufre un ataque de 2 dados, y luego haces un Movimiento.",
+    "Barres los pies del enemigo: un objetivo en contacto queda Derribado.",
+    "Pasiva: tus ataques ganan Quickstrike. Si usas un arma que ya tenga Quickstrike, puedes hacer Dash y Ataque.",
+  ],
+  "Fleet of Foot": [
+    "Haz un Movimiento. Pasiva: ganas Fast 1.",
+    "Haz un Movimiento. Ese y todos tus otros Movimientos del turno ignoran ataques de oportunidad, y haces un ataque de 1 dado a cada enemigo tocado durante tus Movimientos; si impactas tambien lo Derribas.",
+    "Reaccion: cuando un enemigo te engancha, haces un Movimiento ignorando ataques de oportunidad.",
   ],
   "Camouflage": [
     "Mientras estes en contacto con una pared no puedes ser objetivo el resto de la ronda.",
@@ -412,6 +432,11 @@ const SKILL_LEVEL_DATA = {
     "Reaccion: cuando un enemigo te engancha, haces un Movimiento ignorando ataques de oportunidad y un Ataque, en cualquier orden. Pasiva: puedes usar Parry tambien contra ataques a distancia.",
     "Reaccion: cuando un enemigo te engancha, el atacante queda Aturdido; luego haces dos Movimientos ignorando ataques de oportunidad y un Ataque, en cualquier orden. Pasiva: puedes ignorar un ataque de oportunidad usando una accion sin esfuerzo.",
   ],
+  "Herbalism": [
+    "Reaccion: cuando un aliado cercano haga un ataque, puedes anadir Poison; si ya tenia Poison, anades Vicious.",
+    "Pasiva: puedes aplicar Herbs, Fungus o Minerals como accion normal en vez de solo durante Descanso.",
+    "Durante una mision puedes fabricar una pocion gastando 2 acciones en la misma ronda como si usaras el Artisan's Guild; en Mercado haces lo mismo gratis.",
+  ],
   "Smithing": [
     "Durante una mision, gastas 1 accion para reparar un objeto roto gratis como si estuvieras en el gremio. Con X determinas que rarezas puedes reparar. En Mercado haces lo mismo gratis.",
     "Durante una mision, gastas 2 acciones en la misma ronda para fabricar un arma o armadura gratis como en el gremio, con limite de recursos segun X. En Mercado haces lo mismo gratis.",
@@ -461,6 +486,35 @@ const ATTRIBUTE_DATA = {
   vicious: { label: "Vicious", summary: "Hace el ataque especialmente peligroso o castigador." },
   retaliation: { label: "Retaliation", summary: "Puede devolver dano o efectos al atacante." },
 };
+
+const TERM_GLOSSARY = [
+  { term: "First Strike", summary: "Cuando entras a rango melee de un enemigo, obtienes un Ataque Melee gratuito inmediato." },
+  { term: "Parry", summary: "Cuando sufres un ataque melee, puedes tirar 1 dado de combate; cada impacto anula 1 impacto enemigo y luego quedas Fatigado." },
+  { term: "Shield Block", summary: "Puedes alzar el escudo para ganar su defensa; fuera de tu turno puedes hacerlo antes del ataque, pero luego quedas Fatigado." },
+  { term: "Quickstrike", summary: "Si un ataque melee con esta regla saca critico, despues puedes hacer gratis un Dash o un nuevo ataque." },
+  { term: "Fatigado", summary: "Estado de Fatiga. Varias habilidades lo ponen o lo limpian; el personaje queda mas limitado hasta recuperarse." },
+  { term: "Fatigued", summary: "Estado de Fatiga. Varias habilidades lo ponen o lo limpian; el personaje queda mas limitado hasta recuperarse." },
+  { term: "Stunned", summary: "Estado de Aturdido. Normalmente impide actuar con normalidad hasta que se elimine." },
+  { term: "Aturdido", summary: "Estado de Aturdido. Normalmente impide actuar con normalidad hasta que se elimine." },
+  { term: "Wounded", summary: "Estado de Herido. Es un estado negativo y varias habilidades o remedios lo eliminan." },
+  { term: "Herido", summary: "Estado de Herido. Es un estado negativo y varias habilidades o remedios lo eliminan." },
+  { term: "Poisoned", summary: "Estado de Envenenado. Puede eliminarse con ciertas skills, descansos o remedios." },
+  { term: "Envenenado", summary: "Estado de Envenenado. Puede eliminarse con ciertas skills, descansos o remedios." },
+  { term: "Blessed", summary: "Estado de Bendecido/Bendito. Suele mejorar tiradas o apoyar acciones." },
+  { term: "Bendito", summary: "Estado de Bendecido/Bendito. Suele mejorar tiradas o apoyar acciones." },
+  { term: "Terrified", summary: "Estado de Aterrorizado. Muchas skills de apoyo lo quitan." },
+  { term: "Aterrorizado", summary: "Estado de Aterrorizado. Muchas skills de apoyo lo quitan." },
+  { term: "Dash", summary: "Accion de desplazamiento rapido separada del Movimiento normal." },
+  { term: "Move action", summary: "Accion completa de Movimiento, no solo 1 casilla." },
+  { term: "Movimiento", summary: "Cuando la skill dice Movimiento, se refiere a una accion completa de Mover, no a una sola casilla." },
+  { term: "Melee Attack", summary: "Accion completa de ataque cuerpo a cuerpo." },
+  { term: "Ranged Attack", summary: "Accion completa de ataque a distancia." },
+  { term: "LoS", summary: "Line of Sight: linea de vision." },
+  { term: "Rough Ground", summary: "Terreno dificil que penaliza el movimiento segun su valor." },
+  { term: "Vicious", summary: "Regla ofensiva que vuelve el ataque mas peligroso; se aplica como atributo adicional del ataque." },
+  { term: "physical armour", summary: "Armadura fisica o Proteccion normal del objetivo." },
+  { term: "armadura fisica", summary: "Armadura fisica o Proteccion normal del objetivo." },
+];
 
 const MISSIONS = {
   Intro: {
@@ -812,6 +866,13 @@ function getGrantedSkillsFromItem(item) {
     const level = Number(match[2]) || 1;
     return getSkillEntry(name, level, item?.name ? `Item: ${item.name}` : "Item");
   }).filter(Boolean);
+}
+
+function getGlossaryMatches(text) {
+  const source = String(text || "");
+  const lowered = source.toLowerCase();
+  return TERM_GLOSSARY.filter(entry => lowered.includes(entry.term.toLowerCase()))
+    .filter((entry, index, arr) => arr.findIndex(other => other.term.toLowerCase() === entry.term.toLowerCase()) === index);
 }
 
 function getLearnedSkills(adv) {
@@ -3205,16 +3266,29 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                           const isNext = n === level + 1;
                           const stateLabel = unlocked ? "Activa" : (isNext ? "Siguiente" : "Desactivada");
                           const text = levelDetails[n - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.";
-                          return (
-                            <div key={n} style={{ borderRadius: 8, border: unlocked ? "1px solid #166534" : (isNext ? "1px solid #7c3aed" : "1px solid #374151"), background: unlocked ? "#16653418" : (isNext ? "#7c3aed14" : "#111827"), padding: 8 }}>
-                              <div style={{ color: unlocked ? "#bbf7d0" : (isNext ? "#d8b4fe" : "#9ca3af"), fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
-                                Nivel {n} | {stateLabel}
+                            return (
+                              <div key={n} style={{ borderRadius: 8, border: unlocked ? "1px solid #166534" : (isNext ? "1px solid #7c3aed" : "1px solid #374151"), background: unlocked ? "#16653418" : (isNext ? "#7c3aed14" : "#111827"), padding: 8 }}>
+                                <div style={{ color: unlocked ? "#bbf7d0" : (isNext ? "#d8b4fe" : "#9ca3af"), fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+                                  Nivel {n} | {stateLabel}
+                                </div>
+                                <div style={{ color: unlocked ? "#dbeafe" : "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
+                                {getGlossaryMatches(text).length > 0 && (
+                                  <details style={{ marginTop: 8 }}>
+                                    <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>Terminos utiles</summary>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                                      {getGlossaryMatches(text).map(entry => (
+                                        <div key={entry.term} style={{ background: "#0b1220", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                                          <div style={{ color: "#d4b896", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{entry.term}</div>
+                                          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{entry.summary}</div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </details>
+                                )}
                               </div>
-                              <div style={{ color: unlocked ? "#dbeafe" : "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button onClick={() => updateSkillLevel(skillName, -1)}
@@ -3247,6 +3321,19 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                   <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {skill.level}</span>
                 </div>
                 <div style={{ color: activeSkillInfo?.name === skill.name ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{skill.summary}</div>
+                {getGlossaryMatches(skill.summary).length > 0 && (
+                  <details style={{ marginTop: 8 }}>
+                    <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>Terminos utiles</summary>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                      {getGlossaryMatches(skill.summary).map(entry => (
+                        <div key={entry.term} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                          <div style={{ color: "#d4b896", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{entry.term}</div>
+                          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{entry.summary}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </details>
+                )}
               </div>
             ))}
           </div>
