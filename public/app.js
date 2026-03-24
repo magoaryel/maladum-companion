@@ -2133,6 +2133,29 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
         <StatusEffects effects={normalized.status_effects} onChange={v => update("status_effects", v)}/>
       </Collapsible>
 
+      <Collapsible title="Estadisticas" icon="ST">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+          {[
+            { label: "Experiencia", field: "experiencia" },
+            { label: "Rango", field: "rango" },
+          ].map(({ label, field }) => (
+            <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "#0f172a", borderRadius: 8, padding: "8px 10px" }}>
+              <span style={{ color: "#9ca3af", fontSize: 12 }}>{label}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => update(field, Math.max(field === "rango" ? 1 : 0, normalized[field] - 1))}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
+                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+                <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 24, textAlign: "center" }}>{normalized[field]}</span>
+                <button onClick={() => update(field, normalized[field] + 1)}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
+                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Collapsible>
+
       {normalized.innatas.length > 0 && (
         <Collapsible title="Habilidades Innatas" icon="INN">
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
@@ -2210,29 +2233,6 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
       {isMagicalClass && <SpellbookEditor adv={normalized} onUpdate={onUpdate}/>}
 
       <InventoryEditor adv={normalized} onUpdate={onUpdate}/>
-
-      <Collapsible title="Estadisticas" icon="ST">
-        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
-          {[
-            { label: "Experiencia", field: "experiencia" },
-            { label: "Rango", field: "rango" },
-          ].map(({ label, field }) => (
-            <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
-              background: "#0f172a", borderRadius: 8, padding: "8px 10px" }}>
-              <span style={{ color: "#9ca3af", fontSize: 12 }}>{label}</span>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <button onClick={() => update(field, Math.max(field === "rango" ? 1 : 0, normalized[field] - 1))}
-                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
-                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
-                <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 24, textAlign: "center" }}>{normalized[field]}</span>
-                <button onClick={() => update(field, normalized[field] + 1)}
-                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
-                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Collapsible>
 
       <button onClick={onBack}
         style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "2px solid #166534",
