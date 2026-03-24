@@ -219,6 +219,8 @@ const ITEM_SOURCE_URLS = {
 
 let officialItemCatalogCache = null;
 let officialItemCatalogPromise = null;
+let craftingCatalogCache = null;
+let craftingCatalogPromise = null;
 
 const SKILL_DATA = {
   "Acrobatics": { category: "Agilidad", tags: ["move","reaction","defense"], summary: "Movimiento acrobatico, defensa reactiva y salida agresiva del combate." },
@@ -618,6 +620,41 @@ const MISSIONS = {
 
 const MISSION_IDS = ["Intro","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T"];
 
+const RESOURCE_LETTERS = ["W","S","T","H","F","M","R","V","K","B","G","I","A","E","N"];
+const RESOURCE_LABELS = {
+  W: "Wood",
+  S: "Steel",
+  T: "Textiles",
+  H: "Herbs",
+  F: "Fungus",
+  M: "Minerals",
+  R: "Riches",
+  V: "Serpent Venom",
+  K: "Keltic Steel",
+  B: "Powdered Drakon Bone",
+  G: "Graam Ore",
+  I: "Issen Oil",
+  A: "Alary Carapace",
+  E: "Extract of Maladite",
+  N: "Necrotic Fluids",
+};
+
+const REST_REFERENCE = {
+  posada: [
+    "Coste: 2G por aventurero.",
+    "1-2: Bendecir a todos los aventureros o 1 aventurero aleatorio gana 1 PX.",
+    "3-4: Vuelve a lanzar. 1-2: coge una ficha poco comun al azar. 3-4: roba 2 poco comunes y 1 rara; puedes comprar a precio de venta. 5-6: al comienzo de la siguiente partida, mira las 3 primeras cartas de Evento o mira una pieza de terreno buscable.",
+    "5-6: Vuelve a lanzar. 1: -1 Salud a un aventurero aleatorio. 2: coge Provisiones. 3-4: gana 2 de Renombre. 5-6: puedes apostar XG y, si ganas la moneda, recibes 2XG.",
+  ],
+  naturaleza: [
+    "Coste: gratis.",
+    "1: Pierde D6G. Un aventurero aleatorio pierde dos objetos. Puedes sufrir -1 Salud y -1 Habilidad para evitar todos los efectos.",
+    "2: Vuelve a lanzar. Un aventurero al azar empieza la siguiente partida con 1-3: Fatiga o 4-6: Herido.",
+    "3-4: Tira por cada miembro del grupo. Empieza la siguiente partida con 1-2: -1 Salud, 3-4: -1 Habilidad, 5-6: -1 Magia.",
+    "5-6: Sin efecto.",
+  ],
+};
+
 const DEMORA_EFFECTS = [
   { min: 0, max: 2, desc: "Sin efectos negativos." },
   { min: 3, max: 4, desc: "Aumenta la dificultad base de las misiones." },
@@ -734,6 +771,7 @@ function defaultAdventurer(campId, charData) {
 
 function defaultMissionState(campId, missionId) {
   const m = MISSIONS[missionId];
+  const emptyMaterials = Object.fromEntries(RESOURCE_LETTERS.map(letter => [letter, 0]));
   return {
     id: "ms_" + Date.now(),
     campaign_id: campId,
@@ -754,6 +792,11 @@ function defaultMissionState(campId, missionId) {
     oro_ganado: 0,
     demora_cambio: 0,
     next_mission: missionId,
+    rest_mode: "none",
+    rest_notes: "",
+    maintenance_cost: 0,
+    lodging_cost: 0,
+    materials_gained: emptyMaterials,
     notas: "",
     loot_notes: "",
   };
@@ -787,6 +830,7 @@ function normalizeCampaign(campaign) {
 function normalizeMissionState(state) {
   if (!state) return null;
   const base = defaultMissionState(state.campaign_id, state.mision_id);
+  const materials = { ...base.materials_gained, ...(state.materials_gained || {}) };
   return {
     ...base,
     ...state,
@@ -801,6 +845,11 @@ function normalizeMissionState(state) {
     oro_ganado: Math.max(0, Number(state.oro_ganado ?? 0) || 0),
     demora_cambio: Math.max(0, Number(state.demora_cambio ?? 0) || 0),
     next_mission: state.next_mission || state.mision_id || base.next_mission,
+    rest_mode: ["none", "posada", "naturaleza"].includes(state.rest_mode) ? state.rest_mode : "none",
+    rest_notes: String(state.rest_notes || ""),
+    maintenance_cost: Math.max(0, Number(state.maintenance_cost ?? 0) || 0),
+    lodging_cost: Math.max(0, Number(state.lodging_cost ?? 0) || 0),
+    materials_gained: Object.fromEntries(Object.entries(materials).map(([key, value]) => [key, Math.max(0, Number(value) || 0)])),
     fases_completadas: state.fases_completadas || {},
     steps_completados: state.steps_completados || {},
     notas: String(state.notas || ""),
@@ -1168,6 +1217,24 @@ async function loadOfficialItemCatalog() {
   });
 
   return officialItemCatalogPromise;
+}
+
+async function loadCraftingCatalog() {
+  if (craftingCatalogCache) return craftingCatalogCache;
+  if (craftingCatalogPromise) return craftingCatalogPromise;
+  craftingCatalogPromise = fetch("/crafting-data.json")
+    .then(async response => {
+      if (!response.ok) throw new Error("No se pudo cargar crafting-data.json");
+      return response.json();
+    })
+    .then(data => {
+      craftingCatalogCache = Array.isArray(data) ? data : [];
+      return craftingCatalogCache;
+    })
+    .finally(() => {
+      craftingCatalogPromise = null;
+    });
+  return craftingCatalogPromise;
 }
 
 // ========== COMPONENTS ==========
@@ -3542,9 +3609,17 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
 
   const toggleStep = (phaseId, stepIdx) => {
     const key = `${phaseId}_${stepIdx}`;
-    patchMission({
-      steps_completados: { ...missionState.steps_completados, [key]: !missionState.steps_completados[key] }
-    });
+    const nextDone = !missionState.steps_completados[key];
+    const updates = {
+      steps_completados: { ...missionState.steps_completados, [key]: nextDone }
+    };
+    if (phaseId === "dread" && stepIdx === 0) {
+      updates.amenaza_nivel = Math.max(0, missionState.amenaza_nivel + (nextDone ? 1 : -1));
+    }
+    if (phaseId === "dread" && stepIdx === 1 && missionState.magia_usada_esta_ronda) {
+      updates.amenaza_nivel = Math.max(0, missionState.amenaza_nivel + (nextDone ? 1 : -1));
+    }
+    patchMission(updates);
   };
 
   const advanceRound = () => {
@@ -3737,8 +3812,37 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const mission = MISSIONS[missionState.mision_id];
   const xpEach = Math.max(1, Number(missionState.xp_base || 1)) + Math.max(0, Number(missionState.xp_extra || 0));
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
+  const [craftingCatalog, setCraftingCatalog] = useState([]);
+  const [craftingError, setCraftingError] = useState("");
   const adjustNumber = (field, delta, min = 0) => {
     patchMission({ [field]: Math.max(min, Number(missionState[field] || 0) + delta) });
+  };
+  const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
+  const lodgingCost = missionState.rest_mode === "posada" ? adventurers.length * 2 : 0;
+  const netGold = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost;
+  useEffect(() => {
+    loadCraftingCatalog()
+      .then(setCraftingCatalog)
+      .catch(() => setCraftingError("No pude cargar el catalogo de crafteo."));
+  }, []);
+
+  useEffect(() => {
+    if (missionState.maintenance_cost !== maintenanceCost || missionState.lodging_cost !== lodgingCost) {
+      patchMission({ maintenance_cost: maintenanceCost, lodging_cost: lodgingCost });
+    }
+  }, [maintenanceCost, lodgingCost]);
+
+  const craftableItems = craftingCatalog.filter(item =>
+    Object.entries(item.requirements || {}).every(([letter, need]) => (missionState.materials_gained?.[letter] || 0) >= need)
+  );
+
+  const updateMaterialCount = (letter, delta) => {
+    patchMission({
+      materials_gained: {
+        ...(missionState.materials_gained || {}),
+        [letter]: Math.max(0, Number((missionState.materials_gained || {})[letter] || 0) + delta),
+      },
+    });
   };
 
   return (
@@ -3801,7 +3905,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           </div>
         </div>
 
-        {[
+        {[ 
           { field: "xp_extra", label: "PX extra por aventurero", suffix: "" },
           { field: "renombre_ganado", label: "Renombre ganado", suffix: "" },
           { field: "oro_ganado", label: "Oro ganado", suffix: "G" },
@@ -3816,6 +3920,95 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             </div>
           </div>
         ))}
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Descanso y mantenimiento
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <button onClick={() => patchMission({ rest_mode: "posada" })}
+            style={{ padding: 12, borderRadius: 10, border: missionState.rest_mode === "posada" ? "2px solid #166534" : "1px solid #374151", background: missionState.rest_mode === "posada" ? "#16653422" : "#0f172a", color: missionState.rest_mode === "posada" ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
+            Posada
+          </button>
+          <button onClick={() => patchMission({ rest_mode: "naturaleza" })}
+            style={{ padding: 12, borderRadius: 10, border: missionState.rest_mode === "naturaleza" ? "2px solid #166534" : "1px solid #374151", background: missionState.rest_mode === "naturaleza" ? "#16653422" : "#0f172a", color: missionState.rest_mode === "naturaleza" ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
+            Naturaleza
+          </button>
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Mantenimiento</div>
+            <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{maintenanceCost}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11 }}>1G por aventurero + 1G por rango</div>
+          </div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Descanso</div>
+            <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{lodgingCost}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11 }}>{missionState.rest_mode === "posada" ? "2G por aventurero" : "Naturaleza gratis"}</div>
+          </div>
+        </div>
+        <div style={{ background: netGold >= 0 ? "#132034" : "#3a1212", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
+          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Balance neto de oro de esta fase</div>
+          <div style={{ color: netGold >= 0 ? "#bbf7d0" : "#fca5a5", fontSize: 20, fontWeight: 800 }}>{netGold >= 0 ? "+" : ""}{netGold}G</div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado - mantenimiento - descanso</div>
+        </div>
+        {missionState.rest_mode !== "none" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+            {REST_REFERENCE[missionState.rest_mode].map((line, index) => (
+              <div key={index} style={{ background: "#0f172a", borderRadius: 8, padding: 8, border: "1px solid #1f2937", color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                {line}
+              </div>
+            ))}
+          </div>
+        )}
+        <textarea value={missionState.rest_notes || ""} onChange={e => patchMission({ rest_notes: e.target.value })}
+          placeholder="Anota aqui el resultado de la Posada o de la Naturaleza, bendiciones, PX extra, renombre, penalizaciones..."
+          style={{ width: "100%", minHeight: 76, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", padding: 10, resize: "vertical", fontFamily: "inherit", fontSize: 12, lineHeight: 1.5 }} />
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Crafteo y materiales
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+          Introduce los materiales obtenidos. La app te mostrara los items del XLSX oficial que puedes fabricar con esas letras.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
+          {RESOURCE_LETTERS.map(letter => (
+            <div key={letter} style={{ background: "#0f172a", borderRadius: 8, padding: 8, border: "1px solid #1f2937" }}>
+              <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{letter}</div>
+              <div style={{ color: "#6b7280", fontSize: 10, minHeight: 26 }}>{RESOURCE_LABELS[letter]}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                <button onClick={() => updateMaterialCount(letter, -1)} style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", cursor: "pointer" }}>-</button>
+                <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, width: 20, textAlign: "center" }}>{missionState.materials_gained?.[letter] || 0}</span>
+                <button onClick={() => updateMaterialCount(letter, 1)} style={{ width: 24, height: 24, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", cursor: "pointer" }}>+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        {craftingError && <div style={{ color: "#fca5a5", fontSize: 12, marginBottom: 8 }}>{craftingError}</div>}
+        <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
+          Fabricables ahora: {craftableItems.length}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto" }}>
+          {craftableItems.length > 0 ? craftableItems.map(item => (
+            <div key={item.name} style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{item.name}</div>
+                <div style={{ color: "#fde68a", fontSize: 12, fontWeight: 700 }}>{item.price}G</div>
+              </div>
+              <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                {item.type} | Tam {item.size} | {item.expansion}
+              </div>
+              <div style={{ color: "#6b7280", fontSize: 11, marginTop: 4 }}>
+                Requiere: {item.res_required}
+              </div>
+            </div>
+          )) : (
+            <div style={{ color: "#6b7280", fontSize: 12 }}>Todavia no hay recetas que cumplan con los materiales indicados.</div>
+          )}
+        </div>
       </div>
 
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
@@ -3848,7 +4041,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           Aplicacion al grupo
         </div>
         <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
-          Se aplicaran {xpEach} PX a cada aventurero del grupo, {missionState.renombre_ganado || 0} de Renombre, {missionState.oro_ganado || 0}G y +{missionState.demora_cambio || 0} de Demora a la campana.
+          Se aplicaran {xpEach} PX a cada aventurero del grupo, {missionState.renombre_ganado || 0} de Renombre, {netGold >= 0 ? "+" : ""}{netGold}G netos y +{missionState.demora_cambio || 0} de Demora a la campana.
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
           {adventurers.map(adv => (
@@ -3870,6 +4063,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
 // --- CAMPAIGN REGISTRY ---
 function RegistryScreen({ campaign, onUpdate, onBack }) {
   const reg = campaign.registro;
+  const completedMissionIds = new Set((campaign.historial_misiones || []).filter(entry => entry.success).map(entry => entry.missionId));
 
   const updateField = (path, val) => {
     const parts = path.split(".");
@@ -4009,9 +4203,9 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
           {MISSION_IDS.map(m => (
             <button key={m} onClick={() => onUpdate({ ...campaign, currentMission: m })}
               style={{ minWidth: 40, height: 36, borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer",
-                border: campaign.currentMission === m ? "2px solid #b91c1c" : "1px solid #374151",
-                background: campaign.currentMission === m ? "#b91c1c33" : "#0f172a",
-                color: campaign.currentMission === m ? "#fca5a5" : "#6b7280" }}>{m}</button>
+                border: campaign.currentMission === m ? "2px solid #b91c1c" : (completedMissionIds.has(m) ? "2px solid #166534" : "1px solid #374151"),
+                background: campaign.currentMission === m ? "#b91c1c33" : (completedMissionIds.has(m) ? "#16653422" : "#0f172a"),
+                color: campaign.currentMission === m ? "#fca5a5" : (completedMissionIds.has(m) ? "#bbf7d0" : "#6b7280") }}>{m}</button>
           ))}
         </div>
       </Collapsible>
@@ -4144,6 +4338,9 @@ function App() {
     if (!campaign || !missionState) return;
     const resolvedMission = normalizeMissionState(missionState);
     const xpEach = Math.max(1, Number(resolvedMission.xp_base || 1)) + Math.max(0, Number(resolvedMission.xp_extra || 0));
+    const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
+    const lodgingCost = resolvedMission.rest_mode === "posada" ? adventurers.length * 2 : 0;
+    const netGold = Number(resolvedMission.oro_ganado || 0) - maintenanceCost - lodgingCost;
     const updatedAdventurers = adventurers.map(adv => {
       const normalized = normalizeAdventurer(adv);
       return normalizeAdventurer({
@@ -4157,7 +4354,7 @@ function App() {
       currentMission: resolvedMission.next_mission || campaign.currentMission,
       demora: Math.min(12, Math.max(0, Number(campaign.demora || 0) + Number(resolvedMission.demora_cambio || 0))),
       renombre: Math.max(0, Number(campaign.renombre || 0) + Number(resolvedMission.renombre_ganado || 0)),
-      oro: Math.max(0, Number(campaign.oro || 0) + Number(resolvedMission.oro_ganado || 0)),
+      oro: Math.max(0, Number(campaign.oro || 0) + netGold),
       historial_misiones: [
         ...(campaign.historial_misiones || []),
         {
@@ -4169,9 +4366,9 @@ function App() {
           secondary: resolvedMission.secondary_complete,
           xpEach,
           renombre: Number(resolvedMission.renombre_ganado || 0),
-          oro: Number(resolvedMission.oro_ganado || 0),
+          oro: netGold,
           demora: Number(resolvedMission.demora_cambio || 0),
-          notes: [resolvedMission.loot_notes, resolvedMission.notas].filter(Boolean).join(" | "),
+          notes: [resolvedMission.loot_notes, resolvedMission.rest_notes, resolvedMission.notas].filter(Boolean).join(" | "),
           closedAt: new Date().toISOString(),
         },
       ],

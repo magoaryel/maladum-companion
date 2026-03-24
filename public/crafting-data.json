@@ -1,0 +1,977 @@
+[
+  {
+    "name": "Arrow - Entangle x2",
+    "type": "Ammunition",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WT",
+    "requirements": {
+      "W": 1,
+      "T": 1
+    },
+    "price": 2.0,
+    "relic": 0
+  },
+  {
+    "name": "Arrow - Viscous/Sharp x2",
+    "type": "Ammunition",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WS",
+    "requirements": {
+      "W": 1,
+      "S": 1
+    },
+    "price": 3.0,
+    "relic": 0
+  },
+  {
+    "name": "Arrow - Poison/Sharp x2",
+    "type": "Ammunition",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WV",
+    "requirements": {
+      "W": 1,
+      "V": 1
+    },
+    "price": 2.0,
+    "relic": 0
+  },
+  {
+    "name": "Magic Potion x3",
+    "type": "Potion",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "HFF",
+    "requirements": {
+      "H": 1,
+      "F": 2
+    },
+    "price": 4.0,
+    "relic": 0
+  },
+  {
+    "name": "Health Potion x3",
+    "type": "Potion",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "HHF",
+    "requirements": {
+      "H": 2,
+      "F": 1
+    },
+    "price": 5.0,
+    "relic": 0
+  },
+  {
+    "name": "Arrow - Hawkeye/Sharp x2",
+    "type": "Ammunition",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WG",
+    "requirements": {
+      "W": 1,
+      "G": 1
+    },
+    "price": 2.0,
+    "relic": 0
+  },
+  {
+    "name": "Skill Potion x2",
+    "type": "Potion",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "HFM",
+    "requirements": {
+      "H": 1,
+      "F": 1,
+      "M": 1
+    },
+    "price": 6.0,
+    "relic": 0
+  },
+  {
+    "name": "Ethereal Edge",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Oblivion's Maw",
+    "res_required": "SRNN",
+    "requirements": {
+      "S": 1,
+      "R": 1,
+      "N": 2
+    },
+    "price": 10.0,
+    "relic": 0
+  },
+  {
+    "name": "Shilielagh",
+    "type": "Weapon",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WWM",
+    "requirements": {
+      "W": 2,
+      "M": 1
+    },
+    "price": 11.0,
+    "relic": 0
+  },
+  {
+    "name": "Mighty Brew x2",
+    "type": "Potion",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "HMV",
+    "requirements": {
+      "H": 1,
+      "M": 1,
+      "V": 1
+    },
+    "price": 5.0,
+    "relic": 0
+  },
+  {
+    "name": "Cordial of Cognisance",
+    "type": "Potion",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "MMR",
+    "requirements": {
+      "M": 2,
+      "R": 1
+    },
+    "price": 7.0,
+    "relic": 0
+  },
+  {
+    "name": "Bullet - Burning x2",
+    "type": "Ammunition",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SI",
+    "requirements": {
+      "S": 1,
+      "I": 1
+    },
+    "price": 3.0,
+    "relic": 0
+  },
+  {
+    "name": "Honed Leather Armour",
+    "type": "Armour",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "TTR",
+    "requirements": {
+      "T": 2,
+      "R": 1
+    },
+    "price": 12.0,
+    "relic": 0
+  },
+  {
+    "name": "Hat*",
+    "type": "Armour",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "TA",
+    "requirements": {
+      "T": 1,
+      "A": 1
+    },
+    "price": 2.0,
+    "relic": 0
+  },
+  {
+    "name": "Action Poition x3",
+    "type": "Potion",
+    "size": "XS",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "HMB",
+    "requirements": {
+      "H": 1,
+      "M": 1,
+      "B": 1
+    },
+    "price": 4.0,
+    "relic": 0
+  },
+  {
+    "name": "Dreamers Draught",
+    "type": "Potion",
+    "size": "M",
+    "expansion": "Oblivion's Maw",
+    "res_required": "HFFVN",
+    "requirements": {
+      "H": 1,
+      "F": 2,
+      "V": 1,
+      "N": 1
+    },
+    "price": 8.0,
+    "relic": 0
+  },
+  {
+    "name": "Horned War Axe x2",
+    "type": "Weapon",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WSK",
+    "requirements": {
+      "W": 1,
+      "S": 1,
+      "K": 1
+    },
+    "price": 11.0,
+    "relic": 0
+  },
+  {
+    "name": "Spiked Armour",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSST",
+    "requirements": {
+      "S": 3,
+      "T": 1
+    },
+    "price": 14.0,
+    "relic": 0
+  },
+  {
+    "name": "Honed Long Sword x2",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SRK",
+    "requirements": {
+      "S": 1,
+      "R": 1,
+      "K": 1
+    },
+    "price": 8.0,
+    "relic": 0
+  },
+  {
+    "name": "Eld Short Bow",
+    "type": "Weapon",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WSG",
+    "requirements": {
+      "W": 1,
+      "S": 1,
+      "G": 1
+    },
+    "price": 9.0,
+    "relic": 0
+  },
+  {
+    "name": "Potion of Finesse x2",
+    "type": "Potion",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "HRG",
+    "requirements": {
+      "H": 1,
+      "R": 1,
+      "G": 1
+    },
+    "price": 6.0,
+    "relic": 0
+  },
+  {
+    "name": "Starstrike Flail",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WSSR",
+    "requirements": {
+      "W": 1,
+      "S": 2,
+      "R": 1
+    },
+    "price": 14.0,
+    "relic": 0
+  },
+  {
+    "name": "Herbalist's Cloak",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "TTHFV",
+    "requirements": {
+      "T": 2,
+      "H": 1,
+      "F": 1,
+      "V": 1
+    },
+    "price": 7.0,
+    "relic": 0
+  },
+  {
+    "name": "Mastercrafted Box",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WWTR",
+    "requirements": {
+      "W": 2,
+      "T": 1,
+      "R": 1
+    },
+    "price": 17.0,
+    "relic": 0
+  },
+  {
+    "name": "Mastercrafted Bow",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WWTR",
+    "requirements": {
+      "W": 2,
+      "T": 1,
+      "R": 1
+    },
+    "price": 17.0,
+    "relic": 0
+  },
+  {
+    "name": "Curative Cuirass",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "STHH",
+    "requirements": {
+      "S": 1,
+      "T": 1,
+      "H": 2
+    },
+    "price": 18.0,
+    "relic": 0
+  },
+  {
+    "name": "Wardweaver's Nip",
+    "type": "Potion",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "FFE",
+    "requirements": {
+      "F": 2,
+      "E": 1
+    },
+    "price": 5.0,
+    "relic": 0
+  },
+  {
+    "name": "Crafted Great Axe",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WSSTR",
+    "requirements": {
+      "W": 1,
+      "S": 2,
+      "T": 1,
+      "R": 1
+    },
+    "price": 14.0,
+    "relic": 0
+  },
+  {
+    "name": "Crafted Great Sword",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSSSR",
+    "requirements": {
+      "S": 4,
+      "R": 1
+    },
+    "price": 13.0,
+    "relic": 0
+  },
+  {
+    "name": "Viperfang",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SRVV",
+    "requirements": {
+      "S": 1,
+      "R": 1,
+      "V": 2
+    },
+    "price": 11.0,
+    "relic": 0
+  },
+  {
+    "name": "Disarming Staff",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WWKB",
+    "requirements": {
+      "W": 2,
+      "K": 1,
+      "B": 1
+    },
+    "price": 6.0,
+    "relic": 0
+  },
+  {
+    "name": "Destiny's Tincture",
+    "type": "Potion",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "FMA",
+    "requirements": {
+      "F": 1,
+      "M": 1,
+      "A": 1
+    },
+    "price": 8.0,
+    "relic": 0
+  },
+  {
+    "name": "Keltic Falchion",
+    "type": "Weapon",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSRK",
+    "requirements": {
+      "S": 2,
+      "R": 1,
+      "K": 1
+    },
+    "price": 13.0,
+    "relic": 0
+  },
+  {
+    "name": "Blitz-Hammer",
+    "type": "Weapon",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WSSRB",
+    "requirements": {
+      "W": 1,
+      "S": 2,
+      "R": 1,
+      "B": 1
+    },
+    "price": 8.0,
+    "relic": 0
+  },
+  {
+    "name": "Makeshift Wings",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WTTA",
+    "requirements": {
+      "W": 1,
+      "T": 2,
+      "A": 1
+    },
+    "price": 8.0,
+    "relic": 0
+  },
+  {
+    "name": "Sentient Scimitar",
+    "type": "Weapon",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSRG",
+    "requirements": {
+      "S": 2,
+      "R": 1,
+      "G": 1
+    },
+    "price": 14.0,
+    "relic": 0
+  },
+  {
+    "name": "Warrior Totem",
+    "type": "Maladar/Misc",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WMRI",
+    "requirements": {
+      "W": 1,
+      "M": 1,
+      "R": 1,
+      "I": 1
+    },
+    "price": 8.0,
+    "relic": 0
+  },
+  {
+    "name": "Sacrificium",
+    "type": "Maladar/Misc",
+    "size": "M",
+    "expansion": "Oblivion's Maw",
+    "res_required": "HHREN",
+    "requirements": {
+      "H": 2,
+      "R": 1,
+      "E": 1,
+      "N": 1
+    },
+    "price": 5.0,
+    "relic": 0
+  },
+  {
+    "name": "Keltmail Armour",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "TRKK",
+    "requirements": {
+      "T": 1,
+      "R": 1,
+      "K": 2
+    },
+    "price": 10.0,
+    "relic": 0
+  },
+  {
+    "name": "Arcane Steel",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSKG",
+    "requirements": {
+      "S": 2,
+      "K": 1,
+      "G": 1
+    },
+    "price": 10.0,
+    "relic": 0
+  },
+  {
+    "name": "Crafted Breastplate Amour",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSSSTR",
+    "requirements": {
+      "S": 4,
+      "T": 1,
+      "R": 1
+    },
+    "price": 17.0,
+    "relic": 0
+  },
+  {
+    "name": "Bewitched Blade",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSRG",
+    "requirements": {
+      "S": 2,
+      "R": 1,
+      "G": 1
+    },
+    "price": 16.0,
+    "relic": 0
+  },
+  {
+    "name": "Calamitous Caber",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WWWMA",
+    "requirements": {
+      "W": 3,
+      "M": 1,
+      "A": 1
+    },
+    "price": 10.0,
+    "relic": 0
+  },
+  {
+    "name": "Reaper's Riposte",
+    "type": "Weapon",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SSRA",
+    "requirements": {
+      "S": 2,
+      "R": 1,
+      "A": 1
+    },
+    "price": 12.0,
+    "relic": 0
+  },
+  {
+    "name": "Bladed Shield",
+    "type": "Weapon",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WSSKB",
+    "requirements": {
+      "W": 1,
+      "S": 2,
+      "K": 1,
+      "B": 1
+    },
+    "price": 13.0,
+    "relic": 0
+  },
+  {
+    "name": "Spelleater",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "RRKG",
+    "requirements": {
+      "R": 2,
+      "K": 1,
+      "G": 1
+    },
+    "price": 10.0,
+    "relic": 0
+  },
+  {
+    "name": "Necrotic Censor",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Oblivion's Maw",
+    "res_required": "WMRVG",
+    "requirements": {
+      "W": 1,
+      "M": 1,
+      "R": 1,
+      "V": 1,
+      "G": 1
+    },
+    "price": 11.0,
+    "relic": 0
+  },
+  {
+    "name": "Liberator Of Souls",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Oblivion's Maw",
+    "res_required": "WGANN",
+    "requirements": {
+      "W": 1,
+      "G": 1,
+      "A": 1,
+      "N": 2
+    },
+    "price": 13.0,
+    "relic": 0
+  },
+  {
+    "name": "Mechanical Musket",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WSMRG",
+    "requirements": {
+      "W": 1,
+      "S": 1,
+      "M": 1,
+      "R": 1,
+      "G": 1
+    },
+    "price": 18.0,
+    "relic": 0
+  },
+  {
+    "name": "Blade of Momentum",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SRBG",
+    "requirements": {
+      "S": 1,
+      "R": 1,
+      "B": 1,
+      "G": 1
+    },
+    "price": 15.0,
+    "relic": 0
+  },
+  {
+    "name": "Adamantine Elixir",
+    "type": "Potion",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "MVBI",
+    "requirements": {
+      "M": 1,
+      "V": 1,
+      "B": 1,
+      "I": 1
+    },
+    "price": 9.0,
+    "relic": 0
+  },
+  {
+    "name": "Vampiric Blade",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Oblivion's Maw",
+    "res_required": "SSVBGN",
+    "requirements": {
+      "S": 2,
+      "V": 1,
+      "B": 1,
+      "G": 1,
+      "N": 1
+    },
+    "price": 15.0,
+    "relic": 0
+  },
+  {
+    "name": "Robes Of Invulnerability",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "TTMBA",
+    "requirements": {
+      "T": 2,
+      "M": 1,
+      "B": 1,
+      "A": 1
+    },
+    "price": 15.0,
+    "relic": 0
+  },
+  {
+    "name": "Cloak Of Cloning",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Oblivion's Maw",
+    "res_required": "TTFIE",
+    "requirements": {
+      "T": 2,
+      "F": 1,
+      "I": 1,
+      "E": 1
+    },
+    "price": 9.0,
+    "relic": 0
+  },
+  {
+    "name": "Anyssal Trophy",
+    "type": "Maladar/Misc",
+    "size": "M",
+    "expansion": "Oblivion's Maw",
+    "res_required": "FBAN",
+    "requirements": {
+      "F": 1,
+      "B": 1,
+      "A": 1,
+      "N": 1
+    },
+    "price": 28.0,
+    "relic": 7.0
+  },
+  {
+    "name": "Protection Orb",
+    "type": "Maladar/Misc",
+    "size": "S",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "RBGE",
+    "requirements": {
+      "R": 1,
+      "B": 1,
+      "G": 1,
+      "E": 1
+    },
+    "price": 12.0,
+    "relic": 0
+  },
+  {
+    "name": "Daemon Mantle",
+    "type": "Armour",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "TFVBB",
+    "requirements": {
+      "T": 1,
+      "F": 1,
+      "V": 1,
+      "B": 2
+    },
+    "price": 28.0,
+    "relic": 5.0
+  },
+  {
+    "name": "Hellfire Blade",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SRKII",
+    "requirements": {
+      "S": 1,
+      "R": 1,
+      "K": 1,
+      "I": 2
+    },
+    "price": 12.0,
+    "relic": 0
+  },
+  {
+    "name": "Sword Of Tephysus",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "SRKKB",
+    "requirements": {
+      "S": 1,
+      "R": 1,
+      "K": 2,
+      "B": 1
+    },
+    "price": 28.0,
+    "relic": 1.0
+  },
+  {
+    "name": "Soul Siphon",
+    "type": "Weapon",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "WRVGI",
+    "requirements": {
+      "W": 1,
+      "R": 1,
+      "V": 1,
+      "G": 1,
+      "I": 1
+    },
+    "price": 28.0,
+    "relic": 3.0
+  },
+  {
+    "name": "Astral Arbiter",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Oblivion's Maw",
+    "res_required": "WWMKGE",
+    "requirements": {
+      "W": 2,
+      "M": 1,
+      "K": 1,
+      "G": 1,
+      "E": 1
+    },
+    "price": 19.0,
+    "relic": 0
+  },
+  {
+    "name": "Natures Fury",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "MMVBA",
+    "requirements": {
+      "M": 2,
+      "V": 1,
+      "B": 1,
+      "A": 1
+    },
+    "price": 28.0,
+    "relic": 6.0
+  },
+  {
+    "name": "Sceptre of Domion",
+    "type": "Maladar/Misc",
+    "size": "L",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "RRRGA",
+    "requirements": {
+      "R": 3,
+      "G": 1,
+      "A": 1
+    },
+    "price": 28.0,
+    "relic": 4.0
+  },
+  {
+    "name": "Refined Robes",
+    "type": "Armour",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "TFREE",
+    "requirements": {
+      "T": 1,
+      "F": 1,
+      "R": 1,
+      "E": 2
+    },
+    "price": 24.0,
+    "relic": 0
+  },
+  {
+    "name": "Acendant Blades",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "The Forbidden Creed",
+    "res_required": "SMKIE",
+    "requirements": {
+      "S": 1,
+      "M": 1,
+      "K": 1,
+      "I": 1,
+      "E": 1
+    },
+    "price": 28.0,
+    "relic": 10.0
+  },
+  {
+    "name": "Uncanny Oculus",
+    "type": "Weapon",
+    "size": "XL",
+    "expansion": "Oblivion's Maw",
+    "res_required": "VGIEN",
+    "requirements": {
+      "V": 1,
+      "G": 1,
+      "I": 1,
+      "E": 1,
+      "N": 1
+    },
+    "price": 28.0,
+    "relic": 8.0
+  },
+  {
+    "name": "Light In The Darkness",
+    "type": "Maladar/Misc",
+    "size": "L",
+    "expansion": "The Forbidden Creed",
+    "res_required": "RGAEN",
+    "requirements": {
+      "R": 1,
+      "G": 1,
+      "A": 1,
+      "E": 1,
+      "N": 1
+    },
+    "price": 28.0,
+    "relic": 9.0
+  },
+  {
+    "name": "Grail of the Gods",
+    "type": "Maladar/Misc",
+    "size": "M",
+    "expansion": "Of Ale and Adventure",
+    "res_required": "MRGIE",
+    "requirements": {
+      "M": 1,
+      "R": 1,
+      "G": 1,
+      "I": 1,
+      "E": 1
+    },
+    "price": 28.0,
+    "relic": 2.0
+  }
+]
