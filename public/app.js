@@ -338,7 +338,7 @@ const SKILL_LEVEL_DATA = {
     "Usa antes de hacer un ataque melee: anades 4 dados. Despues de tirar, puedes repartir los impactos entre varios enemigos al alcance del arma; otros efectos del arma se aplican a todos los enemigos que sufran al menos 1 impacto.",
   ],
   "Weapons Master": [
-    "Pasiva: ganas First Strike.",
+    "Pasiva: ganas First Strike. Cuando entras a rango melee de un enemigo, obtienes una accion gratuita inmediata de Ataque Melee.",
     "Haz un ataque melee con un arma. Puedes repetir 1 dado de combate.",
     "Pasiva: puedes usar Shield Block como accion sin esfuerzo. Si lo usas fuera de tu turno sigues quedando Fatigado.",
   ],
@@ -407,6 +407,11 @@ const SKILL_LEVEL_DATA = {
     "Segun el Dread actual, tiras la llegada de todos los NPC de esta ronda y los colocas junto a sus Entry Points; luego puedes mover los de un Entry Point a otro. Pasiva: si el Staging Point se intercambia al azar, tiras dos veces el Dado Magico y eliges.",
     "Reaccion: antes o despues de que un enemigo entre en LoS o en mesa, este personaje hace un turno gratis inmediato y todos los aliados cercanos hacen 1 accion; las acciones contra ese enemigo ganan 1 dado extra. Pasiva: tratas Rough Ground como 2 menor.",
   ],
+  "Reflexes": [
+    "Reaccion: cuando un enemigo te engancha, haces un Movimiento ignorando ataques de oportunidad. Pasiva: ignoras 1 impacto en cualquier ataque de oportunidad que recibas.",
+    "Reaccion: cuando un enemigo te engancha, haces un Movimiento ignorando ataques de oportunidad y un Ataque, en cualquier orden. Pasiva: puedes usar Parry tambien contra ataques a distancia.",
+    "Reaccion: cuando un enemigo te engancha, el atacante queda Aturdido; luego haces dos Movimientos ignorando ataques de oportunidad y un Ataque, en cualquier orden. Pasiva: puedes ignorar un ataque de oportunidad usando una accion sin esfuerzo.",
+  ],
   "Smithing": [
     "Durante una mision, gastas 1 accion para reparar un objeto roto gratis como si estuvieras en el gremio. Con X determinas que rarezas puedes reparar. En Mercado haces lo mismo gratis.",
     "Durante una mision, gastas 2 acciones en la misma ronda para fabricar un arma o armadura gratis como en el gremio, con limite de recursos segun X. En Mercado haces lo mismo gratis.",
@@ -428,7 +433,7 @@ const ATTRIBUTE_DATA = {
   melee: { label: "Melee", summary: "Puede usarse como arma de cuerpo a cuerpo." },
   balanced: { label: "Balanced", summary: "Si esta arma se lanza, tira 1 dado extra." },
   quickstrike: { label: "Quickstrike", summary: "Si esta arma saca critico en un ataque melee, despues de resolver ese ataque puedes hacer gratis un Dash o un nuevo ataque con esta u otra arma." },
-  first_strike: { label: "First Strike", summary: "Ventaja al golpear primero en el intercambio." },
+  first_strike: { label: "First Strike", summary: "Cuando entras a rango melee de un enemigo, incluso al aparecer o abrirse una puerta, obtienes un Ataque Melee gratuito inmediato." },
   parry: { label: "Parry", summary: "Cuando el usuario sufre un ataque melee, puedes tirar 1 dado de combate. Cada impacto anula 1 impacto enemigo como si fuera armadura fisica. Luego quedas Fatigado." },
   reach: { label: "Reach", summary: "Permite atacar con mas alcance que un arma cuerpo a cuerpo normal." },
   channel: { label: "Channel", summary: "Necesita gastar al menos 1 clavija de Magia para activar o mejorar su efecto." },
@@ -1423,15 +1428,6 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
     <Collapsible title="Inventario y Equipo" icon="INV">
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Registra aqui lo que lleva el aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
-      </div>
-      <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10, marginBottom: 12 }}>
-        <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Guia rapida de campos</div>
-        <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.6 }}>
-          Melee: dados del arma o bono cuerpo a cuerpo. Dist: dados del ataque a distancia. Escudo: impactos anulados al defender. Prot: proteccion del equipo.
-        </div>
-        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.6, marginTop: 6 }}>
-          Las armas cuentan como equipadas solo por estar en inventario. Marca Equipado sobre todo en armaduras, cascos, capas, escudos u otros objetos que si dependan de llevarse puestos.
-        </div>
       </div>
 
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
@@ -3188,11 +3184,9 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
               const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
               const meta = SKILL_DATA[skillName] || {};
               const levelDetails = getSkillLevelDetails(skillName);
-              const currentDetail = level > 0 ? (levelDetails[Math.min(level, levelDetails.length) - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.") : (meta.summary || "Resumen pendiente de verificar en manual oficial.");
-              const previewLevels = Array.from(new Set(
-                (level > 0 ? [level, Math.min(3, level + 1)] : [1, 2])
-                  .filter(n => n >= 1 && n <= 3)
-              ));
+              const currentDetail = level > 0
+                ? (levelDetails[Math.min(level, levelDetails.length) - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.")
+                : (levelDetails[0] || meta.summary || "Resumen pendiente de verificar en manual oficial.");
               return (
                 <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
@@ -3205,29 +3199,22 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                         <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
                       </div>
                       <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{currentDetail}</div>
-                      {previewLevels.length > 0 ? (
-                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                          {previewLevels.map(n => {
-                            const unlocked = level >= n;
-                            const isNext = level > 0 ? n === level + 1 : n === 1;
-                            const text = levelDetails[n - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.";
-                            return (
-                              <div key={n} style={{ borderRadius: 8, border: unlocked ? "1px solid #166534" : "1px solid #374151", background: unlocked ? "#16653418" : "#111827", padding: 8 }}>
-                                <div style={{ color: unlocked ? "#bbf7d0" : "#9ca3af", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
-                                  Nivel {n} | {unlocked ? "Actual" : (isNext ? "Siguiente" : "Vista previa")}
-                                </div>
-                                <div style={{ color: unlocked ? "#dbeafe" : "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        {[1, 2, 3].map(n => {
+                          const unlocked = level >= n;
+                          const isNext = n === level + 1;
+                          const stateLabel = unlocked ? "Activa" : (isNext ? "Siguiente" : "Desactivada");
+                          const text = levelDetails[n - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.";
+                          return (
+                            <div key={n} style={{ borderRadius: 8, border: unlocked ? "1px solid #166534" : (isNext ? "1px solid #7c3aed" : "1px solid #374151"), background: unlocked ? "#16653418" : (isNext ? "#7c3aed14" : "#111827"), padding: 8 }}>
+                              <div style={{ color: unlocked ? "#bbf7d0" : (isNext ? "#d8b4fe" : "#9ca3af"), fontSize: 11, fontWeight: 700, marginBottom: 4 }}>
+                                Nivel {n} | {stateLabel}
                               </div>
-                            );
-                          })}
-                        </div>
-                      ) : (
-                        <div style={{ borderRadius: 8, border: "1px solid #374151", background: "#111827", padding: 8 }}>
-                          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
-                            Sin niveles comprados todavia. Usa + para reflejar lo aprendido en mesa; aqui se mostrara solo el texto oficial de los niveles que ya tenga esta habilidad.
-                          </div>
-                        </div>
-                      )}
+                              <div style={{ color: unlocked ? "#dbeafe" : "#6b7280", fontSize: 11, lineHeight: 1.5 }}>{text}</div>
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button onClick={() => updateSkillLevel(skillName, -1)}
