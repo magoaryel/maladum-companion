@@ -2078,6 +2078,347 @@ function MainBoardV2({ missionState, adventurers, campaign, onUpdateMission, onU
   );
 }
 
+AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, onRemove }) {
+  const normalized = normalizeAdventurer(adv);
+  const update = (field, value) => onUpdate(normalizeAdventurer({ ...normalized, [field]: value }));
+  const learnedSkills = getLearnedSkills(normalized);
+  const spentXP = getSpentXP(normalized);
+  const freeXP = getRemainingXP(normalized);
+  const isMagicalClass = !!CLASS_DATA[normalized.clase]?.spell;
+
+  const updateSkillLevel = (skillName, delta) => {
+    const current = Number(normalized.clase_habilidades?.[skillName]) || 0;
+    const next = Math.max(0, current + delta);
+    if (delta > 0 && freeXP <= 0) return;
+    onUpdate(normalizeAdventurer({
+      ...normalized,
+      clase_habilidades: {
+        ...normalized.clase_habilidades,
+        [skillName]: next,
+      },
+    }));
+  };
+
+  return (
+    <div style={{ padding: 16 }}>
+      <button onClick={onBack}
+        style={{ background: "none", border: "none", color: "#9ca3af", fontSize: 13,
+          cursor: "pointer", marginBottom: 12, padding: 0 }}>Volver al grupo</button>
+
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <h2 style={{ color: "#d4b896", fontSize: 22, fontWeight: 800, margin: 0 }}>{normalized.nombre}</h2>
+        <div style={{ color: "#6b7280", fontSize: 13 }}>{normalized.especie} | Rango {normalized.rango} | {normalized.coste} G</div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, marginBottom: 6, textTransform: "uppercase" }}>Clase</div>
+        <select value={normalized.clase} onChange={e => onUpdate(updateAdventurerClass(normalized, e.target.value))}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151",
+            background: "#0f172a", color: "#d4b896", fontSize: 14 }}>
+          <option value="">-- Sin clase --</option>
+          {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 12, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <PegBar label="Salud" icon="HP" current={normalized.salud_actual} max={normalized.salud_max}
+          color="#22c55e" onChange={v => update("salud_actual", v)}/>
+        <PegBar label="Magia" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
+          color="#3b82f6" onChange={v => update("magia_actual", v)}/>
+        <PegBar label="Habilidad" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
+          color="#eab308" onChange={v => update("habilidad_actual", v)}/>
+      </div>
+
+      <Collapsible title="Estados" icon="EST" defaultOpen={normalized.status_effects.length > 0}>
+        <StatusEffects effects={normalized.status_effects} onChange={v => update("status_effects", v)}/>
+      </Collapsible>
+
+      {normalized.innatas.length > 0 && (
+        <Collapsible title="Habilidades Innatas" icon="INN">
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {normalized.innatas.map(h => (
+              <span key={h} style={{ padding: "4px 10px", borderRadius: 6, background: "#eab30822",
+                border: "1px solid #eab30844", color: "#eab308", fontSize: 12 }}>{h}</span>
+            ))}
+          </div>
+        </Collapsible>
+      )}
+
+      {normalized.clase && (
+        <Collapsible title="Progresion de Clase" icon="CLS" defaultOpen>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+              <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase" }}>PX gastada</div>
+              <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{spentXP}</div>
+            </div>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+              <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase" }}>PX libre</div>
+              <div style={{ color: freeXP > 0 ? "#22c55e" : "#9ca3af", fontSize: 20, fontWeight: 800 }}>{freeXP}</div>
+            </div>
+          </div>
+          <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
+            Aqui puedes reflejar lo aprendido gastando PX. No impongo topes automaticos porque aun nos faltan cartas completas de avance por validar.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {(CLASS_DATA[normalized.clase]?.skills || []).map(skillName => {
+              const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
+              const meta = SKILL_DATA[skillName] || {};
+              return (
+                <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+                        <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{skillName}</span>
+                        {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
+                        <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
+                      </div>
+                      <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{meta.summary || "Resumen pendiente de verificar en manual oficial."}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button onClick={() => updateSkillLevel(skillName, -1)}
+                        style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: "#d4b896", cursor: "pointer" }}>-</button>
+                      <div style={{ minWidth: 26, textAlign: "center", color: "#d4b896", fontWeight: 700 }}>{level}</div>
+                      <button onClick={() => updateSkillLevel(skillName, 1)} disabled={freeXP <= 0}
+                        style={{ width: 32, height: 32, borderRadius: 8, border: freeXP > 0 ? "1px solid #166534" : "1px solid #374151",
+                          background: freeXP > 0 ? "#16653422" : "transparent", color: freeXP > 0 ? "#bbf7d0" : "#4b5563", cursor: freeXP > 0 ? "pointer" : "default" }}>+</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </Collapsible>
+      )}
+
+      {learnedSkills.length > 0 && (
+        <Collapsible title="Habilidades Aprendidas" icon="HAB">
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {learnedSkills.map((skill, index) => (
+              <div key={skill.name + "_" + index} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap", marginBottom: 4 }}>
+                  <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{skill.name}</span>
+                  <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{skill.source}</span>
+                  <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {skill.level}</span>
+                </div>
+                <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{skill.summary}</div>
+              </div>
+            ))}
+          </div>
+        </Collapsible>
+      )}
+
+      {isMagicalClass && <SpellbookEditor adv={normalized} onUpdate={onUpdate}/>}
+
+      <InventoryEditor adv={normalized} onUpdate={onUpdate}/>
+
+      <Collapsible title="Estadisticas" icon="ST">
+        <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8 }}>
+          {[
+            { label: "Experiencia", field: "experiencia" },
+            { label: "Rango", field: "rango" },
+          ].map(({ label, field }) => (
+            <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "#0f172a", borderRadius: 8, padding: "8px 10px" }}>
+              <span style={{ color: "#9ca3af", fontSize: 12 }}>{label}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <button onClick={() => update(field, Math.max(field === "rango" ? 1 : 0, normalized[field] - 1))}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
+                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+                <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 24, textAlign: "center" }}>{normalized[field]}</span>
+                <button onClick={() => update(field, normalized[field] + 1)}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151",
+                    background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Collapsible>
+
+      <button onClick={onBack}
+        style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "2px solid #166534",
+          background: "#16653422", color: "#bbf7d0", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+        Confirmar aventurero
+      </button>
+
+      <button onClick={onRemove}
+        style={{ width: "100%", padding: 12, marginTop: 12, borderRadius: 8, border: "1px solid #7f1d1d",
+          background: "#7f1d1d22", color: "#fca5a5", fontSize: 13, cursor: "pointer" }}>
+        Retirar del grupo
+      </button>
+    </div>
+  );
+};
+
+MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign, onUpdateMission, onUpdateAdventurer, onEndMission, onBack }) {
+  const mission = MISSIONS[missionState.mision_id];
+  const mName = mission?.nombre || missionState.mision_id;
+  const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
+  const [activeItemAdv, setActiveItemAdv] = useState(null);
+
+  const handleThreatChange = (newLevel) => {
+    onUpdateMission({ ...missionState, amenaza_nivel: newLevel });
+  };
+
+  const toggleMagic = () => {
+    onUpdateMission({ ...missionState, magia_usada_esta_ronda: !missionState.magia_usada_esta_ronda });
+  };
+
+  const toggleStep = (phaseId, stepIdx) => {
+    const key = `${phaseId}_${stepIdx}`;
+    onUpdateMission({
+      ...missionState,
+      steps_completados: { ...missionState.steps_completados, [key]: !missionState.steps_completados[key] }
+    });
+  };
+
+  const advanceRound = () => {
+    onUpdateMission({
+      ...missionState,
+      ronda: missionState.ronda + 1,
+      magia_usada_esta_ronda: false,
+      steps_completados: {},
+    });
+  };
+
+  const selectedAbilityAdv = adventurers.find(a => a.id === activeAbilityAdv) || null;
+  const selectedItemAdv = adventurers.find(a => a.id === activeItemAdv) || null;
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, fontSize: 13 }}>Hub</button>
+        <div style={{ textAlign: "center" }}>
+          <div style={{ color: "#b91c1c", fontSize: 10, fontWeight: 700, textTransform: "uppercase" }}>Mision {missionState.mision_id}</div>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{mName}</div>
+        </div>
+        <div style={{ background: "#1a1a2e", borderRadius: 8, padding: "4px 12px", border: "1px solid #2d2d44" }}>
+          <div style={{ color: "#6b7280", fontSize: 9, textTransform: "uppercase" }}>Ronda</div>
+          <div style={{ color: "#d4b896", fontSize: 22, fontWeight: 800, textAlign: "center" }}>{missionState.ronda}</div>
+        </div>
+      </div>
+
+      <ThreatTracker level={missionState.amenaza_nivel} cara={missionState.amenaza_cara} onLevelChange={handleThreatChange}/>
+
+      <button onClick={toggleMagic}
+        style={{ width: "100%", padding: 10, borderRadius: 8, marginTop: 8, marginBottom: 12,
+          border: missionState.magia_usada_esta_ronda ? "2px solid #3b82f6" : "1px solid #374151",
+          background: missionState.magia_usada_esta_ronda ? "#3b82f622" : "#1a1a2e",
+          color: missionState.magia_usada_esta_ronda ? "#60a5fa" : "#6b7280",
+          fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
+        {missionState.magia_usada_esta_ronda ? "Magia usada esta ronda (+1 Amenaza)" : "Se uso magia esta ronda?"}
+      </button>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
+          letterSpacing: 2, marginBottom: 8 }}>Fases del turno</div>
+        <PhaseChecklist phases={TURN_PHASES}
+          completedPhases={missionState.fases_completadas || {}}
+          completedSteps={missionState.steps_completados || {}}
+          onTogglePhase={() => {}}
+          onToggleStep={toggleStep}/>
+      </div>
+
+      <button onClick={advanceRound}
+        style={{ width: "100%", padding: 14, borderRadius: 10, border: "2px solid #eab308",
+          background: "#eab30815", color: "#eab308", fontSize: 15, fontWeight: 700,
+          cursor: "pointer", marginBottom: 12 }}>
+        Avanzar a Ronda {missionState.ronda + 1}
+      </button>
+
+      <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
+        letterSpacing: 2, marginBottom: 8 }}>Aventureros</div>
+      {adventurers.map(a => {
+        const normalized = normalizeAdventurer(a);
+        const equipment = getEquipmentStats(normalized);
+        const equipped = summarizeEquippedItems(normalized);
+        return (
+          <div key={a.id} style={{ background: "#1a1a2e", borderRadius: 10, padding: 12,
+            border: "1px solid #2d2d44", marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <div>
+                <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{normalized.nombre}</span>
+                <span style={{ color: "#6b7280", fontSize: 12, marginLeft: 8 }}>{normalized.clase || normalized.especie}</span>
+              </div>
+              {normalized.status_effects.length > 0 && (
+                <div style={{ display: "flex", gap: 2 }}>
+                  {[...new Set(normalized.status_effects)].map(se => {
+                    const status = STATUS_EFFECTS.find(x => x.id === se);
+                    return status ? <span key={se} title={status.name} style={{ fontSize: 14 }}>{status.icon}</span> : null;
+                  })}
+                </div>
+              )}
+            </div>
+
+            <PegBar label="HP" icon="HP" current={normalized.salud_actual} max={normalized.salud_max}
+              color="#22c55e" onChange={v => onUpdateAdventurer({ ...normalized, salud_actual: v })}/>
+            <PegBar label="MP" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
+              color="#3b82f6" onChange={v => onUpdateAdventurer({ ...normalized, magia_actual: v })}/>
+            <PegBar label="SP" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
+              color="#eab308" onChange={v => onUpdateAdventurer({ ...normalized, habilidad_actual: v })}/>
+
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+              {equipment.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{equipment.meleeDice}</span>}
+              {equipment.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{equipment.rangedDice}</span>}
+              {equipment.shield > 0 && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {equipment.shield}</span>}
+              {equipment.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot +{equipment.armor}</span>}
+              {getKnownSpells(normalized).length > 0 && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{getKnownSpells(normalized).length} hechizos</span>}
+            </div>
+
+            {equipped.length > 0 && (
+              <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.4, marginBottom: 8 }}>
+                Equipo: {equipped.map(item => item.name).join(", ")}
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button onClick={() => setActiveAbilityAdv(normalized.id)}
+                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                Habilidades
+              </button>
+              <button onClick={() => setActiveItemAdv(normalized.id)}
+                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                Items
+              </button>
+            </div>
+          </div>
+        );
+      })}
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
+        {mission?.reglas_especiales?.length > 0 && (
+          <button onClick={() => {}}
+            style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#1a1a2e",
+              color: "#d4b896", fontSize: 12, cursor: "pointer" }}>Reglas Especiales</button>
+        )}
+        <button onClick={() => window.open("https://xinix.github.io/maladum/", "_blank")}
+          style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#1a1a2e",
+            color: "#d4b896", fontSize: 12, cursor: "pointer" }}>Items DB</button>
+        <button onClick={onEndMission}
+          style={{ padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22",
+            color: "#fca5a5", fontSize: 12, cursor: "pointer", gridColumn: "1 / -1" }}>Fin de Mision</button>
+      </div>
+
+      {selectedAbilityAdv && (
+        <CombatAbilitiesModal
+          adv={selectedAbilityAdv}
+          missionState={missionState}
+          onUpdateMission={onUpdateMission}
+          onClose={() => setActiveAbilityAdv(null)}
+        />
+      )}
+
+      {selectedItemAdv && (
+        <InventoryModal
+          adv={selectedItemAdv}
+          missionState={missionState}
+          onUpdateMission={onUpdateMission}
+          onClose={() => setActiveItemAdv(null)}
+        />
+      )}
+    </div>
+  );
+};
+
 // --- CAMPAIGN REGISTRY ---
 function RegistryScreen({ campaign, onUpdate, onBack }) {
   const reg = campaign.registro;
