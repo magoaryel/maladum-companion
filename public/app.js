@@ -2912,10 +2912,10 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
       <div style={{ background: "#1a1a2e", borderRadius: 12, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <PegBar label="Salud" icon="HP" current={normalized.salud_actual} max={normalized.salud_max}
           color="#22c55e" onChange={v => update("salud_actual", v)}/>
-        <PegBar label="Magia" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
-          color="#3b82f6" onChange={v => update("magia_actual", v)}/>
         <PegBar label="Habilidad" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
           color="#d946ef" onChange={v => update("habilidad_actual", v)}/>
+        <PegBar label="Magia" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
+          color="#3b82f6" onChange={v => update("magia_actual", v)}/>
       </div>
 
       <Collapsible title="Estados" icon="EST" defaultOpen={normalized.status_effects.length > 0}>
@@ -2984,6 +2984,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
             {(CLASS_DATA[normalized.clase]?.skills || []).map(skillName => {
               const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
               const meta = SKILL_DATA[skillName] || {};
+              const levelDetails = getSkillLevelDetails(skillName);
               return (
                 <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
@@ -3169,10 +3170,10 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
 
             <PegBar label="HP" icon="HP" current={normalized.salud_actual} max={normalized.salud_max}
               color="#22c55e" onChange={v => onUpdateAdventurer({ ...normalized, salud_actual: v })}/>
-            <PegBar label="MP" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
-              color="#3b82f6" onChange={v => onUpdateAdventurer({ ...normalized, magia_actual: v })}/>
             <PegBar label="SP" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
               color="#d946ef" onChange={v => onUpdateAdventurer({ ...normalized, habilidad_actual: v })}/>
+            <PegBar label="MP" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
+              color="#3b82f6" onChange={v => onUpdateAdventurer({ ...normalized, magia_actual: v })}/>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
               {equipment.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{equipment.meleeDice}</span>}
