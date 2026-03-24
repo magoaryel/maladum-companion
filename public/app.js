@@ -211,6 +211,15 @@ const CLASS_SPELL_NOTES = {
   },
 };
 
+const ITEM_SOURCE_URLS = {
+  maladum: "https://xinix.github.io/maladum/maladum46271.js",
+  adventure: "https://xinix.github.io/maladum/adventure46271.js",
+  beasts: "https://xinix.github.io/maladum/beasts46271.js",
+};
+
+let officialItemCatalogCache = null;
+let officialItemCatalogPromise = null;
+
 const SKILL_DATA = {
   "Acrobatics": { category: "Agilidad", tags: ["move","melee"], summary: "Movilidad agresiva: derribar, reposicionarse y entrar o salir del combate con ventaja." },
   "Ambush": { category: "Sigilo", tags: ["ranged","reaction"], summary: "Emboscadas desde cobertura con ataques y movimientos de reaccion." },
@@ -492,6 +501,14 @@ function normalizeInventoryItem(item) {
     name: item?.name || "Item",
     summary: item?.summary || "",
     type: item?.type || "",
+    source: item?.source || "",
+    rarity: item?.rarity || "",
+    color: item?.color || "",
+    size: item?.size || "",
+    buy: Number.isFinite(Number(item?.buy)) ? Number(item.buy) : null,
+    sell: Number.isFinite(Number(item?.sell)) ? Number(item.sell) : null,
+    range: Array.isArray(item?.range) ? item.range.map(v => Number(v) || 0).filter(v => v > 0) : [],
+    attributes: Array.isArray(item?.attributes) ? item.attributes.filter(Boolean) : [],
     meleeDice: Math.max(0, Number(item?.meleeDice) || 0),
     rangedDice: Math.max(0, Number(item?.rangedDice) || 0),
     shield: Math.max(0, Number(item?.shield) || 0),
@@ -597,6 +614,94 @@ function getEquipmentStats(adv) {
     armor: stats.armor + item.armor,
     magicItems: stats.magicItems + (item.magic ? 1 : 0),
   }), { meleeDice: 0, rangedDice: 0, shield: 0, armor: 0, magicItems: 0 });
+}
+
+function titleCaseToken(value) {
+  return String(value || "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, letter => letter.toUpperCase());
+}
+
+function summarizeCatalogEntry(entry) {
+  const parts = [];
+  if (entry.source) parts.push(titleCaseToken(entry.source));
+  if (entry.rarity) parts.push(titleCaseToken(entry.rarity));
+  if (entry.size) parts.push("Tam " + String(entry.size).toUpperCase());
+  if (entry.buy != null && entry.buy >= 0) parts.push("Compra " + entry.buy + "G");
+  if (entry.sell != null && entry.sell >= 0) parts.push("Venta " + entry.sell + "G");
+  if (entry.range?.length) parts.push("Rango " + entry.range.join("/"));
+  if (entry.attributes?.length) parts.push("Atributos: " + entry.attributes.slice(0, 4).map(titleCaseToken).join(", "));
+  return parts.join(" | ");
+}
+
+function inferInventoryFlagsFromCatalog(entry) {
+  const attrs = new Set(entry.attributes || []);
+  const magic = attrs.has("channel") || attrs.has("starting_magic") || attrs.has("x_dice") || attrs.has("magic_resist");
+  const shield = attrs.has("shield") || attrs.has("shield_block") ? 1 : 0;
+  const armor = attrs.has("armour") || attrs.has("armored") ? 1 : 0;
+  return { magic, shield, armor };
+}
+
+function catalogEntryToInventoryItem(entry) {
+  const inferred = inferInventoryFlagsFromCatalog(entry);
+  return normalizeInventoryItem({
+    name: entry.name,
+    summary: summarizeCatalogEntry(entry),
+    type: titleCaseToken(entry.color || entry.type || "Catalogo"),
+    source: entry.source,
+    rarity: entry.rarity,
+    color: entry.color,
+    size: entry.size,
+    buy: entry.buy,
+    sell: entry.sell,
+    range: entry.range,
+    attributes: entry.attributes,
+    magic: inferred.magic,
+    shield: inferred.shield,
+    armor: inferred.armor,
+    equipped: false,
+  });
+}
+
+function parseRemoteItemModule(text) {
+  const startMarker = "const e=";
+  const endMarker = ";export{e as default};";
+  const startIndex = text.indexOf(startMarker);
+  const endIndex = text.lastIndexOf(endMarker);
+  if (startIndex === -1 || endIndex === -1 || endIndex <= startIndex) {
+    throw new Error("No se pudo leer el modulo remoto");
+  }
+  const expression = text.slice(startIndex + startMarker.length, endIndex).trim();
+  return Function('"use strict"; return (' + expression + ');')();
+}
+
+async function loadOfficialItemCatalog() {
+  if (officialItemCatalogCache) return officialItemCatalogCache;
+  if (officialItemCatalogPromise) return officialItemCatalogPromise;
+
+  officialItemCatalogPromise = Promise.all(
+    Object.entries(ITEM_SOURCE_URLS).map(async ([source, url]) => {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Catalogo no disponible: " + source);
+      const text = await response.text();
+      const items = parseRemoteItemModule(text);
+      return (Array.isArray(items) ? items : []).map(item => ({
+        ...item,
+        source,
+        attributes: Array.isArray(item.attributes) ? item.attributes : [],
+        range: Array.isArray(item.range) ? item.range : [],
+      }));
+    })
+  ).then(groups => {
+    officialItemCatalogCache = groups.flat().sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    return officialItemCatalogCache;
+  }).finally(() => {
+    officialItemCatalogPromise = null;
+  });
+
+  return officialItemCatalogPromise;
 }
 
 // ========== COMPONENTS ==========
@@ -946,6 +1051,272 @@ function InventoryEditor({ adv, onUpdate }) {
     </Collapsible>
   );
 }
+
+InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogStatus, setCatalogStatus] = useState("loading");
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogSource, setCatalogSource] = useState("all");
+  const [draft, setDraft] = useState({
+    name: "",
+    summary: "",
+    type: "",
+    meleeDice: 0,
+    rangedDice: 0,
+    shield: 0,
+    armor: 0,
+    magic: false,
+    equipped: false,
+  });
+
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogStatus("loading");
+    setCatalogError("");
+    loadOfficialItemCatalog()
+      .then(items => {
+        if (cancelled) return;
+        setCatalogItems(items);
+        setCatalogStatus("ready");
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setCatalogError(error?.message || "No se pudo cargar el catalogo oficial.");
+        setCatalogStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const updateItem = (id, field, value) => {
+    onUpdate({
+      ...adv,
+      inventario: normalizeAdventurer(adv).inventario.map(item => item.id === id ? normalizeInventoryItem({ ...item, [field]: value }) : item),
+    });
+  };
+
+  const removeItem = (id) => {
+    onUpdate({
+      ...adv,
+      inventario: normalizeAdventurer(adv).inventario.filter(item => item.id !== id),
+    });
+  };
+
+  const addItem = () => {
+    if (!draft.name.trim()) return;
+    onUpdate({
+      ...adv,
+      inventario: [...normalizeAdventurer(adv).inventario, normalizeInventoryItem(draft)],
+    });
+    setDraft({
+      name: "",
+      summary: "",
+      type: "",
+      meleeDice: 0,
+      rangedDice: 0,
+      shield: 0,
+      armor: 0,
+      magic: false,
+      equipped: false,
+    });
+  };
+
+  const addCatalogItem = (entry) => {
+    onUpdate({
+      ...adv,
+      inventario: [...normalizeAdventurer(adv).inventario, catalogEntryToInventoryItem(entry)],
+    });
+  };
+
+  const catalogResults = catalogItems.filter(item => {
+    if (catalogSource !== "all" && item.source !== catalogSource) return false;
+    const query = catalogQuery.trim().toLowerCase();
+    if (!query) return true;
+    const haystack = [
+      item.name,
+      item.slug,
+      item.source,
+      item.rarity,
+      item.color,
+      item.size,
+      ...(item.attributes || []),
+    ].join(" ").toLowerCase();
+    return haystack.includes(query);
+  }).slice(0, 24);
+
+  return (
+    <Collapsible title="Inventario y Equipo" icon="INV">
+      <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
+        Registra aqui lo que lleva el aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
+      </div>
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar desde catalogo oficial</div>
+        <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 10 }}>
+          Busca por nombre, fuente o atributo. Al agregarlo podras ajustar despues los valores de combate si hace falta.
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8, marginBottom: 8 }}>
+          <input value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)}
+            placeholder="Buscar item o atributo"
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+          <select value={catalogSource} onChange={e => setCatalogSource(e.target.value)}
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13 }}>
+            <option value="all">Todo</option>
+            <option value="maladum">Caja base</option>
+            <option value="adventure">Adventure</option>
+            <option value="beasts">Beasts</option>
+          </select>
+        </div>
+
+        {catalogStatus === "loading" && (
+          <div style={{ color: "#9ca3af", fontSize: 12 }}>Cargando catalogo oficial...</div>
+        )}
+
+        {catalogStatus === "error" && (
+          <div style={{ color: "#fca5a5", fontSize: 12 }}>{catalogError || "No se pudo cargar el catalogo oficial."}</div>
+        )}
+
+        {catalogStatus === "ready" && (
+          <div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>
+              {catalogResults.length} resultados visibles de {catalogItems.length} items oficiales.
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto" }}>
+              {catalogResults.map(item => (
+                <div key={item.source + "_" + item.slug} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</div>
+                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                        {item.source && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #334155" }}>{titleCaseToken(item.source)}</span>}
+                        {item.rarity && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>{titleCaseToken(item.rarity)}</span>}
+                        {item.size && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{String(item.size).toUpperCase()}</span>}
+                      </div>
+                    </div>
+                    <button onClick={() => addCatalogItem(item)}
+                      style={{ minWidth: 84, padding: "10px 12px", borderRadius: 8, border: "1px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Agregar
+                    </button>
+                  </div>
+                  <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 6 }}>{summarizeCatalogEntry(item)}</div>
+                  {!!item.attributes?.length && (
+                    <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5 }}>
+                      {item.attributes.slice(0, 6).map(titleCaseToken).join(", ")}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {catalogResults.length === 0 && (
+                <div style={{ color: "#6b7280", fontSize: 12 }}>No se encontraron items con ese filtro.</div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {(normalizeAdventurer(adv).inventario || []).length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
+          {normalizeAdventurer(adv).inventario.map(item => (
+            <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
+                <div style={{ flex: 1 }}>
+                  <input value={item.name} onChange={e => updateItem(item.id, "name", e.target.value)}
+                    style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, marginBottom: 6, boxSizing: "border-box" }}/>
+                  <input value={item.summary} onChange={e => updateItem(item.id, "summary", e.target.value)}
+                    placeholder="Que hace o que recordar"
+                    style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#9ca3af", fontSize: 12, boxSizing: "border-box" }}/>
+                </div>
+                <button onClick={() => removeItem(item.id)}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>x</button>
+              </div>
+
+              {(item.source || item.rarity || item.size || item.buy != null || item.sell != null) && (
+                <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                  {summarizeCatalogEntry(item)}
+                </div>
+              )}
+
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
+                {[
+                  ["meleeDice", "Melee"],
+                  ["rangedDice", "Dist"],
+                  ["shield", "Escudo"],
+                  ["armor", "Prot"],
+                ].map(([field, label]) => (
+                  <div key={field}>
+                    <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>{label}</div>
+                    <input type="number" min="0" value={item[field]} onChange={e => updateItem(item.id, field, Number(e.target.value) || 0)}
+                      style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
+                  style={{ padding: "8px 10px", borderRadius: 999, border: item.equipped ? "1px solid #22c55e" : "1px solid #374151",
+                    background: item.equipped ? "#16653422" : "transparent", color: item.equipped ? "#bbf7d0" : "#9ca3af",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {item.equipped ? "Equipado" : "No equipado"}
+                </button>
+                <button onClick={() => updateItem(item.id, "magic", !item.magic)}
+                  style={{ padding: "8px 10px", borderRadius: 999, border: item.magic ? "1px solid #3b82f6" : "1px solid #374151",
+                    background: item.magic ? "#1d4ed822" : "transparent", color: item.magic ? "#bfdbfe" : "#9ca3af",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {item.magic ? "Magico" : "No magico"}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 12 }}>Todavia no hay objetos registrados.</div>
+      )}
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar item manualmente</div>
+        <input value={draft.name} onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
+          placeholder="Nombre del item"
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8, boxSizing: "border-box" }}/>
+        <input value={draft.summary} onChange={e => setDraft(prev => ({ ...prev, summary: e.target.value }))}
+          placeholder="Resumen corto"
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box" }}/>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
+          {[
+            ["meleeDice", "Melee"],
+            ["rangedDice", "Dist"],
+            ["shield", "Escudo"],
+            ["armor", "Prot"],
+          ].map(([field, label]) => (
+            <div key={field}>
+              <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>{label}</div>
+              <input type="number" min="0" value={draft[field]} onChange={e => setDraft(prev => ({ ...prev, [field]: Number(e.target.value) || 0 }))}
+                style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          <button onClick={() => setDraft(prev => ({ ...prev, equipped: !prev.equipped }))}
+            style={{ flex: 1, padding: 10, borderRadius: 8, border: draft.equipped ? "1px solid #22c55e" : "1px solid #374151",
+              background: draft.equipped ? "#16653422" : "transparent", color: draft.equipped ? "#bbf7d0" : "#9ca3af", cursor: "pointer", fontSize: 12 }}>
+            {draft.equipped ? "Se agrega equipado" : "Agregar sin equipar"}
+          </button>
+          <button onClick={() => setDraft(prev => ({ ...prev, magic: !prev.magic }))}
+            style={{ flex: 1, padding: 10, borderRadius: 8, border: draft.magic ? "1px solid #3b82f6" : "1px solid #374151",
+              background: draft.magic ? "#1d4ed822" : "transparent", color: draft.magic ? "#bfdbfe" : "#9ca3af", cursor: "pointer", fontSize: 12 }}>
+            {draft.magic ? "Es magico" : "No es magico"}
+          </button>
+        </div>
+        <button onClick={addItem}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: "#7f1d1d", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+          Agregar item
+        </button>
+      </div>
+    </Collapsible>
+  );
+};
 
 function SpellbookEditor({ adv, onUpdate }) {
   const [draft, setDraft] = useState({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
