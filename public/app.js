@@ -616,6 +616,8 @@ const MISSIONS = {
   },
 };
 
+const MISSION_IDS = ["Intro","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T"];
+
 const DEMORA_EFFECTS = [
   { min: 0, max: 2, desc: "Sin efectos negativos." },
   { min: 3, max: 4, desc: "Aumenta la dificultad base de las misiones." },
@@ -677,6 +679,9 @@ function defaultCampaign(name) {
     createdAt: new Date().toISOString(),
     currentMission: "Intro",
     demora: 0,
+    renombre: 0,
+    oro: 0,
+    historial_misiones: [],
     registro: {
       malagauntDerrotado: 0, troll_derrotado: false,
       aprendiz_estado: null, aprendiz_nombre: null,
@@ -740,7 +745,66 @@ function defaultMissionState(campId, missionId) {
     magia_usada_esta_ronda: false,
     fases_completadas: {},
     steps_completados: {},
+    primary_complete: false,
+    secondary_complete: false,
+    success: true,
+    xp_base: 1,
+    xp_extra: 0,
+    renombre_ganado: 0,
+    oro_ganado: 0,
+    demora_cambio: 0,
+    next_mission: missionId,
     notas: "",
+    loot_notes: "",
+  };
+}
+
+function normalizeCampaign(campaign) {
+  if (!campaign) return null;
+  const base = defaultCampaign(campaign.name || "Campana");
+  return {
+    ...base,
+    ...campaign,
+    demora: Math.max(0, Math.min(12, Number(campaign.demora ?? base.demora) || 0)),
+    renombre: Math.max(0, Number(campaign.renombre ?? 0) || 0),
+    oro: Math.max(0, Number(campaign.oro ?? 0) || 0),
+    historial_misiones: Array.isArray(campaign.historial_misiones) ? campaign.historial_misiones : [],
+    registro: {
+      ...base.registro,
+      ...(campaign.registro || {}),
+      logros: {
+        ...base.registro.logros,
+        ...((campaign.registro || {}).logros || {}),
+      },
+      recompensas: {
+        ...base.registro.recompensas,
+        ...((campaign.registro || {}).recompensas || {}),
+      },
+    },
+  };
+}
+
+function normalizeMissionState(state) {
+  if (!state) return null;
+  const base = defaultMissionState(state.campaign_id, state.mision_id);
+  return {
+    ...base,
+    ...state,
+    amenaza_nivel: Math.max(0, Number(state.amenaza_nivel ?? base.amenaza_nivel) || 0),
+    ronda: Math.max(1, Number(state.ronda ?? base.ronda) || 1),
+    primary_complete: !!state.primary_complete,
+    secondary_complete: !!state.secondary_complete,
+    success: state.success !== false,
+    xp_base: Math.max(1, Number(state.xp_base ?? 1) || 1),
+    xp_extra: Math.max(0, Number(state.xp_extra ?? 0) || 0),
+    renombre_ganado: Math.max(0, Number(state.renombre_ganado ?? 0) || 0),
+    oro_ganado: Math.max(0, Number(state.oro_ganado ?? 0) || 0),
+    demora_cambio: Math.max(0, Number(state.demora_cambio ?? 0) || 0),
+    next_mission: state.next_mission || state.mision_id || base.next_mission,
+    fases_completadas: state.fases_completadas || {},
+    steps_completados: state.steps_completados || {},
+    notas: String(state.notas || ""),
+    loot_notes: String(state.loot_notes || ""),
   };
 }
 
@@ -2574,6 +2638,19 @@ function CampaignHub({ campaign, adventurers, onNavigate }) {
         </div>
       </div>
 
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Renombre</div>
+          <div style={{ color: "#fbbf24", fontSize: 22, fontWeight: 800 }}>{campaign.renombre || 0}</div>
+          <div style={{ color: "#6b7280", fontSize: 10 }}>Total del grupo</div>
+        </div>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Oro</div>
+          <div style={{ color: "#d4b896", fontSize: 22, fontWeight: 800 }}>{campaign.oro || 0}G</div>
+          <div style={{ color: "#6b7280", fontSize: 10 }}>Reserva del grupo</div>
+        </div>
+      </div>
+
       {adventurers.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
@@ -2866,6 +2943,15 @@ function MissionSetupScreen({ campaign, onStartMission, onBack }) {
       <Collapsible title="Consecuencias" icon="🔮">
         <p style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, margin: 0 }}>{mission.consecuencias}</p>
       </Collapsible>
+
+      <div style={{ background: "#132034", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginTop: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
+          Recordatorio de cierre
+        </div>
+        <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
+          Al cerrar la mision, cada aventurero ganara 1 PX base. La PX extra, el Renombre, el Oro, la Demora y la siguiente mision se ajustaran en la pantalla postmision.
+        </div>
+      </div>
 
       <button onClick={onStartMission}
         style={{ width: "100%", padding: 16, borderRadius: 10, border: "none",
@@ -3444,26 +3530,25 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
   const mName = mission?.nombre || missionState.mision_id;
   const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
   const [activeItemAdv, setActiveItemAdv] = useState(null);
+  const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
 
   const handleThreatChange = (newLevel) => {
-    onUpdateMission({ ...missionState, amenaza_nivel: newLevel });
+    patchMission({ amenaza_nivel: newLevel });
   };
 
   const toggleMagic = () => {
-    onUpdateMission({ ...missionState, magia_usada_esta_ronda: !missionState.magia_usada_esta_ronda });
+    patchMission({ magia_usada_esta_ronda: !missionState.magia_usada_esta_ronda });
   };
 
   const toggleStep = (phaseId, stepIdx) => {
     const key = `${phaseId}_${stepIdx}`;
-    onUpdateMission({
-      ...missionState,
+    patchMission({
       steps_completados: { ...missionState.steps_completados, [key]: !missionState.steps_completados[key] }
     });
   };
 
   const advanceRound = () => {
-    onUpdateMission({
-      ...missionState,
+    patchMission({
       ronda: missionState.ronda + 1,
       magia_usada_esta_ronda: false,
       steps_completados: {},
@@ -3497,6 +3582,50 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           fontSize: 13, cursor: "pointer", fontWeight: 600 }}>
         {missionState.magia_usada_esta_ronda ? "Magia usada esta ronda (+1 Amenaza)" : "Se uso magia esta ronda?"}
       </button>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Objetivo de mision
+        </div>
+        <button onClick={() => patchMission({ primary_complete: !missionState.primary_complete })}
+          style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, marginBottom: 10, cursor: "pointer", textAlign: "left" }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "✓" : ""}</div>
+          <div>
+            <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo primario</div>
+            <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_primario || "Sin texto cargado."}</div>
+          </div>
+        </button>
+        <button onClick={() => patchMission({ secondary_complete: !missionState.secondary_complete })}
+          style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "✓" : ""}</div>
+          <div>
+            <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo secundario</div>
+            <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_secundario || "Sin objetivo secundario."}</div>
+          </div>
+        </button>
+        {mission?.reglas_especiales?.length > 0 && (
+          <div style={{ marginTop: 10, paddingTop: 10, borderTop: "1px solid #2d2d44" }}>
+            <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Reglas especiales</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {mission.reglas_especiales.map((rule, index) => (
+                <div key={rule.nombre + "_" + index} style={{ background: "#0f172a", borderRadius: 8, padding: 8, border: "1px solid #1f2937" }}>
+                  <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{rule.nombre}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{rule.desc}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>
+          Notas de partida
+        </div>
+        <textarea value={missionState.notas || ""} onChange={e => patchMission({ notas: e.target.value })}
+          placeholder="Botin, eventos clave, puertas abiertas, enemigos especiales, recordatorios..."
+          style={{ width: "100%", minHeight: 96, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", padding: 10, resize: "vertical", fontFamily: "inherit", fontSize: 12, lineHeight: 1.5 }} />
+      </div>
 
       <div style={{ marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase",
@@ -3575,17 +3704,12 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
       })}
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginTop: 8 }}>
-        {mission?.reglas_especiales?.length > 0 && (
-          <button onClick={() => {}}
-            style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#1a1a2e",
-              color: "#d4b896", fontSize: 12, cursor: "pointer" }}>Reglas Especiales</button>
-        )}
         <button onClick={() => window.open("https://xinix.github.io/maladum/", "_blank")}
           style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#1a1a2e",
             color: "#d4b896", fontSize: 12, cursor: "pointer" }}>Items DB</button>
         <button onClick={onEndMission}
           style={{ padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22",
-            color: "#fca5a5", fontSize: 12, cursor: "pointer", gridColumn: "1 / -1" }}>Fin de Mision</button>
+            color: "#fca5a5", fontSize: 12, cursor: "pointer" }}>Cerrar mision</button>
       </div>
 
       {selectedAbilityAdv && (
@@ -3608,6 +3732,140 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
     </div>
   );
 };
+
+function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdateMission, onConfirm, onBack }) {
+  const mission = MISSIONS[missionState.mision_id];
+  const xpEach = Math.max(1, Number(missionState.xp_base || 1)) + Math.max(0, Number(missionState.xp_extra || 0));
+  const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
+  const adjustNumber = (field, delta, min = 0) => {
+    patchMission({ [field]: Math.max(min, Number(missionState[field] || 0) + delta) });
+  };
+
+  return (
+    <div style={{ padding: 16 }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>Volver a la partida</button>
+
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <div style={{ color: "#b91c1c", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 2 }}>
+          Cierre de mision
+        </div>
+        <h2 style={{ color: "#d4b896", fontSize: 20, fontWeight: 800, margin: "4px 0" }}>{mission?.nombre || missionState.mision_id}</h2>
+        <div style={{ color: "#6b7280", fontSize: 12 }}>Ronda final {missionState.ronda} | Amenaza {missionState.amenaza_nivel}</div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+        <button onClick={() => patchMission({ success: true })}
+          style={{ padding: 12, borderRadius: 10, border: missionState.success ? "2px solid #166534" : "1px solid #374151", background: missionState.success ? "#16653422" : "#1a1a2e", color: missionState.success ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
+          Mision superada
+        </button>
+        <button onClick={() => patchMission({ success: false })}
+          style={{ padding: 12, borderRadius: 10, border: !missionState.success ? "2px solid #7f1d1d" : "1px solid #374151", background: !missionState.success ? "#7f1d1d22" : "#1a1a2e", color: !missionState.success ? "#fca5a5" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
+          Retirada / derrota
+        </button>
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Resultado de objetivos
+        </div>
+        <button onClick={() => patchMission({ primary_complete: !missionState.primary_complete })}
+          style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, marginBottom: 10, cursor: "pointer", textAlign: "left" }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "✓" : ""}</div>
+          <div>
+            <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo primario</div>
+            <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_primario || "Sin texto cargado."}</div>
+          </div>
+        </button>
+        <button onClick={() => patchMission({ secondary_complete: !missionState.secondary_complete })}
+          style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "✓" : ""}</div>
+          <div>
+            <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo secundario</div>
+            <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_secundario || "Sin objetivo secundario."}</div>
+          </div>
+        </button>
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Recompensas del grupo
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>PX base por aventurero</div>
+            <div style={{ color: "#bbf7d0", fontSize: 22, fontWeight: 800 }}>1</div>
+          </div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>PX total por aventurero</div>
+            <div style={{ color: "#fde68a", fontSize: 22, fontWeight: 800 }}>{xpEach}</div>
+          </div>
+        </div>
+
+        {[
+          { field: "xp_extra", label: "PX extra por aventurero", suffix: "" },
+          { field: "renombre_ganado", label: "Renombre ganado", suffix: "" },
+          { field: "oro_ganado", label: "Oro ganado", suffix: "G" },
+          { field: "demora_cambio", label: "Demora a sumar", suffix: "" },
+        ].map(({ field, label, suffix }) => (
+          <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0f172a", borderRadius: 8, padding: "8px 10px", marginBottom: 6 }}>
+            <span style={{ color: "#9ca3af", fontSize: 12 }}>{label}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <button onClick={() => adjustNumber(field, -1)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+              <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 34, textAlign: "center" }}>{missionState[field] || 0}{suffix}</span>
+              <button onClick={() => adjustNumber(field, 1)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Siguiente paso de campana
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+          Elige manualmente la siguiente mision segun las consecuencias del libro. La app no la deduce sola para no inventar reglas.
+        </div>
+        <select value={missionState.next_mission || campaign.currentMission} onChange={e => patchMission({ next_mission: e.target.value })}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 14 }}>
+          {MISSION_IDS.map(id => <option key={id} value={id}>{id} | {MISSIONS[id]?.nombre || "Pendiente"}</option>)}
+        </select>
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>
+          Resumen del cierre
+        </div>
+        <textarea value={missionState.loot_notes || ""} onChange={e => patchMission({ loot_notes: e.target.value })}
+          placeholder="Botin, recompensas, objetos especiales, personajes rescatados..."
+          style={{ width: "100%", minHeight: 80, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", padding: 10, resize: "vertical", fontFamily: "inherit", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }} />
+        <textarea value={missionState.notas || ""} onChange={e => patchMission({ notas: e.target.value })}
+          placeholder="Notas de cierre, heridas pendientes, decisiones del libro, recordatorios para mercado/descanso..."
+          style={{ width: "100%", minHeight: 90, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", padding: 10, resize: "vertical", fontFamily: "inherit", fontSize: 12, lineHeight: 1.5 }} />
+      </div>
+
+      <div style={{ background: "#132034", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", letterSpacing: 1, marginBottom: 6 }}>
+          Aplicacion al grupo
+        </div>
+        <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
+          Se aplicaran {xpEach} PX a cada aventurero del grupo, {missionState.renombre_ganado || 0} de Renombre, {missionState.oro_ganado || 0}G y +{missionState.demora_cambio || 0} de Demora a la campana.
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+          {adventurers.map(adv => (
+            <span key={adv.id} style={{ fontSize: 11, color: "#d4b896", padding: "4px 8px", borderRadius: 999, border: "1px solid #374151" }}>
+              {adv.nombre} +{xpEach} PX
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <button onClick={onConfirm}
+        style={{ width: "100%", padding: 16, borderRadius: 10, border: "2px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+        Aplicar cierre de mision
+      </button>
+    </div>
+  );
+}
 
 // --- CAMPAIGN REGISTRY ---
 function RegistryScreen({ campaign, onUpdate, onBack }) {
@@ -3653,6 +3911,17 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
     <div style={{ padding: 16 }}>
       <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>← Volver</button>
       <h2 style={{ color: "#d4b896", fontSize: 18, fontWeight: 800, margin: "0 0 16px" }}>📜 Registro de Campaña</h2>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Renombre</div>
+          <div style={{ color: "#fbbf24", fontSize: 24, fontWeight: 800 }}>{campaign.renombre || 0}</div>
+        </div>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Oro</div>
+          <div style={{ color: "#d4b896", fontSize: 24, fontWeight: 800 }}>{campaign.oro || 0}G</div>
+        </div>
+      </div>
 
       {/* Demora */}
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
@@ -3737,7 +4006,7 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
       {/* Mission selector */}
       <Collapsible title="Misión Actual" icon="📍">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-          {["Intro","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T"].map(m => (
+          {MISSION_IDS.map(m => (
             <button key={m} onClick={() => onUpdate({ ...campaign, currentMission: m })}
               style={{ minWidth: 40, height: 36, borderRadius: 6, fontSize: 13, fontWeight: 700, cursor: "pointer",
                 border: campaign.currentMission === m ? "2px solid #b91c1c" : "1px solid #374151",
@@ -3745,6 +4014,29 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
                 color: campaign.currentMission === m ? "#fca5a5" : "#6b7280" }}>{m}</button>
           ))}
         </div>
+      </Collapsible>
+      <Collapsible title="Historial de Misiones" icon="HIS">
+        {(campaign.historial_misiones || []).length === 0 ? (
+          <div style={{ color: "#6b7280", fontSize: 12 }}>Todavia no hay cierres de mision registrados.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {[...(campaign.historial_misiones || [])].slice().reverse().map((entry, index) => (
+              <div key={entry.id || index} style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1f2937" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                  <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{entry.missionId} | {entry.name}</div>
+                  <div style={{ color: entry.success ? "#22c55e" : "#f87171", fontSize: 11, fontWeight: 700 }}>{entry.success ? "Superada" : "Retirada"}</div>
+                </div>
+                <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                  {entry.xpEach} PX por aventurero | +{entry.renombre || 0} Renombre | +{entry.oro || 0}G | +{entry.demora || 0} Demora
+                </div>
+                <div style={{ color: "#6b7280", fontSize: 11, marginTop: 4 }}>
+                  {entry.primary ? "Primario completado" : "Primario pendiente"} | {entry.secondary ? "Secundario completado" : "Secundario pendiente"}
+                </div>
+                {entry.notes && <div style={{ color: "#6b7280", fontSize: 11, marginTop: 4, lineHeight: 1.5 }}>{entry.notes}</div>}
+              </div>
+            ))}
+          </div>
+        )}
       </Collapsible>
     </div>
   );
@@ -3768,11 +4060,11 @@ function App() {
       if (lastCampId) {
         const c = await DB.load("campaign_" + lastCampId);
         if (c) {
-          setCampaign(c);
+          setCampaign(normalizeCampaign(c));
           const advs = (await DB.load("adventurers_" + lastCampId) || []).map(normalizeAdventurer);
           setAdventurers(advs);
           const ms = await DB.load("mission_state_" + lastCampId);
-          if (ms) setMissionState(ms);
+          if (ms) setMissionState(normalizeMissionState(ms));
           setSubScreen("hub");
           setScreen("campaign");
           return;
@@ -3806,7 +4098,7 @@ function App() {
   }, [missionState]);
 
   const createCampaign = (name) => {
-    const c = defaultCampaign(name);
+    const c = normalizeCampaign(defaultCampaign(name));
     setCampaign(c);
     setAdventurers([]);
     setMissionState(null);
@@ -3817,11 +4109,11 @@ function App() {
   const loadCampaign = async (summary) => {
     const c = await DB.load("campaign_" + summary.id);
     if (c) {
-      setCampaign(c);
+      setCampaign(normalizeCampaign(c));
       const advs = (await DB.load("adventurers_" + summary.id) || []).map(normalizeAdventurer);
       setAdventurers(advs);
       const ms = await DB.load("mission_state_" + summary.id);
-      setMissionState(ms || null);
+      setMissionState(ms ? normalizeMissionState(ms) : null);
       setSubScreen("hub");
       setScreen("campaign");
     }
@@ -3843,9 +4135,60 @@ function App() {
   };
 
   const startMission = () => {
-    const ms = defaultMissionState(campaign.id, campaign.currentMission);
+    const ms = normalizeMissionState(defaultMissionState(campaign.id, campaign.currentMission));
     setMissionState(ms);
     setSubScreen("board");
+  };
+
+  const finishMission = async () => {
+    if (!campaign || !missionState) return;
+    const resolvedMission = normalizeMissionState(missionState);
+    const xpEach = Math.max(1, Number(resolvedMission.xp_base || 1)) + Math.max(0, Number(resolvedMission.xp_extra || 0));
+    const updatedAdventurers = adventurers.map(adv => {
+      const normalized = normalizeAdventurer(adv);
+      return normalizeAdventurer({
+        ...normalized,
+        experiencia: Math.max(0, Number(normalized.experiencia || 0) + xpEach),
+      });
+    });
+    const mission = MISSIONS[resolvedMission.mision_id];
+    const updatedCampaign = normalizeCampaign({
+      ...campaign,
+      currentMission: resolvedMission.next_mission || campaign.currentMission,
+      demora: Math.min(12, Math.max(0, Number(campaign.demora || 0) + Number(resolvedMission.demora_cambio || 0))),
+      renombre: Math.max(0, Number(campaign.renombre || 0) + Number(resolvedMission.renombre_ganado || 0)),
+      oro: Math.max(0, Number(campaign.oro || 0) + Number(resolvedMission.oro_ganado || 0)),
+      historial_misiones: [
+        ...(campaign.historial_misiones || []),
+        {
+          id: resolvedMission.id,
+          missionId: resolvedMission.mision_id,
+          name: mission?.nombre || resolvedMission.mision_id,
+          success: resolvedMission.success,
+          primary: resolvedMission.primary_complete,
+          secondary: resolvedMission.secondary_complete,
+          xpEach,
+          renombre: Number(resolvedMission.renombre_ganado || 0),
+          oro: Number(resolvedMission.oro_ganado || 0),
+          demora: Number(resolvedMission.demora_cambio || 0),
+          notes: [resolvedMission.loot_notes, resolvedMission.notas].filter(Boolean).join(" | "),
+          closedAt: new Date().toISOString(),
+        },
+      ],
+    });
+    setAdventurers(updatedAdventurers);
+    setCampaign(updatedCampaign);
+    setMissionState(null);
+    setSubScreen("hub");
+    await DB.remove("mission_state_" + campaign.id);
+  };
+
+  const handleNav = (target) => {
+    if (target === "board" && !missionState) {
+      setSubScreen("mission-setup");
+      return;
+    }
+    setSubScreen(target);
   };
 
   const goHome = () => {
@@ -3888,7 +4231,7 @@ function App() {
 
       {screen === "campaign" && subScreen === "hub" && campaign && (
         <CampaignHub campaign={campaign} adventurers={adventurers}
-          onNavigate={(s) => setSubScreen(s)}/>
+          onNavigate={handleNav}/>
       )}
 
       {screen === "campaign" && subScreen === "adventurers" && (
@@ -3905,15 +4248,22 @@ function App() {
 
       {screen === "campaign" && subScreen === "board" && missionState && (
         <MainBoardV2 missionState={missionState} adventurers={adventurers} campaign={campaign}
-          onUpdateMission={setMissionState}
+          onUpdateMission={ms => setMissionState(normalizeMissionState(ms))}
           onUpdateAdventurer={updateAdventurer}
-          onEndMission={() => { setMissionState(null); setSubScreen("hub"); }}
+          onEndMission={() => setSubScreen("mission-resolution")}
           onBack={() => setSubScreen("hub")}/>
+      )}
+
+      {screen === "campaign" && subScreen === "mission-resolution" && missionState && (
+        <MissionResolutionScreen campaign={campaign} missionState={missionState} adventurers={adventurers}
+          onUpdateMission={ms => setMissionState(normalizeMissionState(ms))}
+          onConfirm={finishMission}
+          onBack={() => setSubScreen("board")}/>
       )}
 
       {screen === "campaign" && subScreen === "registry" && (
         <RegistryScreen campaign={campaign}
-          onUpdate={setCampaign}
+          onUpdate={updated => setCampaign(normalizeCampaign(updated))}
           onBack={() => setSubScreen("hub")}/>
       )}
 
@@ -3928,7 +4278,7 @@ function App() {
             { id: "board", icon: "⚔️", label: "Partida" },
             { id: "registry", icon: "📜", label: "Registro" },
           ].map(tab => (
-            <button key={tab.id} onClick={() => setSubScreen(tab.id)}
+            <button key={tab.id} onClick={() => handleNav(tab.id)}
               style={{ flex: 1, padding: "10px 0", background: "none", border: "none",
                 cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
               <span style={{ fontSize: 20 }}>{tab.icon}</span>
