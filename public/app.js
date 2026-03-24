@@ -237,7 +237,7 @@ const SKILL_DATA = {
   "Entertainer": { category: "Ciudadano", tags: ["rest","support"], summary: "Potencia descanso, bendiciones y el uso alternativo de clavijas de magia." },
   "Fleet of Foot": { category: "Agilidad", tags: ["move"], summary: "Velocidad pura: mas movimiento, ignorar oportunidades y mejorar desplazamientos." },
   "Fortified Mind": { category: "Magia", tags: ["magic","defense","reaction"], summary: "Resistencia mental y apoyo defensivo con armadura magica y autoresistencia." },
-  "Frenzy": { category: "Melee", tags: ["melee"], summary: "Aumenta dados en melee y puede repartir golpes entre varios enemigos." },
+  "Frenzy": { category: "Melee", tags: ["melee"], summary: "Aumenta 2 dados en melee y puede repartir golpes entre varios enemigos." },
   "Hard to Hit": { category: "Sigilo", tags: ["defense"], summary: "Hace muy dificil ser impactado, sobre todo a distancia o tras moverse bien." },
   "Herbalism": { category: "Ciudadano", tags: ["rest","craft"], summary: "Mejora hierbas, pociones y fabricacion improvisada durante la mision." },
   "Impervious": { category: "Resistencia", tags: ["defense","status","reaction"], summary: "Niega estados, absorbe dano y aguanta rondas enteras bajo presion." },
@@ -690,7 +690,7 @@ function getLearnedSkills(adv) {
   Object.entries(normalized.clase_habilidades || {}).forEach(([name, level]) => {
     if ((Number(level) || 0) > 0) learned.push(getSkillEntry(name, level, normalized.clase || "Clase"));
   });
-  (normalized.inventario || []).filter(item => item.equipped).forEach(item => {
+  summarizeEquippedItems(normalized).forEach(item => {
     getGrantedSkillsFromItem(item).forEach(skill => learned.push(skill));
   });
   return learned;
@@ -722,7 +722,7 @@ function canLearnSpell(adv, spellLevel) {
 }
 
 function summarizeEquippedItems(adv) {
-  return (normalizeAdventurer(adv).inventario || []).filter(item => item.equipped);
+  return (normalizeAdventurer(adv).inventario || []).filter(item => item.equipped || isWeaponItem(item));
 }
 
 function getEquipmentStats(adv) {
@@ -734,6 +734,34 @@ function getEquipmentStats(adv) {
     magicItems: stats.magicItems + (item.magic ? 1 : 0),
   }), { meleeDice: 0, rangedDice: 0, shield: 0, armor: 0, magicItems: 0 });
 }
+
+function isWeaponItem(item) {
+  const attrs = new Set(item?.attributes || []);
+  return !!(
+    item?.meleeDice > 0 ||
+    item?.rangedDice > 0 ||
+    (item?.range || []).length > 0 ||
+    attrs.has("melee") ||
+    attrs.has("forceful_melee") ||
+    attrs.has("quickstrike") ||
+    attrs.has("first_strike") ||
+    attrs.has("parry") ||
+    attrs.has("reach") ||
+    attrs.has("sharp") ||
+    attrs.has("piercing") ||
+    attrs.has("blast") ||
+    attrs.has("ammo_arrow") ||
+    attrs.has("ammo_bullet") ||
+    attrs.has("trap_melee")
+  );
+}
+
+const EQUIPMENT_FIELD_HELP = {
+  meleeDice: "Dados que aporta al ataque cuerpo a cuerpo de ese objeto o arma.",
+  rangedDice: "Dados que aporta al ataque a distancia de ese objeto o arma.",
+  shield: "Cuantos impactos puede anular como escudo o bloqueo defensivo.",
+  armor: "Proteccion que aporta el equipo, armadura o casco.",
+};
 
 function titleCaseToken(value) {
   return String(value || "")
@@ -1270,6 +1298,15 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Registra aqui lo que lleva el aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
       </div>
+      <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10, marginBottom: 12 }}>
+        <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Guia rapida de campos</div>
+        <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.6 }}>
+          Melee: dados del arma o bono cuerpo a cuerpo. Dist: dados del ataque a distancia. Escudo: impactos anulados al defender. Prot: proteccion del equipo.
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.6, marginTop: 6 }}>
+          Las armas cuentan como equipadas solo por estar en inventario. Marca Equipado sobre todo en armaduras, cascos, capas, escudos u otros objetos que si dependan de llevarse puestos.
+        </div>
+      </div>
 
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
         <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar desde catalogo oficial</div>
@@ -1351,7 +1388,9 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
 
       {(normalizeAdventurer(adv).inventario || []).length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-          {normalizeAdventurer(adv).inventario.map(item => (
+          {normalizeAdventurer(adv).inventario.map(item => {
+            const autoEquippedWeapon = isWeaponItem(item);
+            return (
             <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
                 <div style={{ flex: 1 }}>
@@ -1396,7 +1435,7 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                   ["armor", "Prot"],
                 ].map(([field, label]) => (
                   <div key={field}>
-                    <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>{label}</div>
+                    <div title={EQUIPMENT_FIELD_HELP[field]} style={{ color: "#6b7280", fontSize: 10, marginBottom: 4, cursor: "help" }}>{label}</div>
                     <input type="number" min="0" value={item[field]} onChange={e => updateItem(item.id, field, Number(e.target.value) || 0)}
                       style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
                   </div>
@@ -1404,12 +1443,19 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
               </div>
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
-                  style={{ padding: "8px 10px", borderRadius: 999, border: item.equipped ? "1px solid #22c55e" : "1px solid #374151",
-                    background: item.equipped ? "#16653422" : "transparent", color: item.equipped ? "#bbf7d0" : "#9ca3af",
-                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  {item.equipped ? "Equipado" : "No equipado"}
-                </button>
+                {autoEquippedWeapon ? (
+                  <span style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #92400e",
+                    background: "#92400e22", color: "#fde68a", fontSize: 12, fontWeight: 700 }}>
+                    Arma: cuenta como equipada
+                  </span>
+                ) : (
+                  <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: item.equipped ? "1px solid #22c55e" : "1px solid #374151",
+                      background: item.equipped ? "#16653422" : "transparent", color: item.equipped ? "#bbf7d0" : "#9ca3af",
+                      fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    {item.equipped ? "Equipado" : "No equipado"}
+                  </button>
+                )}
                 <button onClick={() => updateItem(item.id, "magic", !item.magic)}
                   style={{ padding: "8px 10px", borderRadius: 999, border: item.magic ? "1px solid #3b82f6" : "1px solid #374151",
                     background: item.magic ? "#1d4ed822" : "transparent", color: item.magic ? "#bfdbfe" : "#9ca3af",
@@ -1418,7 +1464,7 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                 </button>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       ) : (
         <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 12 }}>Todavia no hay objetos registrados.</div>
@@ -1440,11 +1486,14 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
             ["armor", "Prot"],
           ].map(([field, label]) => (
             <div key={field}>
-              <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>{label}</div>
+              <div title={EQUIPMENT_FIELD_HELP[field]} style={{ color: "#6b7280", fontSize: 10, marginBottom: 4, cursor: "help" }}>{label}</div>
               <input type="number" min="0" value={draft[field]} onChange={e => setDraft(prev => ({ ...prev, [field]: Number(e.target.value) || 0 }))}
                 style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
             </div>
           ))}
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+          Si es un arma, normalmente basta con tenerla en inventario. Usa Equipado sobre todo para armaduras, cascos, capas o equipo defensivo.
         </div>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           <button onClick={() => setDraft(prev => ({ ...prev, equipped: !prev.equipped }))}
@@ -1635,10 +1684,10 @@ SpellbookEditor = function SpellbookEditorPatched({ adv, onUpdate }) {
   return (
     <Collapsible title="Libro de Hechizos" icon="SPL" defaultOpen>
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
-        Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo es tu rango actual.
+        Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo usa el rango manual que hayas marcado en la ficha.
       </div>
       <div style={{ color: "#c4b5fd", fontSize: 12, marginBottom: 10 }}>
-        Rango actual: {rank} | PX libre: {remainingXP}
+        Rango manual actual: {rank} | PX libre: {remainingXP}
       </div>
 
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
@@ -1774,10 +1823,10 @@ SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
   return (
     <Collapsible title="Libro de Hechizos" icon="SPL" defaultOpen>
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
-        Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo es tu rango actual.
+        Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo usa el rango manual que hayas marcado en la ficha.
       </div>
       <div style={{ color: "#c4b5fd", fontSize: 12, marginBottom: 10 }}>
-        Rango actual: {rank} | PX libre: {remainingXP}
+        Rango manual actual: {rank} | PX libre: {remainingXP}
       </div>
 
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
@@ -2896,7 +2945,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
 
       <div style={{ textAlign: "center", marginBottom: 16 }}>
         <h2 style={{ color: "#d4b896", fontSize: 22, fontWeight: 800, margin: 0 }}>{normalized.nombre}</h2>
-        <div style={{ color: "#6b7280", fontSize: 13 }}>{normalized.especie} | Rango {normalized.rango} | {normalized.coste} G</div>
+        <div style={{ color: "#6b7280", fontSize: 13 }}>{normalized.especie} | {normalized.coste} G</div>
       </div>
 
       <div style={{ marginBottom: 12 }}>
@@ -2966,7 +3015,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
 
       {normalized.clase && (
         <Collapsible title="Progresion de Clase" icon="CLS" defaultOpen>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 10 }}>
             <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
               <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase" }}>PX gastada</div>
               <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{spentXP}</div>
@@ -2975,9 +3024,22 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
               <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase" }}>PX libre</div>
               <div style={{ color: freeXP > 0 ? "#22c55e" : "#9ca3af", fontSize: 20, fontWeight: 800 }}>{freeXP}</div>
             </div>
+            <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+              <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase", marginBottom: 6 }}>Rango manual</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                <button onClick={() => update("rango", Math.max(1, (Number(normalized.rango) || 1) - 1))}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", cursor: "pointer" }}>-</button>
+                <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{Math.max(1, Number(normalized.rango) || 1)}</div>
+                <button onClick={() => update("rango", Math.max(1, (Number(normalized.rango) || 1) + 1))}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", cursor: "pointer" }}>+</button>
+              </div>
+            </div>
           </div>
           <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
-            Aqui puedes reflejar lo aprendido gastando PX. No impongo topes automaticos porque aun nos faltan cartas completas de avance por validar.
+            Aqui puedes reflejar lo aprendido gastando PX. La app no sube el rango automaticamente por experiencia: ese rango manual lo decides segun la mesa fisica.
+          </div>
+          <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 10 }}>
+            De momento no impongo topes automaticos de avance de clase porque aun nos faltan cartas completas de progreso por validar.
           </div>
           <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>En movil puedes tocar el nombre de una habilidad para resaltarla y ver su resumen.</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
