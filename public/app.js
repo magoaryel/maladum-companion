@@ -1730,6 +1730,130 @@ SpellbookEditor = function SpellbookEditorPatched({ adv, onUpdate }) {
   );
 };
 
+SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
+  const [draft, setDraft] = useState({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
+  const rank = Math.max(1, Number(adv?.rango) || 1);
+  const remainingXP = getRemainingXP(adv);
+  const officialOptions = getAvailableOfficialSpells(adv);
+  const selectedOfficial = officialOptions.find(spell => spell.id === draft.spellId) || null;
+
+  const resetDraft = () => setDraft({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
+
+  const addOfficial = () => {
+    if (!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)) return;
+    onUpdate({
+      ...adv,
+      hechizos: [...getKnownSpells(adv), normalizeSpell(selectedOfficial)],
+    });
+    resetDraft();
+  };
+
+  const addManual = () => {
+    const name = draft.name.trim();
+    if (!name || !canLearnSpell(adv, draft.level)) return;
+    onUpdate({
+      ...adv,
+      hechizos: [...getKnownSpells(adv), normalizeSpell({
+        id: "sp_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name,
+        level: Math.max(1, Math.min(rank, Number(draft.level) || 1)),
+        school: draft.school || "Manual",
+        notes: draft.notes.trim(),
+      })],
+    });
+    resetDraft();
+  };
+
+  const removeSpell = (spellId) => {
+    onUpdate({
+      ...adv,
+      hechizos: getKnownSpells(adv).filter(spell => spell.id !== spellId),
+    });
+  };
+
+  return (
+    <Collapsible title="Libro de Hechizos" icon="SPL" defaultOpen>
+      <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
+        Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo es tu rango actual.
+      </div>
+      <div style={{ color: "#c4b5fd", fontSize: 12, marginBottom: 10 }}>
+        Rango actual: {rank} | PX libre: {remainingXP}
+      </div>
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Hechizos oficiales de tu clase</div>
+        <select value={draft.spellId} onChange={e => setDraft(prev => ({ ...prev, spellId: e.target.value }))}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8 }}>
+          <option value="">{officialOptions.length ? "Selecciona un hechizo oficial" : "No hay hechizos oficiales disponibles a este rango"}</option>
+          {officialOptions.map(spell => (
+            <option key={spell.id} value={spell.id}>Nivel {spell.level} | {spell.name}</option>
+          ))}
+        </select>
+        {selectedOfficial && (
+          <div style={{ background: "#0f172a", border: "1px solid #2d2d44", borderRadius: 8, padding: 10, marginBottom: 8 }}>
+            <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+              Nivel {selectedOfficial.level} | {selectedOfficial.name}
+            </div>
+            <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>
+              {selectedOfficial.summary || selectedOfficial.notes || "Texto oficial pendiente de transcribir."}
+            </div>
+          </div>
+        )}
+        <button onClick={addOfficial} disabled={!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
+            background: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#1d4ed8" : "#1e293b",
+            color: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#dbeafe" : "#64748b",
+            fontWeight: 700, cursor: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "pointer" : "default" }}>
+          Aprender hechizo oficial (1 PX)
+        </button>
+      </div>
+
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Carga manual de respaldo</div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: 8, marginBottom: 8 }}>
+          <input value={draft.name} onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="Nombre del hechizo"
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+          <input type="number" min="1" max={rank} value={draft.level} onChange={e => setDraft(prev => ({ ...prev, level: Number(e.target.value) || 1 }))}
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+        </div>
+        <input value={draft.school} onChange={e => setDraft(prev => ({ ...prev, school: e.target.value }))}
+          placeholder="Escuela o clase"
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8, boxSizing: "border-box" }}/>
+        <textarea value={draft.notes} onChange={e => setDraft(prev => ({ ...prev, notes: e.target.value }))}
+          placeholder="Resumen del hechizo"
+          rows={3}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box", resize: "vertical" }}/>
+        <button onClick={addManual} disabled={!draft.name.trim() || !canLearnSpell(adv, draft.level)}
+          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
+            background: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#7f1d1d" : "#1e293b",
+            color: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#fff" : "#64748b",
+            fontWeight: 700, cursor: draft.name.trim() && canLearnSpell(adv, draft.level) ? "pointer" : "default" }}>
+          Agregar hechizo manual (1 PX)
+        </button>
+      </div>
+
+      {getKnownSpells(adv).length > 0 && (
+        <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {getKnownSpells(adv).map(spell => (
+            <div key={spell.id} style={{ background: "#0f172a", border: "1px solid #2d2d44", borderRadius: 10, padding: 10 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                <div>
+                  <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{spell.name}</div>
+                  <div style={{ color: "#6b7280", fontSize: 11 }}>Nivel {spell.level} | {spell.school}</div>
+                </div>
+                <button onClick={() => removeSpell(spell.id)}
+                  style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>x</button>
+              </div>
+              <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{spell.summary || spell.notes || "Resumen pendiente."}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </Collapsible>
+  );
+};
+
 function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
   const [filter, setFilter] = useState("all");
   const learnedSkills = getLearnedSkills(adv);
@@ -2791,7 +2915,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
         <PegBar label="Magia" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
           color="#3b82f6" onChange={v => update("magia_actual", v)}/>
         <PegBar label="Habilidad" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
-          color="#eab308" onChange={v => update("habilidad_actual", v)}/>
+          color="#d946ef" onChange={v => update("habilidad_actual", v)}/>
       </div>
 
       <Collapsible title="Estados" icon="EST" defaultOpen={normalized.status_effects.length > 0}>
@@ -3048,7 +3172,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
             <PegBar label="MP" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
               color="#3b82f6" onChange={v => onUpdateAdventurer({ ...normalized, magia_actual: v })}/>
             <PegBar label="SP" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
-              color="#eab308" onChange={v => onUpdateAdventurer({ ...normalized, habilidad_actual: v })}/>
+              color="#d946ef" onChange={v => onUpdateAdventurer({ ...normalized, habilidad_actual: v })}/>
 
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
               {equipment.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{equipment.meleeDice}</span>}
