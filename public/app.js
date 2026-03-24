@@ -3181,6 +3181,10 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
   const isMagicalClass = !!CLASS_DATA[normalized.clase]?.spell;
   const [activeSkillInfo, setActiveSkillInfo] = useState(null);
 
+  useEffect(() => {
+    setActiveSkillInfo(null);
+  }, [normalized.clase]);
+
   const updateSkillLevel = (skillName, delta) => {
     const current = Number(normalized.clase_habilidades?.[skillName]) || 0;
     const next = Math.max(0, current + delta);
@@ -3217,6 +3221,9 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
           <option value="">-- Sin clase --</option>
           {CLASSES.map(c => <option key={c} value={c}>{c}</option>)}
         </select>
+        <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>
+          La habilidad innata pertenece al aventurero y no cambia al cambiar de clase.
+        </div>
       </div>
 
       <div style={{ background: "#1a1a2e", borderRadius: 12, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
@@ -3255,7 +3262,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
       </Collapsible>
 
       {normalized.innatas.length > 0 && (
-        <Collapsible title="Habilidades Innatas" icon="INN">
+        <Collapsible title="Innatas del Aventurero" icon="INN">
           <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>Toca una habilidad para ver que hace.</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
             {getInnateSkillEntries(normalized).map(entry => (
@@ -3325,12 +3332,12 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                           style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>{skillName}</button>
                         {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
                         <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
-                        {innateLevel > 0 && <span style={{ fontSize: 11, color: "#facc15", padding: "2px 8px", borderRadius: 999, border: "1px solid #a16207" }}>Innata {innateLevel}</span>}
+                        {innateLevel > 0 && <span style={{ fontSize: 11, color: "#facc15", padding: "2px 8px", borderRadius: 999, border: "1px solid #a16207" }}>Innata aventurero {innateLevel}</span>}
                       </div>
                       <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{currentDetail}</div>
                       {innateLevel > 0 && (
                         <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
-                          Ya la tienes por habilidad innata a nivel {innateLevel}. Esta pista sigue reflejando solo la PX invertida en la clase.
+                          Ya la tienes por habilidad innata del aventurero a nivel {innateLevel}. Esta pista sigue reflejando solo la PX invertida en la clase.
                         </div>
                       )}
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
