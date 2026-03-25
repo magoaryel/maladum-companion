@@ -510,8 +510,8 @@ const ATTRIBUTE_DATA = {
   immunity_bludgeoning: { label: "Immunity Bludgeoning", summary: "Inmunidad al efecto Contundente o al tipo de impacto indicado por la carta." },
   bludgeoning_immunity: { label: "Bludgeoning Immunity", summary: "Inmunidad al efecto Contundente o al tipo de impacto indicado por la carta." },
   camouflage: { label: "Camouflage", summary: "Solo puede ser objetivo de ataques a distancia desde corto alcance." },
-  ammo_arrow: { label: "Ammo Arrow", summary: "Municion de flechas: un arma con este icono necesita una ficha de flechas para disparar." },
-  ammo_bullet: { label: "Ammo Bullet", summary: "Municion de bala: un arma con este icono necesita una ficha de balas para disparar." },
+  ammo_arrow: { label: "Ammo Arrow", summary: "Municion de flechas: un arma con este icono necesita una ficha de flechas para disparar. Si en el dado azul sale una calavera, descarta esa ficha de municion." },
+  ammo_bullet: { label: "Ammo Bullet", summary: "Municion de bala: un arma con este icono necesita una ficha de balas para disparar. Si en el dado azul sale una calavera, descarta esa ficha de municion." },
   loud: { label: "Loud", summary: "Ruido: al usar este objeto, la Amenaza aumenta en 1." },
   cumbersome: { label: "Cumbersome", summary: "Aparatoso: ciertos resultados del ataque pueden atascar o inutilizar el arma hasta prepararla o repararla, segun la carta." },
   indestructible: { label: "Indestructible", summary: "Indestructible: este objeto no se rompe por los resultados normales que afectarian a otros objetos." },
@@ -555,6 +555,33 @@ const ATTRIBUTE_DATA = {
   vicious: { label: "Vicious", summary: "Vicioso: los resultados indicados en el dado azul para esta arma cuentan como golpes criticos." },
   retaliation: { label: "Retaliation", summary: "Puede devolver dano o efectos al atacante." },
   blast: { label: "Blast", summary: "Afecta a varios objetivos o zonas cercanas segun el perfil del arma o efecto." },
+  malacyte_regeneration_1: { label: "Malacyte Regeneration 1", summary: "Regeneracion de malacita 1: restaura 1 clavija de Magia en la Fase de Evaluacion o segun indique la carta." },
+  focused_energy: { label: "Focused Energy", summary: "Energia concentrada: este objeto canaliza una descarga o golpe energetico propio. Usa el perfil exacto de la carta para resolverlo." },
+  stash: { label: "Stash", summary: "Reserva: el objeto representa dinero o botin guardado para anadir a tu reserva o a la economia del grupo." },
+  fireball: { label: "Fireball", summary: "Bola de fuego: el objeto permite resolver un ataque o efecto explosivo de fuego propio de la carta." },
+  malacyte_enhancement: { label: "Malacyte Enhancement", summary: "Mejora de malacita: potencia el arma o el efecto magico del objeto segun el texto de su carta." },
+  darts: { label: "Darts", summary: "Municion de dardos: este objeto dispara dardos con su propio perfil de ataque. Si el dado azul muestra la perdida de municion indicada por la carta, se descarta la ficha usada." },
+  darkness: { label: "Darkness", summary: "Oscuridad: crea o aplica un efecto de Oscuridad segun el perfil de esta carta." },
+  plunderer: { label: "Plunderer", summary: "Saqueador: el objeto ayuda a desarmar, dispersar o robar equipo del objetivo segun el ataque resuelto." },
+  fatigue: { label: "Fatigue", summary: "Fatiga: este ataque o efecto hace que el objetivo sufra Fatiga." },
+  hawkeye: { label: "Hawkeye", summary: "Ojo de Halcon: el ataque ignora la cobertura parcial y puede disparar a personajes enfrentados a cualquier distancia sin aleatorizar el objetivo." },
+  scramble: { label: "Scramble", summary: "Trepar: ayuda a subir, bajar o cruzar obstaculos usando el valor de Trepar de la carta." },
+  learn_spells_one_level_higher: { label: "Learn Spells One Level Higher", summary: "Permite aprender hechizos de 1 nivel por encima de lo normal para tu rango, segun la carta." },
+  dart: { label: "Dart", summary: "Dardo: ataque o municion de dardo con el perfil concreto indicado en la carta." },
+  skill: { label: "Skill", summary: "Restaura o interactua con clavijas de Habilidad segun el objeto." },
+  rope: { label: "Rope", summary: "Cuerda: ayuda a Trepar, Saltar o mover objetos/terreno segun la situacion y la carta." },
+  reactive: { label: "Reactive", summary: "Reactivo: este objeto se usa o responde como reaccion cuando se cumple su desencadenante." },
+  size: { label: "Size", summary: "Tamano: modifica el tamano efectivo del personaje u objeto y sus reglas asociadas." },
+  malacyte_stability: { label: "Malacyte Stability", summary: "Estabilidad de malacita: hace mas estable la canalizacion o el uso magico del objeto segun su carta." },
+  stars: { label: "Stars", summary: "Estrellas arrojadizas: ataque o lanzamiento rapido con el perfil indicado por la carta." },
+  x_actions: { label: "X Actions", summary: "Concede X acciones adicionales o efectos ligados a acciones, segun el objeto y su carta." },
+  fast: { label: "Fast", summary: "Rapido: al realizar una accion de Movimiento, este personaje puede mover X casillas adicionales. Si tiene varias fuentes, usa el valor mas alto." },
+  hidden_location: { label: "Hidden Location", summary: "Localizacion oculta: revela o interactua con una ubicacion secreta segun la mision o la carta." },
+  warded: { label: "Warded", summary: "Protegido: el objetivo o usuario queda resguardado frente a magia o efectos hostiles segun la carta." },
+  remove_poison: { label: "Remove Poison", summary: "Elimina un contador o efecto de Envenenado." },
+  remove_wounded: { label: "Remove Wounded", summary: "Elimina un contador o efecto de Herido." },
+  malacytic_conduit: { label: "Malacytic Conduit", summary: "Conducto malacitico: usa malacita para canalizar o amplificar efectos magicos del objeto." },
+  regen_magic: { label: "Regen Magic", summary: "Regenera 1 clavija de Magia en la Fase de Evaluacion o segun indique la carta." },
 };
 
 const TERM_GLOSSARY = [
@@ -845,6 +872,7 @@ function defaultMissionState(campId, missionId) {
     materials_gained: emptyMaterials,
     magic_threat_levels: [],
     crafted_items: [],
+    repaired_items: [],
     notas: "",
     loot_notes: "",
   };
@@ -900,6 +928,7 @@ function normalizeMissionState(state) {
     materials_gained: Object.fromEntries(Object.entries(materials).map(([key, value]) => [key, Math.max(0, Number(value) || 0)])),
     magic_threat_levels: Array.isArray(state.magic_threat_levels) ? state.magic_threat_levels.map(v => Math.max(1, Number(v) || 1)) : [],
     crafted_items: Array.isArray(state.crafted_items) ? state.crafted_items : [],
+    repaired_items: Array.isArray(state.repaired_items) ? state.repaired_items : [],
     fases_completadas: state.fases_completadas || {},
     steps_completados: state.steps_completados || {},
     notas: String(state.notas || ""),
@@ -1021,6 +1050,8 @@ function normalizeInventoryItem(item) {
     armor: Math.max(0, Number(item?.armor) || 0),
     magic: !!item?.magic,
     equipped: !!item?.equipped,
+    stowed: !!item?.stowed,
+    broken: !!item?.broken,
   };
 }
 
@@ -1103,6 +1134,16 @@ function resolveSkillNameFromToken(token) {
   return Object.keys(SKILL_DATA).find(name => slugKey(name) === slugKey(normalized)) || titleCaseToken(normalized);
 }
 
+function resolveSpellNameFromToken(token) {
+  const cleaned = String(token || "").replace(/^spell_/, "");
+  const normalized = cleaned.replace(/_/g, " ");
+  const candidates = new Set([
+    ...Object.keys(OFFICIAL_SPELL_DETAILS || {}),
+    ...Object.values(OFFICIAL_SPELLS || {}).flat().map(spell => spell.name),
+  ]);
+  return [...candidates].find(name => slugKey(name) === slugKey(normalized)) || titleCaseToken(normalized);
+}
+
 function getSkillLevelDetails(name) {
   return SKILL_LEVEL_DATA[normalizeSkillLookupName(name)] || [];
 }
@@ -1116,6 +1157,17 @@ function getAttributeEntry(attr) {
     return {
       label: `Skill ${skillName} ${level}`,
       summary: `Otorga ${skillName} nivel ${level} mientras el objeto este equipado.`,
+    };
+  }
+  const spellMatch = String(attr).match(/^spell_(.+)$/);
+  if (spellMatch) {
+    const spellName = resolveSpellNameFromToken(attr);
+    const spellMeta = OFFICIAL_SPELL_DETAILS[spellName];
+    return {
+      label: `Spell ${spellName}`,
+      summary: spellMeta?.summary
+        ? `Otorga acceso al hechizo ${spellName}. ${spellMeta.summary}`
+        : `Otorga acceso al hechizo ${spellName} mientras el objeto este disponible.`,
     };
   }
   const meta = ATTRIBUTE_DATA[attr];
@@ -1230,7 +1282,11 @@ function canLearnSpell(adv, spellLevel) {
 }
 
 function summarizeEquippedItems(adv) {
-  return (normalizeAdventurer(adv).inventario || []).filter(item => item.equipped || isWeaponItem(item));
+  return (normalizeAdventurer(adv).inventario || []).filter(item => {
+    if (item.broken) return false;
+    if (isWeaponItem(item)) return !item.stowed;
+    return item.equipped;
+  });
 }
 
 function getEquipmentStats(adv) {
@@ -1340,6 +1396,18 @@ function getUniqueCraftedNames(adventurers, missionState) {
     if (item?.name) names.add(String(item.name).toLowerCase());
   });
   return names;
+}
+
+function getRepairCost(item) {
+  const rarity = String(item?.rarity || "").toLowerCase();
+  if (rarity === "common") return 1;
+  if (rarity === "uncommon") return 3;
+  if (rarity === "rare") return 5;
+  return null;
+}
+
+function makeRepairKey(adventurerId, itemId) {
+  return `${adventurerId}::${itemId}`;
 }
 
 const COMBAT_ATTRIBUTE_GROUPS = {
@@ -1719,6 +1787,8 @@ function InventoryEditor({ adv, onUpdate }) {
     armor: 0,
     magic: false,
     equipped: false,
+    stowed: false,
+    broken: false,
   });
 
   const updateItem = (id, field, value) => {
@@ -1746,12 +1816,14 @@ function InventoryEditor({ adv, onUpdate }) {
       summary: "",
       type: "",
       meleeDice: 0,
-      rangedDice: 0,
-      shield: 0,
-      armor: 0,
-      magic: false,
-      equipped: false,
-    });
+        rangedDice: 0,
+        shield: 0,
+        armor: 0,
+        magic: false,
+        equipped: false,
+        stowed: false,
+        broken: false,
+      });
   };
 
   return (
@@ -1871,6 +1943,8 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
     armor: 0,
     magic: false,
     equipped: false,
+    stowed: false,
+    broken: false,
   });
 
   useEffect(() => {
@@ -1900,6 +1974,13 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
     });
   };
 
+  const patchItem = (id, updates) => {
+    onUpdate({
+      ...adv,
+      inventario: normalizeAdventurer(adv).inventario.map(item => item.id === id ? normalizeInventoryItem({ ...item, ...updates }) : item),
+    });
+  };
+
   const removeItem = (id) => {
     onUpdate({
       ...adv,
@@ -1923,6 +2004,8 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
       armor: 0,
       magic: false,
       equipped: false,
+      stowed: false,
+      broken: false,
     });
   };
 
@@ -1958,7 +2041,7 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
         <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar desde catalogo oficial</div>
         <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 10 }}>
-          Busca por nombre, fuente o atributo. Al agregarlo podras ajustar despues los valores de combate si hace falta.
+          Busca por nombre, fuente o atributo. Al agregarlo podras ajustar despues los valores de combate si hace falta, marcarlo roto o guardarlo si no lo llevas activo.
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8, marginBottom: 8 }}>
@@ -2037,6 +2120,17 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
           {normalizeAdventurer(adv).inventario.map(item => {
             const autoEquippedWeapon = isWeaponItem(item);
+            const toggleBroken = () => {
+              if (item.broken) {
+                patchItem(item.id, { broken: false });
+                return;
+              }
+              patchItem(item.id, {
+                broken: true,
+                equipped: false,
+                stowed: autoEquippedWeapon ? true : item.stowed,
+              });
+            };
             return (
             <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 8 }}>
@@ -2049,6 +2143,12 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                 </div>
                 <button onClick={() => removeItem(item.id)}
                   style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>x</button>
+              </div>
+
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
+                {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
+                {isWeaponItem(item) && item.stowed && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Guardado</span>}
+                {!isWeaponItem(item) && item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>}
               </div>
 
               {(item.source || item.rarity || item.size || item.buy != null || item.sell != null) && (
@@ -2106,15 +2206,19 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {autoEquippedWeapon ? (
-                  <span style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #92400e",
-                    background: "#92400e22", color: "#fde68a", fontSize: 12, fontWeight: 700 }}>
-                    Arma: cuenta como equipada
-                  </span>
+                  <button onClick={() => patchItem(item.id, { stowed: !item.stowed })}
+                    disabled={item.broken}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: item.stowed ? "1px solid #374151" : "1px solid #92400e",
+                      background: item.stowed ? "transparent" : "#92400e22", color: item.stowed ? "#9ca3af" : "#fde68a",
+                      fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.5 : 1 }}>
+                    {item.stowed ? "Arma guardada" : "Arma activa"}
+                  </button>
                 ) : (
                   <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
+                    disabled={item.broken}
                     style={{ padding: "8px 10px", borderRadius: 999, border: item.equipped ? "1px solid #22c55e" : "1px solid #374151",
                       background: item.equipped ? "#16653422" : "transparent", color: item.equipped ? "#bbf7d0" : "#9ca3af",
-                      fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.5 : 1 }}>
                     {item.equipped ? "Equipado" : "No equipado"}
                   </button>
                 )}
@@ -2123,6 +2227,12 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                     background: item.magic ? "#1d4ed822" : "transparent", color: item.magic ? "#bfdbfe" : "#9ca3af",
                     fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                   {item.magic ? "Magico" : "No magico"}
+                </button>
+                <button onClick={toggleBroken}
+                  style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #fca5a5" : "1px solid #374151",
+                    background: item.broken ? "#7f1d1d22" : "transparent", color: item.broken ? "#fca5a5" : "#9ca3af",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {item.broken ? "Quitar roto" : "Marcar roto"}
                 </button>
               </div>
             </div>
@@ -4392,9 +4502,27 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   };
   const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
   const lodgingCost = missionState.rest_mode === "posada" ? adventurers.length * 2 : 0;
+  const brokenItems = adventurers.flatMap(adv => {
+    const normalized = normalizeAdventurer(adv);
+    return (normalized.inventario || [])
+      .filter(item => item.broken)
+      .map(item => {
+        const repairKey = makeRepairKey(normalized.id, item.id);
+        const selected = (missionState.repaired_items || []).find(entry => entry.key === repairKey);
+        return {
+          key: repairKey,
+          adventurerId: normalized.id,
+          adventurerName: normalized.nombre,
+          item,
+          autoCost: getRepairCost(item),
+          selected,
+        };
+      });
+  });
   const craftedSpend = (missionState.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
-  const availableGoldBeforeCraft = Number(campaign.oro || 0) + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost;
-  const netGold = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend;
+  const repairSpend = (missionState.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
+  const availableGoldBeforeCraft = Number(campaign.oro || 0) + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - repairSpend;
+  const netGold = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend;
   useEffect(() => {
     loadCraftingCatalog()
       .then(setCraftingCatalog)
@@ -4463,6 +4591,35 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
     patchMission({
       materials_gained: craftedItem ? restoreRecipeMaterials(missionState.materials_gained, craftedItem) : missionState.materials_gained,
       crafted_items: (missionState.crafted_items || []).filter(item => item.id !== id),
+    });
+  };
+
+  const toggleRepairItem = (entry) => {
+    const existing = (missionState.repaired_items || []).find(item => item.key === entry.key);
+    if (existing) {
+      patchMission({
+        repaired_items: (missionState.repaired_items || []).filter(item => item.key !== entry.key),
+      });
+      return;
+    }
+    const cost = entry.autoCost != null ? entry.autoCost : 0;
+    patchMission({
+      repaired_items: [
+        ...(missionState.repaired_items || []),
+        {
+          key: entry.key,
+          adventurerId: entry.adventurerId,
+          itemId: entry.item.id,
+          itemName: entry.item.name,
+          cost,
+        },
+      ],
+    });
+  };
+
+  const updateRepairCost = (entry, cost) => {
+    patchMission({
+      repaired_items: (missionState.repaired_items || []).map(item => item.key === entry.key ? { ...item, cost: Math.max(0, Number(cost) || 0) } : item),
     });
   };
 
@@ -4576,7 +4733,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         <div style={{ background: netGold >= 0 ? "#132034" : "#3a1212", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Balance neto de oro de esta fase</div>
           <div style={{ color: netGold >= 0 ? "#bbf7d0" : "#fca5a5", fontSize: 20, fontWeight: 800 }}>{netGold >= 0 ? "+" : ""}{netGold}G</div>
-          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado - mantenimiento - descanso - crafteo</div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado - mantenimiento - descanso - reparaciones - crafteo</div>
         </div>
         {missionState.rest_mode !== "none" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
@@ -4590,6 +4747,62 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         <textarea value={missionState.rest_notes || ""} onChange={e => patchMission({ rest_notes: e.target.value })}
           placeholder="Anota aqui el resultado de la Posada o de la Naturaleza, bendiciones, PX extra, renombre, penalizaciones..."
           style={{ width: "100%", minHeight: 76, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", padding: 10, resize: "vertical", fontFamily: "inherit", fontSize: 12, lineHeight: 1.5 }} />
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Reparacion de objetos
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+          Marca aqui los objetos rotos que quieres reparar durante la fase de mercado. Comun 1G, Poco comun 3G, Raro 5G. Si una carta especial no entra en esos rangos, puedes escribir el coste manualmente.
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
+          <span>Objetos rotos: {brokenItems.length}</span>
+          <span>Gasto en reparacion: {repairSpend}G</span>
+        </div>
+        {brokenItems.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {brokenItems.map(entry => {
+              const selected = !!entry.selected;
+              const cost = selected ? Math.max(0, Number(entry.selected?.cost) || 0) : (entry.autoCost ?? 0);
+              const projectedNetGold = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - (repairSpend + (selected ? 0 : cost));
+              const canAffordRepair = selected || projectedNetGold >= 0;
+              return (
+                <div key={entry.key} style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1f2937" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                    <div>
+                      <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{entry.item.name}</div>
+                      <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                        {entry.adventurerName} | {titleCaseToken(entry.item.rarity || "especial")} | {titleCaseToken(entry.item.size || "")}
+                      </div>
+                    </div>
+                    <button onClick={() => toggleRepairItem(entry)} disabled={!canAffordRepair}
+                      style={{ padding: "8px 10px", borderRadius: 8, border: selected ? "1px solid #166534" : "1px solid #374151", background: selected ? "#16653422" : "#132034", color: selected ? "#bbf7d0" : "#d4b896", cursor: canAffordRepair ? "pointer" : "default", opacity: canAffordRepair ? 1 : 0.5 }}>
+                      {selected ? "Reparacion marcada" : "Reparar"}
+                    </button>
+                  </div>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: entry.autoCost == null && selected ? 8 : 0 }}>
+                    <div style={{ color: "#6b7280", fontSize: 11 }}>
+                      {entry.autoCost != null ? `Coste automatico: ${entry.autoCost}G` : "Coste manual"}
+                    </div>
+                    <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{cost}G</div>
+                  </div>
+                  {entry.autoCost == null && selected && (
+                    <input type="number" min="0" value={entry.selected?.cost || 0} onChange={e => updateRepairCost(entry, e.target.value)}
+                      style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }} />
+                  )}
+                  {!canAffordRepair && (
+                    <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 6 }}>
+                      No alcanza el oro neto disponible para sumar esta reparacion.
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ color: "#6b7280", fontSize: 12 }}>No hay objetos rotos pendientes de reparar.</div>
+        )}
       </div>
 
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
@@ -4754,6 +4967,11 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
           Se aplicaran {xpEach} PX a cada aventurero del grupo, {missionState.renombre_ganado || 0} de Renombre, {netGold >= 0 ? "+" : ""}{netGold}G netos y +{missionState.demora_cambio || 0} de Demora a la campana.
         </div>
+        {(missionState.repaired_items || []).length > 0 && (
+          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+            Objetos reparados: {(missionState.repaired_items || []).map(item => `${item.itemName || "Objeto"} (${item.cost || 0}G)`).join(" | ")}
+          </div>
+        )}
         {(missionState.crafted_items || []).length > 0 && (
           <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
             Items crafteados: {(missionState.crafted_items || []).map(item => {
@@ -5061,7 +5279,10 @@ function App() {
     const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
     const lodgingCost = resolvedMission.rest_mode === "posada" ? adventurers.length * 2 : 0;
     const craftedSpend = (resolvedMission.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
-    const netGold = Number(resolvedMission.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend;
+    const repairSpend = (resolvedMission.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
+    const repairedKeys = new Set((resolvedMission.repaired_items || []).map(item => makeRepairKey(item.adventurerId, item.itemId)));
+    const repairedLabels = (resolvedMission.repaired_items || []).map(item => `${item.itemName || "Objeto"} (${item.cost || 0}G)`);
+    const netGold = Number(resolvedMission.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend;
     const updatedAdventurers = adventurers.map(adv => {
       const normalized = normalizeAdventurer(adv);
       const craftedForAdventurer = (resolvedMission.crafted_items || [])
@@ -5077,7 +5298,13 @@ function App() {
       return normalizeAdventurer({
         ...normalized,
         experiencia: Math.max(0, Number(normalized.experiencia || 0) + xpEach),
-        inventario: [...(normalized.inventario || []), ...craftedForAdventurer],
+        inventario: [
+          ...(normalized.inventario || []).map(item => {
+            const repairKey = makeRepairKey(normalized.id, item.id);
+            return repairedKeys.has(repairKey) ? normalizeInventoryItem({ ...item, broken: false }) : item;
+          }),
+          ...craftedForAdventurer,
+        ],
       });
     });
     const mission = MISSIONS[resolvedMission.mision_id];
@@ -5103,6 +5330,9 @@ function App() {
           notes: [
             resolvedMission.loot_notes,
             resolvedMission.rest_notes,
+            repairedLabels.length > 0
+              ? "Reparaciones: " + repairedLabels.join(", ")
+              : "",
             (resolvedMission.crafted_items || []).length > 0
               ? "Crafteo: " + resolvedMission.crafted_items.map(item => item.name).join(", ")
               : "",
