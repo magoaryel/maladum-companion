@@ -3264,38 +3264,220 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
 function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [itemsView, setItemsView] = useState(normalized.inventario || []);
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogStatus, setCatalogStatus] = useState("loading");
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogSource, setCatalogSource] = useState("all");
+  const [manualDraft, setManualDraft] = useState({
+    name: "",
+    summary: "",
+    meleeDice: 0,
+    rangedDice: 0,
+    shield: 0,
+    armor: 0,
+    magic: false,
+  });
 
   useEffect(() => {
     setItemsView(normalized.inventario || []);
   }, [adv?.id, adv?.inventario]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogStatus("loading");
+    setCatalogError("");
+    loadOfficialItemCatalog()
+      .then(items => {
+        if (cancelled) return;
+        setCatalogItems(items);
+        setCatalogStatus("ready");
+      })
+      .catch(error => {
+        if (cancelled) return;
+        setCatalogError(error?.message || "No se pudo cargar el catalogo oficial.");
+        setCatalogStatus("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const markFirstMagicUse = () => {
     if (!missionState || missionState.magia_usada_esta_ronda) return;
     onUpdateMission(addMagicThreatToMission(missionState));
   };
 
-  const patchItem = (itemId, updates) => {
-    const nextInventory = itemsView.map(item => item.id === itemId ? normalizeInventoryItem({ ...item, ...updates }) : item);
+  const persistInventory = (nextInventory) => {
     setItemsView(nextInventory);
     if (!onUpdateAdventurer) return;
     onUpdateAdventurer(normalizeAdventurer({
       ...normalized,
       inventario: nextInventory,
     }));
+  };
+
+  const patchItem = (itemId, updates) => {
+    const nextInventory = itemsView.map(item => item.id === itemId ? normalizeInventoryItem({ ...item, ...updates }) : item);
+    persistInventory(nextInventory);
   };
 
   const removeItem = (itemId) => {
     const nextInventory = itemsView.filter(item => item.id !== itemId);
-    setItemsView(nextInventory);
-    if (!onUpdateAdventurer) return;
-    onUpdateAdventurer(normalizeAdventurer({
-      ...normalized,
-      inventario: nextInventory,
-    }));
+    persistInventory(nextInventory);
   };
+
+  const appendItem = (item) => {
+    persistInventory([...itemsView, normalizeInventoryItem(item)]);
+  };
+
+  const addCatalogItem = (entry) => {
+    appendItem(catalogEntryToInventoryItem(entry));
+  };
+
+  const addManualItem = () => {
+    if (!manualDraft.name.trim()) return;
+    appendItem({
+      name: manualDraft.name.trim(),
+      summary: manualDraft.summary.trim(),
+      meleeDice: manualDraft.meleeDice,
+      rangedDice: manualDraft.rangedDice,
+      shield: manualDraft.shield,
+      armor: manualDraft.armor,
+      magic: manualDraft.magic,
+      equipped: false,
+      broken: false,
+    });
+    setManualDraft({
+      name: "",
+      summary: "",
+      meleeDice: 0,
+      rangedDice: 0,
+      shield: 0,
+      armor: 0,
+      magic: false,
+    });
+  };
+
+  const catalogResults = catalogItems.filter(item => {
+    if (catalogSource !== "all" && item.source !== catalogSource) return false;
+    const query = catalogQuery.trim().toLowerCase();
+    if (!query) return true;
+    const haystack = [
+      item.name,
+      item.slug,
+      item.source,
+      item.rarity,
+      item.color,
+      item.size,
+      ...(item.attributes || []),
+    ].join(" ").toLowerCase();
+    return haystack.includes(query);
+  }).slice(0, 18);
 
   return (
     <ModalSheet title="Items" subtitle={adv.nombre + " · " + itemsView.length + " registrados"} onClose={onClose}>
+      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 12, marginBottom: 12 }}>
+        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Botin encontrado en la mision</div>
+        <div style={{ color: "#6b7280", fontSize: 12, lineHeight: 1.5, marginBottom: 10 }}>
+          Si este aventurero acaba de encontrar un item, anadelo aqui. Si es un arma, empezara a contar en combate en cuanto entre en la mochila.
+        </div>
+        <details style={{ marginBottom: 10 }}>
+          <summary style={{ color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>Agregar desde catalogo oficial</summary>
+          <div style={{ marginTop: 10 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8, marginBottom: 8 }}>
+              <input value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)}
+                placeholder="Buscar item o atributo"
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+              <select value={catalogSource} onChange={e => setCatalogSource(e.target.value)}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13 }}>
+                <option value="all">Todo</option>
+                <option value="maladum">Caja base</option>
+                <option value="adventure">Adventure</option>
+                <option value="beasts">Beasts</option>
+              </select>
+            </div>
+            {catalogStatus === "loading" && <div style={{ color: "#9ca3af", fontSize: 12 }}>Cargando catalogo oficial...</div>}
+            {catalogStatus === "error" && <div style={{ color: "#fca5a5", fontSize: 12 }}>{catalogError || "No se pudo cargar el catalogo oficial."}</div>}
+            {catalogStatus === "ready" && (
+              <div>
+                <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>{catalogResults.length} resultados visibles.</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto" }}>
+                  {catalogResults.map(item => (
+                    <div key={item.source + "_" + item.slug} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</div>
+                          <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                            {item.source && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #334155" }}>{titleCaseToken(item.source)}</span>}
+                            {item.rarity && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>{titleCaseToken(item.rarity)}</span>}
+                            {item.size && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{String(item.size).toUpperCase()}</span>}
+                          </div>
+                        </div>
+                        <button onClick={() => addCatalogItem(item)}
+                          style={{ minWidth: 84, padding: "10px 12px", borderRadius: 8, border: "1px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                          Agregar
+                        </button>
+                      </div>
+                      <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 6 }}>{summarizeCatalogEntry(item)}</div>
+                      {!!item.attributes?.length && (
+                        <details>
+                          <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>Ver atributos y efectos</summary>
+                          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                            {item.attributes.slice(0, 8).map(attr => {
+                              const meta = getAttributeEntry(attr);
+                              return (
+                                <div key={attr} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{meta?.label || titleCaseToken(attr)}</div>
+                                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{meta?.summary || "Detalle pendiente."}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+                  {catalogResults.length === 0 && <div style={{ color: "#6b7280", fontSize: 12 }}>No se encontraron items con ese filtro.</div>}
+                </div>
+              </div>
+            )}
+          </div>
+        </details>
+        <details>
+          <summary style={{ color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>Agregar item manualmente</summary>
+          <div style={{ marginTop: 10 }}>
+            <input value={manualDraft.name} onChange={e => setManualDraft(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Nombre del item encontrado"
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8, boxSizing: "border-box" }}/>
+            <input value={manualDraft.summary} onChange={e => setManualDraft(prev => ({ ...prev, summary: e.target.value }))}
+              placeholder="Resumen corto"
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box" }}/>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
+              {[
+                ["meleeDice", "Melee"],
+                ["rangedDice", "Dist"],
+                ["shield", "Escudo"],
+                ["armor", "Prot"],
+              ].map(([field, label]) => (
+                <div key={field}>
+                  <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>{label}</div>
+                  <input type="number" min="0" value={manualDraft[field]} onChange={e => setManualDraft(prev => ({ ...prev, [field]: Number(e.target.value) || 0 }))}
+                    style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+                </div>
+              ))}
+            </div>
+            <button onClick={() => setManualDraft(prev => ({ ...prev, magic: !prev.magic }))}
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: manualDraft.magic ? "1px solid #3b82f6" : "1px solid #374151", background: manualDraft.magic ? "#1d4ed822" : "transparent", color: manualDraft.magic ? "#bfdbfe" : "#9ca3af", cursor: "pointer", fontSize: 12, marginBottom: 8 }}>
+              {manualDraft.magic ? "Objeto magico" : "Marcar como magico"}
+            </button>
+            <button onClick={addManualItem}
+              style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: "#166534", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
+              Anadir a la mochila
+            </button>
+          </div>
+        </details>
+      </div>
       {itemsView.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {itemsView.map(item => {
