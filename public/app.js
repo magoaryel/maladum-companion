@@ -3244,7 +3244,7 @@ function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer
 
   useEffect(() => {
     setItemsView(normalized.inventario || []);
-  }, [normalized]);
+  }, [adv?.id, adv?.inventario]);
 
   const markFirstMagicUse = () => {
     if (!missionState || missionState.magia_usada_esta_ronda) return;
