@@ -1261,8 +1261,27 @@ function getStatusMeta(effectId) {
   return STATUS_EFFECTS.find(effect => effect.id === effectId) || null;
 }
 
-function formatCombatStatLine(label, value, fallback) {
+function getCombatEquipmentNames(items, mode) {
+  return (items || [])
+    .filter(item => {
+      const attrs = new Set(item?.attributes || []);
+      if (mode === "melee") {
+        return item?.meleeDice > 0 || attrs.has("melee") || attrs.has("forceful_melee") || attrs.has("quickstrike") || attrs.has("parry") || attrs.has("reach");
+      }
+      if (mode === "ranged") {
+        return item?.rangedDice > 0 || (item?.range || []).length > 0 || attrs.has("ammo_arrow") || attrs.has("ammo_bullet") || attrs.has("blast") || attrs.has("trap_melee");
+      }
+      return false;
+    })
+    .map(item => item.name)
+    .filter(Boolean);
+}
+
+function formatCombatStatLine(label, value, fallback, names) {
   if (value > 0) return `${label}: ${value}`;
+  if (Array.isArray(names) && names.length > 0) {
+    return `${label}: ${names.join(", ")} equipada`;
+  }
   return `${label}: ${fallback}`;
 }
 
@@ -2575,6 +2594,8 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const equipment = getEquipmentStats(normalized);
   const equippedItems = summarizeEquippedItems(normalized);
+  const meleeWeaponNames = getCombatEquipmentNames(equippedItems, "melee");
+  const rangedWeaponNames = getCombatEquipmentNames(equippedItems, "ranged");
   const meleeSkills = getCombatSkillEntries(normalized, ["melee"]).slice(0, 4);
   const rangedSkills = getCombatSkillEntries(normalized, ["ranged"]).slice(0, 4);
   const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
@@ -2590,10 +2611,15 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
         <div style={cardStyle}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Ataque base</div>
           <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
-            {formatCombatStatLine("C/C", equipment.meleeDice, "Sin arma o Combate sin armas")}
+            {formatCombatStatLine("C/C", equipment.meleeDice, "Sin arma o Combate sin armas", meleeWeaponNames)}
             <br />
-            {formatCombatStatLine("Dist", equipment.rangedDice, "Sin arma a distancia")}
+            {formatCombatStatLine("Dist", equipment.rangedDice, "Sin arma a distancia", rangedWeaponNames)}
           </div>
+          {(meleeWeaponNames.length > 0 || rangedWeaponNames.length > 0) && (
+            <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+              Si el arma no muestra dados aqui, usa el perfil de su carta fisica.
+            </div>
+          )}
         </div>
         <div style={cardStyle}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Defensa base</div>
