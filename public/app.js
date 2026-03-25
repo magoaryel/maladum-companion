@@ -729,6 +729,7 @@ function defaultCampaign(name) {
     registro: {
       malagauntDerrotado: 0, troll_derrotado: false,
       aprendiz_estado: null, aprendiz_nombre: null,
+      reliquias_encontradas: 0,
       cadaveres_examinados: 0, sepulturas_registradas: 0,
       invasores_escapados: 0, disminuir_horda: 0, salas_santificadas: 0,
       puntos_entrada_mapeados: [],
@@ -1111,6 +1112,23 @@ function getInnateSkillLevel(adv, skillName) {
     .reduce((max, entry) => Math.max(max, Number(entry.level) || 0), 0);
 }
 
+function getPurchasedSkillLevel(adv, skillName) {
+  return Math.max(0, Number(normalizeAdventurer(adv).clase_habilidades?.[skillName]) || 0);
+}
+
+function getEffectiveSkillLevel(adv, skillName) {
+  return Math.min(3, getInnateSkillLevel(adv, skillName) + getPurchasedSkillLevel(adv, skillName));
+}
+
+function combineSkillSources(existingSource, nextSource) {
+  const parts = new Set(
+    [existingSource, nextSource]
+      .flatMap(value => String(value || "").split(" + ").map(part => part.trim()))
+      .filter(Boolean)
+  );
+  return Array.from(parts).join(" + ");
+}
+
 function getGlossaryMatches(text) {
   const source = String(text || "");
   const lowered = source.toLowerCase();
@@ -1120,15 +1138,32 @@ function getGlossaryMatches(text) {
 
 function getLearnedSkills(adv) {
   const normalized = normalizeAdventurer(adv);
-  const learned = [];
-  getInnateSkillEntries(normalized).forEach(entry => learned.push(entry));
+  const learned = new Map();
+  const addOrMerge = (entry) => {
+    const key = normalizeSkillLookupName(entry.name);
+    const existing = learned.get(key);
+    if (!existing) {
+      learned.set(key, { ...entry });
+      return;
+    }
+    const mergedLevel = Math.max(Number(existing.level) || 0, Number(entry.level) || 0);
+    learned.set(key, {
+      ...existing,
+      level: mergedLevel,
+      source: combineSkillSources(existing.source, entry.source),
+      summary: getSkillEntry(entry.name, mergedLevel, entry.source).summary,
+    });
+  };
+  getInnateSkillEntries(normalized).forEach(addOrMerge);
   Object.entries(normalized.clase_habilidades || {}).forEach(([name, level]) => {
-    if ((Number(level) || 0) > 0) learned.push(getSkillEntry(name, level, normalized.clase || "Clase"));
+    if ((Number(level) || 0) > 0) {
+      addOrMerge(getSkillEntry(name, getEffectiveSkillLevel(normalized, name), normalized.clase || "Clase"));
+    }
   });
   summarizeEquippedItems(normalized).forEach(item => {
-    getGrantedSkillsFromItem(item).forEach(skill => learned.push(skill));
+    getGrantedSkillsFromItem(item).forEach(addOrMerge);
   });
-  return learned;
+  return Array.from(learned.values());
 }
 
 function getKnownSpells(adv) {
@@ -1168,6 +1203,45 @@ function getEquipmentStats(adv) {
     armor: stats.armor + item.armor,
     magicItems: stats.magicItems + (item.magic ? 1 : 0),
   }), { meleeDice: 0, rangedDice: 0, shield: 0, armor: 0, magicItems: 0 });
+}
+
+function getItemPreviewBadges(item) {
+  const normalized = normalizeInventoryItem(item);
+  const badges = [];
+  if (normalized.meleeDice > 0) badges.push({ label: `ATQ ${normalized.meleeDice}`, tone: "attack" });
+  else if ((normalized.attributes || []).some(attr => ["melee", "forceful_melee", "quickstrike", "reach"].includes(attr))) badges.push({ label: "C/C", tone: "attack" });
+  if (normalized.rangedDice > 0) badges.push({ label: `DIST ${normalized.rangedDice}`, tone: "range" });
+  else if ((normalized.range || []).length > 0) badges.push({ label: `ALC ${normalized.range.join("/")}`, tone: "range" });
+  if (normalized.shield > 0) badges.push({ label: `ESC ${normalized.shield}`, tone: "shield" });
+  if (normalized.armor > 0) badges.push({ label: `PROT ${normalized.armor}`, tone: "armor" });
+  if (normalized.magic) badges.push({ label: "MAGIA", tone: "magic" });
+  (normalized.attributes || []).slice(0, 3).forEach(attr => {
+    const label = getAttributeEntry(attr)?.label || titleCaseToken(attr);
+    if (!badges.some(badge => badge.label === label)) badges.push({ label, tone: "special" });
+  });
+  return badges;
+}
+
+function getItemPreviewBadgeStyle(tone) {
+  const tones = {
+    attack: { color: "#fde68a", border: "#92400e" },
+    range: { color: "#fca5a5", border: "#7f1d1d" },
+    shield: { color: "#bfdbfe", border: "#1d4ed8" },
+    armor: { color: "#cbd5e1", border: "#475569" },
+    magic: { color: "#c4b5fd", border: "#4338ca" },
+    special: { color: "#d4b896", border: "#374151" },
+  };
+  return tones[tone] || tones.special;
+}
+
+function getItemEffectPreview(item) {
+  const normalized = normalizeInventoryItem(item);
+  const attributeSummaries = (normalized.attributes || [])
+    .map(attr => getAttributeEntry(attr)?.summary)
+    .filter(Boolean);
+  if (attributeSummaries.length > 0) return attributeSummaries.slice(0, 2);
+  if (normalized.summary) return [normalized.summary];
+  return [];
 }
 
 function isWeaponItem(item) {
@@ -3409,9 +3483,11 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
   }, [normalized.clase]);
 
   const updateSkillLevel = (skillName, delta) => {
-    const current = Number(normalized.clase_habilidades?.[skillName]) || 0;
-    const next = Math.max(0, current + delta);
-    if (delta > 0 && freeXP <= 0) return;
+    const current = getPurchasedSkillLevel(normalized, skillName);
+    const innateLevel = getInnateSkillLevel(normalized, skillName);
+    const maxPurchased = Math.max(0, 3 - innateLevel);
+    const next = Math.max(0, Math.min(maxPurchased, current + delta));
+    if (delta > 0 && (freeXP <= 0 || next === current)) return;
     onUpdate(normalizeAdventurer({
       ...normalized,
       clase_habilidades: {
@@ -3537,11 +3613,11 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
           <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>En movil puedes tocar el nombre de una habilidad para resaltarla y ver su resumen.</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {(CLASS_DATA[normalized.clase]?.skills || []).map(skillName => {
-              const level = Number(normalized.clase_habilidades?.[skillName]) || 0;
+              const purchasedLevel = getPurchasedSkillLevel(normalized, skillName);
               const innateLevel = getInnateSkillLevel(normalized, skillName);
               const meta = SKILL_DATA[skillName] || {};
               const levelDetails = getSkillLevelDetails(skillName);
-              const currentShownLevel = Math.max(level, innateLevel);
+              const currentShownLevel = getEffectiveSkillLevel(normalized, skillName);
               const currentDetail = currentShownLevel > 0
                 ? (levelDetails[Math.min(currentShownLevel, levelDetails.length) - 1] || meta.summary || "Resumen pendiente de verificar en manual oficial.")
                 : (levelDetails[0] || meta.summary || "Resumen pendiente de verificar en manual oficial.");
@@ -3554,13 +3630,14 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                           title={currentDetail}
                           style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, background: "none", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>{skillName}</button>
                         {meta.category && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{meta.category}</span>}
-                        <span style={{ fontSize: 11, color: level > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {level}</span>
+                        <span style={{ fontSize: 11, color: currentShownLevel > 0 ? "#fde68a" : "#6b7280", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Nivel {currentShownLevel}</span>
                         {innateLevel > 0 && <span style={{ fontSize: 11, color: "#facc15", padding: "2px 8px", borderRadius: 999, border: "1px solid #a16207" }}>Innata aventurero {innateLevel}</span>}
+                        {purchasedLevel > 0 && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Clase +{purchasedLevel}</span>}
                       </div>
                       <div style={{ color: activeSkillInfo?.name === skillName ? "#d6e4ff" : "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{currentDetail}</div>
                       {innateLevel > 0 && (
                         <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
-                          Ya la tienes por habilidad innata del aventurero a nivel {innateLevel}. Esta pista sigue reflejando solo la PX invertida en la clase.
+                          Nivel efectivo actual: {currentShownLevel}. Sale de Innata {innateLevel}{purchasedLevel > 0 ? ` + Clase ${purchasedLevel}` : ""}.
                         </div>
                       )}
                       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -3596,10 +3673,10 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
                     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                       <button onClick={() => updateSkillLevel(skillName, -1)}
                         style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: "#d4b896", cursor: "pointer" }}>-</button>
-                      <div style={{ minWidth: 26, textAlign: "center", color: "#d4b896", fontWeight: 700 }}>{level}</div>
-                      <button onClick={() => updateSkillLevel(skillName, 1)} disabled={freeXP <= 0}
-                        style={{ width: 32, height: 32, borderRadius: 8, border: freeXP > 0 ? "1px solid #166534" : "1px solid #374151",
-                          background: freeXP > 0 ? "#16653422" : "transparent", color: freeXP > 0 ? "#bbf7d0" : "#4b5563", cursor: freeXP > 0 ? "pointer" : "default" }}>+</button>
+                      <div style={{ minWidth: 26, textAlign: "center", color: "#d4b896", fontWeight: 700 }}>{currentShownLevel}</div>
+                      <button onClick={() => updateSkillLevel(skillName, 1)} disabled={freeXP <= 0 || currentShownLevel >= 3}
+                        style={{ width: 32, height: 32, borderRadius: 8, border: freeXP > 0 && currentShownLevel < 3 ? "1px solid #166534" : "1px solid #374151",
+                          background: freeXP > 0 && currentShownLevel < 3 ? "#16653422" : "transparent", color: freeXP > 0 && currentShownLevel < 3 ? "#bbf7d0" : "#4b5563", cursor: freeXP > 0 && currentShownLevel < 3 ? "pointer" : "default" }}>+</button>
                     </div>
                   </div>
                 </div>
@@ -4111,7 +4188,12 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           <span>Gasto en crafteo: {craftedSpend}G</span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto" }}>
-          {craftableItems.length > 0 ? craftableItems.map(item => (
+          {craftableItems.length > 0 ? craftableItems.map(item => {
+            const officialMatch = officialItems.find(entry => String(entry.name || "").toLowerCase() === String(item.name || "").toLowerCase());
+            const previewItem = officialMatch ? catalogEntryToInventoryItem(officialMatch) : createCraftedInventoryItem(item);
+            const badges = getItemPreviewBadges(previewItem);
+            const effectPreview = getItemEffectPreview(previewItem);
+            return (
             <button key={item.name} onClick={() => setSelectedRecipeName(item.name)}
               style={{ background: selectedRecipeName === item.name ? "#1d3557" : "#132034", borderRadius: 8, padding: 10, border: selectedRecipeName === item.name ? "1px solid #60a5fa" : "1px solid #2d2d44", textAlign: "left", cursor: "pointer" }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
@@ -4121,16 +4203,49 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
               <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
                 {item.type} | Tam {item.size} | {item.expansion}
               </div>
+              {badges.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                  {badges.map((badge, index) => {
+                    const tone = getItemPreviewBadgeStyle(badge.tone);
+                    return (
+                      <span key={badge.label + "_" + index} style={{ fontSize: 11, color: tone.color, padding: "2px 8px", borderRadius: 999, border: `1px solid ${tone.border}` }}>
+                        {badge.label}
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+              {effectPreview.length > 0 && (
+                <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+                  {effectPreview.join(" | ")}
+                </div>
+              )}
               <div style={{ color: "#6b7280", fontSize: 11, marginTop: 4 }}>
                 Requiere: {item.res_required}
               </div>
+              {!!previewItem.attributes?.length && (
+                <details style={{ marginTop: 8 }}>
+                  <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>Ver atributos</summary>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                    {previewItem.attributes.slice(0, 6).map(attr => {
+                      const meta = getAttributeEntry(attr);
+                      return (
+                        <div key={attr} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                          <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{meta?.label || titleCaseToken(attr)}</div>
+                          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{meta?.summary || "Detalle pendiente."}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </details>
+              )}
               {!canAffordRecipeWithGold(availableGoldBeforeCraft, craftedSpend, item) && (
                 <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 6 }}>
                   No alcanza el oro neto disponible para fabricarlo ahora.
                 </div>
               )}
             </button>
-          )) : (
+          )}) : (
             <div style={{ color: "#6b7280", fontSize: 12 }}>Todavia no hay recetas que cumplan con los materiales indicados.</div>
           )}
         </div>
@@ -4316,6 +4431,7 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
       {/* Contadores */}
       <Collapsible title="Contadores" icon="🔢" defaultOpen>
         {numField("Malagaunt derrotado", "malagauntDerrotado", reg.malagauntDerrotado)}
+        {numField("Reliquias encontradas", "reliquias_encontradas", reg.reliquias_encontradas)}
         {numField("Cadáveres examinados", "cadaveres_examinados", reg.cadaveres_examinados)}
         {numField("Sepulturas registradas", "sepulturas_registradas", reg.sepulturas_registradas)}
         {numField("Invasores escapados", "invasores_escapados", reg.invasores_escapados)}
