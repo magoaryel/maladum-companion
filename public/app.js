@@ -1284,7 +1284,7 @@ function canLearnSpell(adv, spellLevel) {
 function summarizeEquippedItems(adv) {
   return (normalizeAdventurer(adv).inventario || []).filter(item => {
     if (item.broken) return false;
-    if (isWeaponItem(item)) return !item.stowed;
+    if (isWeaponItem(item)) return true;
     return item.equipped;
   });
 }
@@ -2125,7 +2125,6 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
               patchItem(item.id, {
                 broken: true,
                 equipped: false,
-                stowed: autoEquippedWeapon ? true : item.stowed,
               });
             };
             return (
@@ -2144,7 +2143,7 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
 
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                 {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
-                {isWeaponItem(item) && item.stowed && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>Guardado</span>}
+                {isWeaponItem(item) && !item.broken && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Arma equipada</span>}
                 {!isWeaponItem(item) && item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>}
               </div>
 
@@ -2203,13 +2202,11 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
 
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {autoEquippedWeapon ? (
-                  <button onClick={() => patchItem(item.id, { stowed: !item.stowed })}
-                    disabled={item.broken}
-                    style={{ padding: "8px 10px", borderRadius: 999, border: item.stowed ? "1px solid #374151" : "1px solid #92400e",
-                      background: item.stowed ? "transparent" : "#92400e22", color: item.stowed ? "#9ca3af" : "#fde68a",
-                      fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.5 : 1 }}>
-                    {item.stowed ? "Arma guardada" : "Arma activa"}
-                  </button>
+                  <span style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #92400e",
+                    background: "#92400e22", color: item.broken ? "#9ca3af" : "#fde68a",
+                    fontSize: 12, fontWeight: 700, opacity: item.broken ? 0.6 : 1 }}>
+                    {item.broken ? "Arma rota: fuera de combate" : "Arma siempre equipada"}
+                  </span>
                 ) : (
                   <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
                     disabled={item.broken}
@@ -3279,8 +3276,8 @@ function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer
                     <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</span>
                     {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
                     {isWeapon ? (
-                      <span style={{ fontSize: 11, color: item.stowed || item.broken ? "#9ca3af" : "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>
-                        {item.stowed || item.broken ? "Guardada" : "Activa"}
+                      <span style={{ fontSize: 11, color: item.broken ? "#9ca3af" : "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>
+                    {item.broken ? "Rota" : "Activa"}
                       </span>
                     ) : (
                       item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>
@@ -3299,11 +3296,9 @@ function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer
                 {item.summary && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{item.summary}</div>}
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: item.magic ? 8 : 0 }}>
                   {isWeapon ? (
-                    <button onClick={() => patchItem(item.id, { stowed: !item.stowed })}
-                      disabled={item.broken}
-                      style={{ padding: "8px 10px", borderRadius: 999, border: item.stowed ? "1px solid #374151" : "1px solid #92400e", background: item.stowed ? "transparent" : "#92400e22", color: item.stowed ? "#9ca3af" : "#fde68a", fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.5 : 1 }}>
-                      {item.stowed ? "Equipar arma" : "Desequipar arma"}
-                    </button>
+                    <span style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #92400e", background: "#92400e22", color: item.broken ? "#9ca3af" : "#fde68a", fontSize: 12, fontWeight: 700, opacity: item.broken ? 0.6 : 1 }}>
+                      {item.broken ? "Arma rota: no usable" : "Arma siempre equipada"}
+                    </span>
                   ) : (
                     <button onClick={() => patchItem(item.id, { equipped: !item.equipped })}
                       disabled={item.broken}
@@ -3311,7 +3306,7 @@ function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer
                       {item.equipped ? "Desequipar" : "Equipar"}
                     </button>
                   )}
-                  <button onClick={() => patchItem(item.id, { broken: true, equipped: false, stowed: isWeapon ? true : item.stowed })}
+                  <button onClick={() => patchItem(item.id, { broken: true, equipped: false })}
                     disabled={item.broken}
                     style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #7f1d1d" : "1px solid #374151", background: item.broken ? "#7f1d1d22" : "transparent", color: item.broken ? "#fca5a5" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.75 : 1 }}>
                     {item.broken ? "Roto" : "Marcar roto"}
