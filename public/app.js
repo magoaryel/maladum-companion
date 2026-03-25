@@ -3240,7 +3240,11 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
 
 function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer, onClose }) {
   const normalized = normalizeAdventurer(adv);
-  const items = normalized.inventario || [];
+  const [itemsView, setItemsView] = useState(normalized.inventario || []);
+
+  useEffect(() => {
+    setItemsView(normalized.inventario || []);
+  }, [normalized]);
 
   const markFirstMagicUse = () => {
     if (!missionState || missionState.magia_usada_esta_ronda) return;
@@ -3248,26 +3252,30 @@ function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer
   };
 
   const patchItem = (itemId, updates) => {
+    const nextInventory = itemsView.map(item => item.id === itemId ? normalizeInventoryItem({ ...item, ...updates }) : item);
+    setItemsView(nextInventory);
     if (!onUpdateAdventurer) return;
     onUpdateAdventurer(normalizeAdventurer({
       ...normalized,
-      inventario: items.map(item => item.id === itemId ? normalizeInventoryItem({ ...item, ...updates }) : item),
+      inventario: nextInventory,
     }));
   };
 
   const removeItem = (itemId) => {
+    const nextInventory = itemsView.filter(item => item.id !== itemId);
+    setItemsView(nextInventory);
     if (!onUpdateAdventurer) return;
     onUpdateAdventurer(normalizeAdventurer({
       ...normalized,
-      inventario: items.filter(item => item.id !== itemId),
+      inventario: nextInventory,
     }));
   };
 
   return (
-    <ModalSheet title="Items" subtitle={adv.nombre + " · " + items.length + " registrados"} onClose={onClose}>
-      {items.length > 0 ? (
+    <ModalSheet title="Items" subtitle={adv.nombre + " · " + itemsView.length + " registrados"} onClose={onClose}>
+      {itemsView.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {items.map(item => {
+          {itemsView.map(item => {
             const isWeapon = isWeaponItem(item);
             return (
               <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 }}>
