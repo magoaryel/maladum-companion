@@ -1291,6 +1291,19 @@ function formatCombatStatLine(label, value, fallback, names) {
   return `${label}: ${fallback}`;
 }
 
+function getUniqueCraftedNames(adventurers, missionState) {
+  const names = new Set();
+  (adventurers || []).forEach(adv => {
+    normalizeAdventurer(adv).inventario.forEach(item => {
+      if (item?.name) names.add(String(item.name).toLowerCase());
+    });
+  });
+  (missionState?.crafted_items || []).forEach(item => {
+    if (item?.name) names.add(String(item.name).toLowerCase());
+  });
+  return names;
+}
+
 function isWeaponItem(item) {
   const attrs = new Set(item?.attributes || []);
   return !!(
@@ -2598,6 +2611,7 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
 
 function CombatQuickReferenceModal({ adv, missionState, onClose }) {
   const normalized = normalizeAdventurer(adv);
+  const [flowMode, setFlowMode] = useState("melee");
   const equipment = getEquipmentStats(normalized);
   const equippedItems = summarizeEquippedItems(normalized);
   const meleeWeaponNames = getCombatEquipmentNames(equippedItems, "melee");
@@ -2612,6 +2626,34 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
   const activeStatuses = [...new Set(normalized.status_effects || [])].map(getStatusMeta).filter(Boolean);
   const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
   const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 };
+  const flowOptions = [
+    { id: "melee", label: "Ataque C/C" },
+    { id: "ranged", label: "Ataque Dist" },
+    { id: "defense", label: "Defensa" },
+  ];
+  const activeFlowSteps = flowMode === "melee"
+    ? [
+        `1. Elige arma cuerpo a cuerpo: ${meleeWeaponNames.length > 0 ? meleeWeaponNames.join(", ") : "usa Combate sin armas o la carta del arma que lleves."}`,
+        "2. Aplica skills o efectos que digan 'antes del ataque' antes de tirar dados.",
+        "3. Tira con el perfil del arma/carta fisica y suma los dados o impactos extra que aporten skills y equipo.",
+        "4. Aplica criticos, Parry/Quickstrike/Forceful u otros atributos del arma si se activan.",
+        "5. El defensor reduce por Proteccion, Parry, Shield Block u otros efectos y luego aplica dano y estados.",
+      ]
+    : flowMode === "ranged"
+      ? [
+          `1. Elige arma a distancia: ${rangedWeaponNames.length > 0 ? rangedWeaponNames.join(", ") : "si no tienes una, no hay ataque a distancia equipado."}`,
+          "2. Confirma alcance, cobertura y si el arma usa municion o reglas especiales de disparo.",
+          "3. Aplica skills o hechizos que mejoren el disparo antes de tirar.",
+          "4. Tira usando el perfil de la carta fisica y resuelve atributos como Piercing, Blast, Sharp o similares.",
+          "5. El objetivo reduce impactos por cobertura/armadura si procede y luego aplica dano o estados.",
+        ]
+      : [
+          "1. Identifica si el ataque es cuerpo a cuerpo, a distancia o magico.",
+          `2. Revisa tu defensa base: Escudo ${equipment.shield || 0}, Proteccion ${equipment.armor || 0}${armorNames.length > 0 ? `, Armadura ${armorNames.join(", ")}` : ""}.`,
+          "3. Antes de aplicar el dano, usa reacciones disponibles: Parry, Shield Block, rerolls defensivos o skills de reaccion.",
+          "4. Si el ataque ignora armadura fisica, no apliques Proteccion ni algunos rerolls defensivos.",
+          "5. Con los impactos finales, ajusta Salud y estados que correspondan.",
+        ];
 
   return (
     <ModalSheet title="Combate" subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
@@ -2643,6 +2685,27 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
               La armadura equipada aporta la proteccion indicada por su carta y sus atributos.
             </div>
           )}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={sectionTitleStyle}>Flujo rapido</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
+          {flowOptions.map(option => (
+            <button key={option.id} onClick={() => setFlowMode(option.id)}
+              style={{ padding: "8px 12px", borderRadius: 999, border: flowMode === option.id ? "1px solid #eab308" : "1px solid #374151", background: flowMode === option.id ? "#eab30822" : "#111827", color: flowMode === option.id ? "#fde68a" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <div style={cardStyle}>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {activeFlowSteps.map((step, index) => (
+              <div key={flowMode + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8, color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
+                {step}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -4243,9 +4306,12 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
     }
   }, [selectedRecipeName, craftingCatalog]);
 
-  const craftableItems = craftingCatalog.filter(item =>
-    Object.entries(item.requirements || {}).every(([letter, need]) => (missionState.materials_gained?.[letter] || 0) >= need)
-  );
+  const uniqueCraftedNames = getUniqueCraftedNames(adventurers, missionState);
+  const craftableItems = craftingCatalog.filter(item => {
+    const hasMaterials = Object.entries(item.requirements || {}).every(([letter, need]) => (missionState.materials_gained?.[letter] || 0) >= need);
+    const alreadyOwnedOrCrafted = uniqueCraftedNames.has(String(item.name || "").toLowerCase());
+    return hasMaterials && !alreadyOwnedOrCrafted;
+  });
   const selectedRecipe = craftableItems.find(item => item.name === selectedRecipeName) || null;
 
   const updateMaterialCount = (letter, delta) => {
@@ -4421,7 +4487,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           Crafteo y materiales
         </div>
         <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
-          Introduce los materiales obtenidos. Al tocar una receta elegiras que aventurero la recibe, se descontaran las letras usadas y el coste se restara del oro neto.
+          Introduce los materiales obtenidos. Al tocar una receta elegiras que aventurero la recibe, se descontaran las letras usadas y el coste se restara del oro neto. Si un objeto unico ya fue fabricado o ya esta en el grupo, desaparece de esta lista.
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
           {RESOURCE_LETTERS.map(letter => (
