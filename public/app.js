@@ -2120,11 +2120,8 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
           {normalizeAdventurer(adv).inventario.map(item => {
             const autoEquippedWeapon = isWeaponItem(item);
-            const toggleBroken = () => {
-              if (item.broken) {
-                patchItem(item.id, { broken: false });
-                return;
-              }
+            const markBroken = () => {
+              if (item.broken) return;
               patchItem(item.id, {
                 broken: true,
                 equipped: false,
@@ -2228,11 +2225,11 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                     fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                   {item.magic ? "Magico" : "No magico"}
                 </button>
-                <button onClick={toggleBroken}
-                  style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #fca5a5" : "1px solid #374151",
+                <button onClick={markBroken} disabled={item.broken}
+                  style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #7f1d1d" : "1px solid #374151",
                     background: item.broken ? "#7f1d1d22" : "transparent", color: item.broken ? "#fca5a5" : "#9ca3af",
-                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  {item.broken ? "Quitar roto" : "Marcar roto"}
+                    fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.75 : 1 }}>
+                  {item.broken ? "Roto: reparar post mision" : "Marcar roto"}
                 </button>
               </div>
             </div>
