@@ -2676,7 +2676,7 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
           <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
             {formatCombatStatLine("Escudo", equipment.shield, "Sin bloqueo adicional", shieldNames)}
             <br />
-            {formatCombatStatLine("Armadura", equipment.armor, "Sin armadura adicional", armorNames)}
+            {armorNames.length > 0 ? `Armadura: ${armorNames.join(", ")}` : "Armadura: Sin armadura adicional"}
             <br />
             {formatCombatStatLine("Prot", equipment.armor, "Sin proteccion adicional")}
           </div>
