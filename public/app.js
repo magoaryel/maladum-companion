@@ -1271,6 +1271,12 @@ function getCombatEquipmentNames(items, mode) {
       if (mode === "ranged") {
         return item?.rangedDice > 0 || (item?.range || []).length > 0 || attrs.has("ammo_arrow") || attrs.has("ammo_bullet") || attrs.has("blast") || attrs.has("trap_melee");
       }
+      if (mode === "shield") {
+        return item?.shield > 0 || attrs.has("shield") || attrs.has("shield_block");
+      }
+      if (mode === "armor") {
+        return item?.armor > 0 || attrs.has("armour") || attrs.has("armored") || attrs.has("magical_armour") || attrs.has("magical_armour_1") || attrs.has("magical_armour_2");
+      }
       return false;
     })
     .map(item => item.name)
@@ -2596,6 +2602,8 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
   const equippedItems = summarizeEquippedItems(normalized);
   const meleeWeaponNames = getCombatEquipmentNames(equippedItems, "melee");
   const rangedWeaponNames = getCombatEquipmentNames(equippedItems, "ranged");
+  const shieldNames = getCombatEquipmentNames(equippedItems, "shield");
+  const armorNames = getCombatEquipmentNames(equippedItems, "armor");
   const meleeSkills = getCombatSkillEntries(normalized, ["melee"]).slice(0, 4);
   const rangedSkills = getCombatSkillEntries(normalized, ["ranged"]).slice(0, 4);
   const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
@@ -2624,10 +2632,17 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
         <div style={cardStyle}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Defensa base</div>
           <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
-            {formatCombatStatLine("Escudo", equipment.shield, "Sin bloqueo adicional")}
+            {formatCombatStatLine("Escudo", equipment.shield, "Sin bloqueo adicional", shieldNames)}
+            <br />
+            {formatCombatStatLine("Armadura", equipment.armor, "Sin armadura adicional", armorNames)}
             <br />
             {formatCombatStatLine("Prot", equipment.armor, "Sin proteccion adicional")}
           </div>
+          {armorNames.length > 0 && (
+            <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+              La armadura equipada aporta la proteccion indicada por su carta y sus atributos.
+            </div>
+          )}
         </div>
       </div>
 
