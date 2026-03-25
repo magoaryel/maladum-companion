@@ -3241,38 +3241,91 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
   );
 }
 
-function InventoryModal({ adv, missionState, onUpdateMission, onClose }) {
-  const items = normalizeAdventurer(adv).inventario || [];
+function InventoryModal({ adv, missionState, onUpdateMission, onUpdateAdventurer, onClose }) {
+  const normalized = normalizeAdventurer(adv);
+  const items = normalized.inventario || [];
 
   const markFirstMagicUse = () => {
     if (!missionState || missionState.magia_usada_esta_ronda) return;
     onUpdateMission(addMagicThreatToMission(missionState));
   };
 
+  const patchItem = (itemId, updates) => {
+    if (!onUpdateAdventurer) return;
+    onUpdateAdventurer(normalizeAdventurer({
+      ...normalized,
+      inventario: items.map(item => item.id === itemId ? normalizeInventoryItem({ ...item, ...updates }) : item),
+    }));
+  };
+
+  const removeItem = (itemId) => {
+    if (!onUpdateAdventurer) return;
+    onUpdateAdventurer(normalizeAdventurer({
+      ...normalized,
+      inventario: items.filter(item => item.id !== itemId),
+    }));
+  };
+
   return (
     <ModalSheet title="Items" subtitle={adv.nombre + " · " + items.length + " registrados"} onClose={onClose}>
       {items.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {items.map(item => (
-            <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 }}>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</span>
-                {item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>}
-                {item.magic && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Magico</span>}
-                {item.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{item.meleeDice}</span>}
-                {item.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{item.rangedDice}</span>}
-                {item.shield > 0 && <span style={{ fontSize: 11, color: "#93c5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {item.shield}</span>}
-                {item.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot {item.armor}</span>}
+          {items.map(item => {
+            const isWeapon = isWeaponItem(item);
+            return (
+              <div key={item.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", flex: 1 }}>
+                    <span style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</span>
+                    {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
+                    {isWeapon ? (
+                      <span style={{ fontSize: 11, color: item.stowed || item.broken ? "#9ca3af" : "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>
+                        {item.stowed || item.broken ? "Guardada" : "Activa"}
+                      </span>
+                    ) : (
+                      item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>
+                    )}
+                    {item.magic && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Magico</span>}
+                    {item.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{item.meleeDice}</span>}
+                    {item.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{item.rangedDice}</span>}
+                    {item.shield > 0 && <span style={{ fontSize: 11, color: "#93c5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {item.shield}</span>}
+                    {item.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot {item.armor}</span>}
+                  </div>
+                  <button onClick={() => removeItem(item.id)}
+                    style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer", flexShrink: 0 }}>
+                    x
+                  </button>
+                </div>
+                {item.summary && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>{item.summary}</div>}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: item.magic ? 8 : 0 }}>
+                  {isWeapon ? (
+                    <button onClick={() => patchItem(item.id, { stowed: !item.stowed })}
+                      disabled={item.broken}
+                      style={{ padding: "8px 10px", borderRadius: 999, border: item.stowed ? "1px solid #374151" : "1px solid #92400e", background: item.stowed ? "transparent" : "#92400e22", color: item.stowed ? "#9ca3af" : "#fde68a", fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.5 : 1 }}>
+                      {item.stowed ? "Equipar arma" : "Desequipar arma"}
+                    </button>
+                  ) : (
+                    <button onClick={() => patchItem(item.id, { equipped: !item.equipped })}
+                      disabled={item.broken}
+                      style={{ padding: "8px 10px", borderRadius: 999, border: item.equipped ? "1px solid #22c55e" : "1px solid #374151", background: item.equipped ? "#16653422" : "transparent", color: item.equipped ? "#bbf7d0" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.5 : 1 }}>
+                      {item.equipped ? "Desequipar" : "Equipar"}
+                    </button>
+                  )}
+                  <button onClick={() => patchItem(item.id, { broken: true, equipped: false, stowed: isWeapon ? true : item.stowed })}
+                    disabled={item.broken}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #7f1d1d" : "1px solid #374151", background: item.broken ? "#7f1d1d22" : "transparent", color: item.broken ? "#fca5a5" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.75 : 1 }}>
+                    {item.broken ? "Roto" : "Marcar roto"}
+                  </button>
+                </div>
+                {item.magic && !missionState?.magia_usada_esta_ronda && (
+                  <button onClick={markFirstMagicUse}
+                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f622", color: "#dbeafe", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
+                    Marcar primer uso magico (+1 Amenaza)
+                  </button>
+                )}
               </div>
-              {item.summary && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: item.magic ? 8 : 0 }}>{item.summary}</div>}
-              {item.magic && !missionState?.magia_usada_esta_ronda && (
-                <button onClick={markFirstMagicUse}
-                  style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f622", color: "#dbeafe", cursor: "pointer", fontSize: 12, fontWeight: 700 }}>
-                  Marcar primer uso magico (+1 Amenaza)
-                </button>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div style={{ color: "#6b7280", fontSize: 13 }}>Este aventurero todavia no tiene items registrados.</div>
@@ -3982,6 +4035,7 @@ function MainBoardV2({ missionState, adventurers, campaign, onUpdateMission, onU
           adv={selectedItemAdv}
           missionState={missionState}
           onUpdateMission={onUpdateMission}
+          onUpdateAdventurer={onUpdateAdventurer}
           onClose={() => setActiveItemAdv(null)}
         />
       )}
