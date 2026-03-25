@@ -4536,6 +4536,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           adv={selectedItemAdv}
           missionState={missionState}
           onUpdateMission={onUpdateMission}
+          onUpdateAdventurer={onUpdateAdventurer}
           onClose={() => setActiveItemAdv(null)}
         />
       )}
