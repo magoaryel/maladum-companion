@@ -499,6 +499,7 @@ const ATTRIBUTE_DATA = {
   forceful_melee: { label: "Forceful Melee", summary: "Golpe cuerpo a cuerpo con gran empuje o potencia." },
   shield_block: { label: "Shield Block", summary: "Bloqueo de Escudo: puedes gastar una accion para levantar el escudo y obtener los efectos mostrados en su icono. La ficha vuelve al inventario cuando haces una accion que no sea Mover o Desplazarte, sufres dano o quedas Aturdido. Fuera de tu turno puedes levantarlo antes del ataque, pero despues quedas Fatigado. Solo puede levantarse 1 escudo a la vez." },
   armour: { label: "Armour", summary: "Otorga proteccion adicional." },
+  defensive_re_roll: { label: "Defensive Re-roll", summary: "Relanzamiento Defensivo: puedes obligar a repetir 1 dado de un ataque contra ti, salvo si el ataque ignora la armadura fisica. Los criticos no se repiten." },
   camouflage: { label: "Camouflage", summary: "Solo puede ser objetivo de ataques a distancia desde corto alcance." },
   ammo_arrow: { label: "Ammo Arrow", summary: "Necesita flechas para dispararse." },
   ammo_bullet: { label: "Ammo Bullet", summary: "Necesita municion de bala para dispararse." },
@@ -517,6 +518,7 @@ const ATTRIBUTE_DATA = {
   magical_armour_2: { label: "Magical Armour 2", summary: "Aporta defensa magica de nivel 2." },
   vicious: { label: "Vicious", summary: "Hace el ataque especialmente peligroso o castigador." },
   retaliation: { label: "Retaliation", summary: "Puede devolver dano o efectos al atacante." },
+  blast: { label: "Blast", summary: "Afecta a varios objetivos o zonas cercanas segun el perfil del arma o efecto." },
 };
 
 const TERM_GLOSSARY = [
@@ -1302,6 +1304,34 @@ function getUniqueCraftedNames(adventurers, missionState) {
     if (item?.name) names.add(String(item.name).toLowerCase());
   });
   return names;
+}
+
+const COMBAT_ATTRIBUTE_GROUPS = {
+  melee: new Set(["melee", "forceful_melee", "quickstrike", "first_strike", "reach", "sharp", "piercing", "balanced", "cleave", "burning", "entangling", "vicious"]),
+  ranged: new Set(["ammo_arrow", "ammo_bullet", "range_plus_1", "sharp", "piercing", "balanced", "burning", "blast", "vicious", "channel"]),
+  defense: new Set(["parry", "shield_block", "armour", "defensive_re_roll", "camouflage", "magical_armour", "magical_armour_1", "magical_armour_2", "retaliation"]),
+};
+
+function getCombatAttributeEntries(items, mode) {
+  const allowed = COMBAT_ATTRIBUTE_GROUPS[mode] || new Set();
+  const seen = new Set();
+  const entries = [];
+  (items || []).forEach(item => {
+    (item?.attributes || []).forEach(attr => {
+      if (!allowed.has(attr)) return;
+      const meta = getAttributeEntry(attr);
+      const label = meta?.label || titleCaseToken(attr);
+      const key = label.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      entries.push({
+        label,
+        summary: meta?.summary || "Detalle pendiente.",
+        source: item?.name || "Equipo",
+      });
+    });
+  });
+  return entries;
 }
 
 function isWeaponItem(item) {
@@ -2612,6 +2642,7 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
 function CombatQuickReferenceModal({ adv, missionState, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [flowMode, setFlowMode] = useState("melee");
+  const [selectedCombatDetail, setSelectedCombatDetail] = useState(null);
   const equipment = getEquipmentStats(normalized);
   const equippedItems = summarizeEquippedItems(normalized);
   const meleeWeaponNames = getCombatEquipmentNames(equippedItems, "melee");
@@ -2622,6 +2653,9 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
   const rangedSkills = getCombatSkillEntries(normalized, ["ranged"]).slice(0, 4);
   const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
   const supportSkills = getCombatSkillEntries(normalized, ["support", "heal"]).slice(0, 4);
+  const meleeAttributeEntries = getCombatAttributeEntries(equippedItems, "melee");
+  const rangedAttributeEntries = getCombatAttributeEntries(equippedItems, "ranged");
+  const defenseAttributeEntries = getCombatAttributeEntries(equippedItems, "defense");
   const spells = getCombatSpellEntries(normalized).slice(0, 5);
   const activeStatuses = [...new Set(normalized.status_effects || [])].map(getStatusMeta).filter(Boolean);
   const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
@@ -2654,6 +2688,29 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
           "4. Si el ataque ignora armadura fisica, no apliques Proteccion ni algunos rerolls defensivos.",
           "5. Con los impactos finales, ajusta Salud y estados que correspondan.",
         ];
+  const toggleCombatDetail = (detail) => {
+    setSelectedCombatDetail(prev => prev?.label === detail.label && prev?.source === detail.source ? null : detail);
+  };
+  const renderDetailChips = (entries, tone) => {
+    if (!entries || entries.length === 0) return null;
+    const styleMap = {
+      attack: { color: "#fde68a", border: "#92400e" },
+      range: { color: "#fca5a5", border: "#7f1d1d" },
+      defense: { color: "#bfdbfe", border: "#1d4ed8" },
+      skill: { color: "#d4b896", border: "#374151" },
+    };
+    const style = styleMap[tone] || styleMap.skill;
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+        {entries.map((entry, index) => (
+          <button key={entry.label + "_" + entry.source + "_" + index} onClick={() => toggleCombatDetail(entry)} title={entry.summary}
+            style={{ fontSize: 11, color: style.color, padding: "4px 8px", borderRadius: 999, border: `1px solid ${style.border}`, background: selectedCombatDetail?.label === entry.label && selectedCombatDetail?.source === entry.source ? style.border + "22" : "#111827", cursor: "pointer" }}>
+            {entry.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <ModalSheet title="Combate" subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
@@ -2670,6 +2727,11 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
               Si el arma no muestra dados aqui, usa el perfil de su carta fisica.
             </div>
           )}
+          {renderDetailChips([
+            ...meleeSkills.map(skill => ({ label: skill.name, summary: skill.summary, source: `Skill ${skill.level}` })),
+            ...meleeAttributeEntries,
+            ...(rangedWeaponNames.length > 0 ? rangedAttributeEntries : []),
+          ], "attack")}
         </div>
         <div style={cardStyle}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Defensa base</div>
@@ -2685,8 +2747,20 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
               La armadura equipada aporta la proteccion indicada por su carta y sus atributos.
             </div>
           )}
+          {renderDetailChips([
+            ...defenseAttributeEntries,
+            ...defenseSkills.map(skill => ({ label: skill.name, summary: skill.summary, source: `Skill ${skill.level}` })),
+          ], "defense")}
         </div>
       </div>
+
+      {selectedCombatDetail && (
+        <div style={{ ...cardStyle, marginBottom: 12, border: "1px solid #374151" }}>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedCombatDetail.label}</div>
+          <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 6 }}>{selectedCombatDetail.source}</div>
+          <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{selectedCombatDetail.summary}</div>
+        </div>
+      )}
 
       <div style={{ marginBottom: 12 }}>
         <div style={sectionTitleStyle}>Flujo rapido</div>
