@@ -1244,6 +1244,28 @@ function getItemEffectPreview(item) {
   return [];
 }
 
+function getCombatSkillEntries(adv, tags) {
+  const tagList = Array.isArray(tags) ? tags : [tags];
+  return getLearnedSkills(adv).filter(skill => (skill.tags || []).some(tag => tagList.includes(tag)));
+}
+
+function getCombatSpellEntries(adv) {
+  return getKnownSpells(adv).map(spell => ({
+    name: spell.name,
+    level: spell.level,
+    summary: spell.summary || spell.notes || "Texto oficial pendiente de transcribir.",
+  }));
+}
+
+function getStatusMeta(effectId) {
+  return STATUS_EFFECTS.find(effect => effect.id === effectId) || null;
+}
+
+function formatCombatStatLine(label, value, fallback) {
+  if (value > 0) return `${label}: ${value}`;
+  return `${label}: ${fallback}`;
+}
+
 function isWeaponItem(item) {
   const attrs = new Set(item?.attributes || []);
   return !!(
@@ -2549,6 +2571,183 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
   );
 }
 
+function CombatQuickReferenceModal({ adv, missionState, onClose }) {
+  const normalized = normalizeAdventurer(adv);
+  const equipment = getEquipmentStats(normalized);
+  const equippedItems = summarizeEquippedItems(normalized);
+  const meleeSkills = getCombatSkillEntries(normalized, ["melee"]).slice(0, 4);
+  const rangedSkills = getCombatSkillEntries(normalized, ["ranged"]).slice(0, 4);
+  const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
+  const supportSkills = getCombatSkillEntries(normalized, ["support", "heal"]).slice(0, 4);
+  const spells = getCombatSpellEntries(normalized).slice(0, 5);
+  const activeStatuses = [...new Set(normalized.status_effects || [])].map(getStatusMeta).filter(Boolean);
+  const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
+  const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 };
+
+  return (
+    <ModalSheet title="Combate" subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+        <div style={cardStyle}>
+          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Ataque base</div>
+          <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
+            {formatCombatStatLine("C/C", equipment.meleeDice, "Sin arma o Combate sin armas")}
+            <br />
+            {formatCombatStatLine("Dist", equipment.rangedDice, "Sin arma a distancia")}
+          </div>
+        </div>
+        <div style={cardStyle}>
+          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Defensa base</div>
+          <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
+            {formatCombatStatLine("Escudo", equipment.shield, "Sin bloqueo adicional")}
+            <br />
+            {formatCombatStatLine("Prot", equipment.armor, "Sin proteccion adicional")}
+          </div>
+        </div>
+      </div>
+
+      {activeStatuses.length > 0 && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={sectionTitleStyle}>Estados activos</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+            {activeStatuses.map(status => (
+              <span key={status.id} style={{ fontSize: 12, color: status.color, padding: "6px 10px", borderRadius: 999, border: `1px solid ${status.color}55`, background: "#111827" }}>
+                {status.icon} {status.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={sectionTitleStyle}>Ataque cuerpo a cuerpo</div>
+        <div style={{ ...cardStyle, marginBottom: 8 }}>
+          <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
+            Usa el arma o equipo cuerpo a cuerpo que lleves encima. Si una habilidad dice "antes del ataque", aplicala antes de tirar.
+          </div>
+          {meleeSkills.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+              {meleeSkills.map((skill, index) => (
+                <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={sectionTitleStyle}>Ataque a distancia</div>
+        <div style={cardStyle}>
+          <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
+            Revisa el perfil de alcance del arma y aplica cobertura, armadura y atributos del disparo.
+          </div>
+          {rangedSkills.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+              {rangedSkills.map((skill, index) => (
+                <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div style={{ marginBottom: 12 }}>
+        <div style={sectionTitleStyle}>Defensa y reacciones</div>
+        <div style={cardStyle}>
+          <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
+            Si vas a defenderte, combina Proteccion, Escudo, Parry, Shield Block y cualquier reaccion disponible antes de aplicar el dano final.
+          </div>
+          {defenseSkills.length > 0 && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+              {defenseSkills.map((skill, index) => (
+                <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {(spells.length > 0 || supportSkills.length > 0 || equipment.magicItems > 0) && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={sectionTitleStyle}>Magia y apoyo</div>
+          <div style={cardStyle}>
+            <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
+              {missionState?.magia_usada_esta_ronda
+                ? "La magia de esta ronda ya esta marcada en Amenaza."
+                : "Si esta es la primera magia de la ronda, recuerda marcar +1 Amenaza azul."}
+            </div>
+            {equipment.magicItems > 0 && (
+              <div style={{ color: "#93c5fd", fontSize: 11, marginTop: 6 }}>
+                Objetos magicos activos: {equipment.magicItems}
+              </div>
+            )}
+            {spells.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                {spells.map((spell, index) => (
+                  <div key={spell.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                    <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{spell.name} | Nivel {spell.level}</div>
+                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{spell.summary}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {supportSkills.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                {supportSkills.map((skill, index) => (
+                  <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                    <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
+                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {equippedItems.length > 0 && (
+        <div>
+          <div style={sectionTitleStyle}>Equipo relevante</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {equippedItems.map(item => {
+              const badges = getItemPreviewBadges(item);
+              const previews = getItemEffectPreview(item);
+              return (
+                <div key={item.id} style={cardStyle}>
+                  <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{item.name}</div>
+                  {badges.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                      {badges.map((badge, index) => {
+                        const tone = getItemPreviewBadgeStyle(badge.tone);
+                        return (
+                          <span key={badge.label + "_" + index} style={{ fontSize: 11, color: tone.color, padding: "2px 8px", borderRadius: 999, border: `1px solid ${tone.border}` }}>
+                            {badge.label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {previews.length > 0 && (
+                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{previews.join(" | ")}</div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </ModalSheet>
+  );
+}
+
 function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
   const normalized = normalizeAdventurer(adv);
   const update = (field, value) => onUpdate(normalizeAdventurer({ ...normalized, [field]: value }));
@@ -3742,6 +3941,7 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
 MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign, onUpdateMission, onUpdateAdventurer, onEndMission, onBack }) {
   const mission = MISSIONS[missionState.mision_id];
   const mName = mission?.nombre || missionState.mision_id;
+  const [activeCombatAdv, setActiveCombatAdv] = useState(null);
   const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
   const [activeItemAdv, setActiveItemAdv] = useState(null);
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
@@ -3774,6 +3974,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
     });
   };
 
+  const selectedCombatAdv = adventurers.find(a => a.id === activeCombatAdv) || null;
   const selectedAbilityAdv = adventurers.find(a => a.id === activeAbilityAdv) || null;
   const selectedItemAdv = adventurers.find(a => a.id === activeItemAdv) || null;
 
@@ -3908,7 +4109,11 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+              <button onClick={() => setActiveCombatAdv(normalized.id)}
+                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                Combate
+              </button>
               <button onClick={() => setActiveAbilityAdv(normalized.id)}
                 style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
                 Habilidades
@@ -3930,6 +4135,14 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           style={{ padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22",
             color: "#fca5a5", fontSize: 12, cursor: "pointer" }}>Cerrar mision</button>
       </div>
+
+      {selectedCombatAdv && (
+        <CombatQuickReferenceModal
+          adv={selectedCombatAdv}
+          missionState={missionState}
+          onClose={() => setActiveCombatAdv(null)}
+        />
+      )}
 
       {selectedAbilityAdv && (
         <CombatAbilitiesModal
