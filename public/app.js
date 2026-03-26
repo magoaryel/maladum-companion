@@ -5475,6 +5475,9 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
 function RegistryScreen({ campaign, onUpdate, onBack }) {
   const reg = campaign.registro;
   const completedMissionIds = new Set((campaign.historial_misiones || []).filter(entry => entry.success).map(entry => entry.missionId));
+  const updateCampaignNumber = (field, value) => {
+    onUpdate({ ...campaign, [field]: Math.max(0, Number(value) || 0) });
+  };
 
   const updateField = (path, val) => {
     const parts = path.split(".");
@@ -5512,20 +5515,40 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
     </button>
   );
 
+  const campaignStatCard = (label, value, color, suffix, field) => (
+    <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+      <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", marginBottom: 8 }}>{label}</div>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
+        <button onClick={() => updateCampaignNumber(field, value - 1)}
+          style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #374151",
+            background: "#0f172a", color: "#d4b896", fontSize: 18, cursor: "pointer" }}>-</button>
+        <input
+          type="number"
+          min="0"
+          value={value}
+          onChange={e => updateCampaignNumber(field, e.target.value)}
+          style={{ width: 88, textAlign: "center", background: "#0f172a", border: "1px solid #374151",
+            borderRadius: 8, color, fontSize: 22, fontWeight: 800, padding: "6px 8px" }}
+        />
+        <button onClick={() => updateCampaignNumber(field, value + 1)}
+          style={{ width: 34, height: 34, borderRadius: 8, border: "1px solid #374151",
+            background: "#0f172a", color: "#d4b896", fontSize: 18, cursor: "pointer" }}>+</button>
+      </div>
+      <div style={{ color, fontSize: 12, fontWeight: 700, marginTop: 6 }}>{value || 0}{suffix}</div>
+    </div>
+  );
+
   return (
     <div style={{ padding: 16 }}>
       <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>← Volver</button>
       <h2 style={{ color: "#d4b896", fontSize: 18, fontWeight: 800, margin: "0 0 16px" }}>📜 Registro de Campaña</h2>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
-          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Renombre</div>
-          <div style={{ color: "#fbbf24", fontSize: 24, fontWeight: 800 }}>{campaign.renombre || 0}</div>
-        </div>
-        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
-          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Oro</div>
-          <div style={{ color: "#d4b896", fontSize: 24, fontWeight: 800 }}>{campaign.oro || 0}G</div>
-        </div>
+        {campaignStatCard("Renombre", Math.max(0, Number(campaign.renombre || 0) || 0), "#fbbf24", "", "renombre")}
+        {campaignStatCard("Oro", Math.max(0, Number(campaign.oro || 0) || 0), "#d4b896", "G", "oro")}
+      </div>
+      <div style={{ color: "#6b7280", fontSize: 11, margin: "0 0 12px" }}>
+        Ajusta estos valores aqui si retomas una campana avanzada o necesitas reflejar el estado real del grupo.
       </div>
 
       {/* Demora */}
