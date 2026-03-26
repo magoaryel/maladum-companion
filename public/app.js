@@ -708,6 +708,18 @@ const MISSIONS = {
 
 const MISSION_IDS = ["Intro","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T"];
 
+const MISSION_SUGGESTIONS = {
+  Intro: ["A"],
+  A: ["B","C","D"],
+  B: ["C","D"],
+  C: ["E","F"],
+  D: ["F"],
+};
+
+function getSuggestedNextMissionIds(missionId) {
+  return MISSION_SUGGESTIONS[missionId] || [];
+}
+
 const RESOURCE_LETTERS = ["W","S","T","H","F","M","R","V","K","B","G","I","A","E","N"];
 const RESOURCE_LABELS = {
   W: "Wood",
@@ -895,6 +907,7 @@ function defaultMissionState(campId, missionId) {
     materials_gained: emptyMaterials,
     magic_threat_levels: [],
     crafted_items: [],
+    purchased_items: [],
     repaired_items: [],
     notas: "",
     loot_notes: "",
@@ -951,6 +964,7 @@ function normalizeMissionState(state) {
     materials_gained: Object.fromEntries(Object.entries(materials).map(([key, value]) => [key, Math.max(0, Number(value) || 0)])),
     magic_threat_levels: Array.isArray(state.magic_threat_levels) ? state.magic_threat_levels.map(v => Math.max(1, Number(v) || 1)) : [],
     crafted_items: Array.isArray(state.crafted_items) ? state.crafted_items : [],
+    purchased_items: Array.isArray(state.purchased_items) ? state.purchased_items : [],
     repaired_items: Array.isArray(state.repaired_items) ? state.repaired_items : [],
     fases_completadas: state.fases_completadas || {},
     steps_completados: state.steps_completados || {},
@@ -4751,17 +4765,22 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
 
 function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdateMission, onConfirm, onBack }) {
   const mission = MISSIONS[missionState.mision_id];
+  const suggestedNextMissionIds = getSuggestedNextMissionIds(missionState.mision_id);
   const xpEach = Math.max(1, Number(missionState.xp_base || 1)) + Math.max(0, Number(missionState.xp_extra || 0));
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
   const [craftingCatalog, setCraftingCatalog] = useState([]);
   const [officialItems, setOfficialItems] = useState([]);
   const [craftingError, setCraftingError] = useState("");
   const [selectedRecipeName, setSelectedRecipeName] = useState("");
+  const [marketQuery, setMarketQuery] = useState("");
+  const [marketSource, setMarketSource] = useState("all");
+  const [selectedMarketKey, setSelectedMarketKey] = useState("");
   const adjustNumber = (field, delta, min = 0) => {
     patchMission({ [field]: Math.max(min, Number(missionState[field] || 0) + delta) });
   };
   const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
   const lodgingCost = missionState.rest_mode === "posada" ? adventurers.length * 2 : 0;
+  const currentGroupGold = Math.max(0, Number(campaign.oro || 0) || 0);
   const brokenItems = adventurers.flatMap(adv => {
     const normalized = normalizeAdventurer(adv);
     return (normalized.inventario || [])
@@ -4780,9 +4799,12 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       });
   });
   const craftedSpend = (missionState.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
+  const marketSpend = (missionState.purchased_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
   const repairSpend = (missionState.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
-  const availableGoldBeforeCraft = Number(campaign.oro || 0) + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - repairSpend;
-  const netGold = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend;
+  const availableGoldBeforeCraft = currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - repairSpend - marketSpend;
+  const availableGoldBeforeMarket = currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
+  const phaseGoldDelta = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
+  const totalGoldAfterPhase = Math.max(0, currentGroupGold + phaseGoldDelta);
   useEffect(() => {
     loadCraftingCatalog()
       .then(setCraftingCatalog)
@@ -4804,6 +4826,12 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
     }
   }, [selectedRecipeName, craftingCatalog]);
 
+  useEffect(() => {
+    if (selectedMarketKey && !marketCatalog.some(item => (item.source + "_" + item.slug) === selectedMarketKey)) {
+      setSelectedMarketKey("");
+    }
+  }, [selectedMarketKey, officialItems, marketSource, marketQuery]);
+
   const uniqueCraftedNames = getUniqueCraftedNames(adventurers, missionState);
   const craftableItems = craftingCatalog.filter(item => {
     const hasMaterials = Object.entries(item.requirements || {}).every(([letter, need]) => (missionState.materials_gained?.[letter] || 0) >= need);
@@ -4811,6 +4839,25 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
     return hasMaterials && !alreadyOwnedOrCrafted;
   });
   const selectedRecipe = craftableItems.find(item => item.name === selectedRecipeName) || null;
+  const marketCatalog = officialItems.filter(item => Number(item.buy) > 0);
+  const marketResults = marketCatalog.filter(item => {
+    if (marketSource !== "all" && item.source !== marketSource) return false;
+    const query = marketQuery.trim().toLowerCase();
+    if (!query) return true;
+    const haystack = [
+      item.name,
+      item.source,
+      item.rarity,
+      item.size,
+      ...(item.attributes || []),
+    ].join(" ").toLowerCase();
+    return haystack.includes(query);
+  }).slice(0, 24);
+  const selectedMarketItem = marketResults.find(item => (item.source + "_" + item.slug) === selectedMarketKey) || marketCatalog.find(item => (item.source + "_" + item.slug) === selectedMarketKey) || null;
+
+  const canAffordMarketItem = (item) => {
+    return availableGoldBeforeMarket - marketSpend - Math.max(0, Number(item?.buy || 0)) >= 0;
+  };
 
   const updateMaterialCount = (letter, delta) => {
     patchMission({
@@ -4851,6 +4898,29 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
     patchMission({
       materials_gained: craftedItem ? restoreRecipeMaterials(missionState.materials_gained, craftedItem) : missionState.materials_gained,
       crafted_items: (missionState.crafted_items || []).filter(item => item.id !== id),
+    });
+  };
+
+  const assignPurchasedItem = (entry, adventurerId) => {
+    if (!entry || !canAffordMarketItem(entry)) return;
+    patchMission({
+      purchased_items: [
+        ...(missionState.purchased_items || []),
+        {
+          id: "buy_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+          adventurerId,
+          name: entry.name,
+          price: Math.max(0, Number(entry.buy || 0)),
+          payload: catalogEntryToInventoryItem(entry),
+        },
+      ],
+    });
+    setSelectedMarketKey("");
+  };
+
+  const removePurchasedItem = (id) => {
+    patchMission({
+      purchased_items: (missionState.purchased_items || []).filter(item => item.id !== id),
     });
   };
 
@@ -4990,10 +5060,19 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             <div style={{ color: "#6b7280", fontSize: 11 }}>{missionState.rest_mode === "posada" ? "2G por aventurero" : "Naturaleza gratis"}</div>
           </div>
         </div>
-        <div style={{ background: netGold >= 0 ? "#132034" : "#3a1212", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
+        <div style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
+          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro actual del grupo</div>
+          <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{currentGroupGold}G</div>
+        </div>
+        <div style={{ background: phaseGoldDelta >= 0 ? "#132034" : "#3a1212", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Balance neto de oro de esta fase</div>
-          <div style={{ color: netGold >= 0 ? "#bbf7d0" : "#fca5a5", fontSize: 20, fontWeight: 800 }}>{netGold >= 0 ? "+" : ""}{netGold}G</div>
-          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado - mantenimiento - descanso - reparaciones - crafteo</div>
+          <div style={{ color: phaseGoldDelta >= 0 ? "#bbf7d0" : "#fca5a5", fontSize: 20, fontWeight: 800 }}>{phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G</div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado - mantenimiento - descanso - reparaciones - crafteo - compras</div>
+        </div>
+        <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
+          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro total del grupo tras este cierre</div>
+          <div style={{ color: "#bbf7d0", fontSize: 20, fontWeight: 800 }}>{totalGoldAfterPhase}G</div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>Incluye el oro acumulado de misiones anteriores</div>
         </div>
         {missionState.rest_mode !== "none" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
@@ -5025,8 +5104,8 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             {brokenItems.map(entry => {
               const selected = !!entry.selected;
               const cost = selected ? Math.max(0, Number(entry.selected?.cost) || 0) : (entry.autoCost ?? 0);
-              const projectedNetGold = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - (repairSpend + (selected ? 0 : cost));
-              const canAffordRepair = selected || projectedNetGold >= 0;
+              const projectedTotalGold = currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - (repairSpend + (selected ? 0 : cost)) - marketSpend;
+              const canAffordRepair = selected || projectedTotalGold >= 0;
               return (
                 <div key={entry.key} style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1f2937" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
@@ -5053,7 +5132,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
                   )}
                   {!canAffordRepair && (
                     <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 6 }}>
-                      No alcanza el oro neto disponible para sumar esta reparacion.
+                      No alcanza el oro total disponible del grupo para sumar esta reparacion.
                     </div>
                   )}
                 </div>
@@ -5144,7 +5223,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
               )}
               {!canAffordRecipeWithGold(availableGoldBeforeCraft, craftedSpend, item) && (
                 <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 6 }}>
-                  No alcanza el oro neto disponible para fabricarlo ahora.
+                  No alcanza el oro total disponible del grupo para fabricarlo ahora.
                 </div>
               )}
             </button>
@@ -5197,15 +5276,142 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
 
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Mercado y compras
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+          Compra items usando el oro total del grupo. Al elegir un item, asignalo al aventurero que lo compra y se anadira a su inventario al aplicar el cierre.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8, marginBottom: 8 }}>
+          <input value={marketQuery} onChange={e => setMarketQuery(e.target.value)}
+            placeholder="Buscar item o atributo"
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+          <select value={marketSource} onChange={e => setMarketSource(e.target.value)}
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13 }}>
+            <option value="all">Todo</option>
+            <option value="maladum">Caja base</option>
+            <option value="adventure">Adventure</option>
+            <option value="beasts">Beasts</option>
+          </select>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
+          <span>Items visibles: {marketResults.length}</span>
+          <span>Gasto en compras: {marketSpend}G</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 260, overflowY: "auto" }}>
+          {marketResults.length > 0 ? marketResults.map(item => {
+            const previewItem = catalogEntryToInventoryItem(item);
+            const badges = getItemPreviewBadges(previewItem);
+            const effectPreview = getItemEffectPreview(previewItem);
+            const itemKey = item.source + "_" + item.slug;
+            return (
+              <button key={itemKey} onClick={() => setSelectedMarketKey(itemKey)}
+                style={{ background: selectedMarketKey === itemKey ? "#1d3557" : "#132034", borderRadius: 8, padding: 10, border: selectedMarketKey === itemKey ? "1px solid #60a5fa" : "1px solid #2d2d44", textAlign: "left", cursor: "pointer" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 8, marginBottom: 4 }}>
+                  <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{item.name}</div>
+                  <div style={{ color: "#fde68a", fontSize: 12, fontWeight: 700 }}>{item.buy}G</div>
+                </div>
+                <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                  {summarizeCatalogEntry(item)}
+                </div>
+                {badges.length > 0 && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 6 }}>
+                    {badges.map((badge, index) => {
+                      const tone = getItemPreviewBadgeStyle(badge.tone);
+                      return (
+                        <span key={badge.label + "_" + index} style={{ fontSize: 11, color: tone.color, padding: "2px 8px", borderRadius: 999, border: `1px solid ${tone.border}` }}>
+                          {badge.label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                )}
+                {effectPreview.length > 0 && (
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+                    {effectPreview.join(" | ")}
+                  </div>
+                )}
+                {!canAffordMarketItem(item) && (
+                  <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 6 }}>
+                    No alcanza el oro total disponible del grupo para comprarlo ahora.
+                  </div>
+                )}
+              </button>
+            );
+          }) : (
+            <div style={{ color: "#6b7280", fontSize: 12 }}>No hay items que coincidan con ese filtro.</div>
+          )}
+        </div>
+        {selectedMarketItem && (
+          <div style={{ marginTop: 10, background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #374151" }}>
+            <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedMarketItem.name}</div>
+            <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+              Elige que aventurero lo compra. Se descontaran {selectedMarketItem.buy}G del oro del grupo al aplicar el cierre.
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              {adventurers.map(adv => (
+                <button key={adv.id} onClick={() => assignPurchasedItem(selectedMarketItem, adv.id)}
+                  disabled={!canAffordMarketItem(selectedMarketItem)}
+                  style={{ padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#132034", color: "#d4b896", cursor: canAffordMarketItem(selectedMarketItem) ? "pointer" : "default", opacity: canAffordMarketItem(selectedMarketItem) ? 1 : 0.5 }}>
+                  {adv.nombre}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {(missionState.purchased_items || []).length > 0 && (
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+              Compras preparadas
+            </div>
+            {(missionState.purchased_items || []).map(item => {
+              const owner = adventurers.find(adv => adv.id === item.adventurerId);
+              return (
+                <div key={item.id} style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                  <div>
+                    <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{item.name}</div>
+                    <div style={{ color: "#9ca3af", fontSize: 11 }}>
+                      Para {owner?.nombre || "Aventurero"} | {Number(item.price || 0)}G
+                    </div>
+                  </div>
+                  <button onClick={() => removePurchasedItem(item.id)}
+                    style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>
+                    Quitar
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Siguiente paso de campana
         </div>
         <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
-          Elige manualmente la siguiente mision segun las consecuencias del libro. La app no la deduce sola para no inventar reglas.
+          Aqui veras la siguiente mision mas probable o las opciones posibles segun el punto actual de campana. Si necesitas desviarte por una regla especial del libro, abajo puedes ajustarlo manualmente.
         </div>
-        <select value={missionState.next_mission || campaign.currentMission} onChange={e => patchMission({ next_mission: e.target.value })}
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 14 }}>
-          {MISSION_IDS.map(id => <option key={id} value={id}>{id} | {MISSIONS[id]?.nombre || "Pendiente"}</option>)}
-        </select>
+        {suggestedNextMissionIds.length > 0 ? (
+          <div style={{ display: "grid", gridTemplateColumns: suggestedNextMissionIds.length > 1 ? "1fr 1fr" : "1fr", gap: 8, marginBottom: 8 }}>
+            {suggestedNextMissionIds.map(id => (
+              <button key={id} onClick={() => patchMission({ next_mission: id })}
+                style={{ padding: 12, borderRadius: 10, border: (missionState.next_mission || campaign.currentMission) === id ? "2px solid #166534" : "1px solid #374151", background: (missionState.next_mission || campaign.currentMission) === id ? "#16653422" : "#0f172a", color: (missionState.next_mission || campaign.currentMission) === id ? "#bbf7d0" : "#d4b896", fontWeight: 700, cursor: "pointer", textAlign: "left" }}>
+                <div>{id} | {MISSIONS[id]?.nombre || "Pendiente"}</div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
+            No hay una ruta unica confirmada en la app para esta mision; usa la seleccion manual.
+          </div>
+        )}
+        <details>
+          <summary style={{ color: "#9ca3af", fontSize: 12, cursor: "pointer" }}>Elegir manualmente</summary>
+          <select value={missionState.next_mission || campaign.currentMission} onChange={e => patchMission({ next_mission: e.target.value })}
+            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 14, marginTop: 8 }}>
+            {MISSION_IDS.map(id => <option key={id} value={id}>{id} | {MISSIONS[id]?.nombre || "Pendiente"}</option>)}
+          </select>
+        </details>
       </div>
 
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
@@ -5225,7 +5431,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           Aplicacion al grupo
         </div>
         <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
-          Se aplicaran {xpEach} PX a cada aventurero del grupo, {missionState.renombre_ganado || 0} de Renombre, {netGold >= 0 ? "+" : ""}{netGold}G netos y +{missionState.demora_cambio || 0} de Demora a la campana.
+          Se aplicaran {xpEach} PX a cada aventurero del grupo, {missionState.renombre_ganado || 0} de Renombre, {phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G en esta fase y el grupo quedara con {totalGoldAfterPhase}G en total, ademas de +{missionState.demora_cambio || 0} de Demora en la campana.
         </div>
         {(missionState.repaired_items || []).length > 0 && (
           <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
@@ -5237,6 +5443,14 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             Items crafteados: {(missionState.crafted_items || []).map(item => {
               const owner = adventurers.find(adv => adv.id === item.adventurerId);
               return `${item.name} -> ${owner?.nombre || "Aventurero"}`;
+            }).join(" | ")}
+          </div>
+        )}
+        {(missionState.purchased_items || []).length > 0 && (
+          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+            Compras: {(missionState.purchased_items || []).map(item => {
+              const owner = adventurers.find(adv => adv.id === item.adventurerId);
+              return `${item.name} -> ${owner?.nombre || "Aventurero"} (${item.price || 0}G)`;
             }).join(" | ")}
           </div>
         )}
@@ -5539,10 +5753,11 @@ function App() {
     const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
     const lodgingCost = resolvedMission.rest_mode === "posada" ? adventurers.length * 2 : 0;
     const craftedSpend = (resolvedMission.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
+    const marketSpend = (resolvedMission.purchased_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
     const repairSpend = (resolvedMission.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
     const repairedKeys = new Set((resolvedMission.repaired_items || []).map(item => makeRepairKey(item.adventurerId, item.itemId)));
     const repairedLabels = (resolvedMission.repaired_items || []).map(item => `${item.itemName || "Objeto"} (${item.cost || 0}G)`);
-    const netGold = Number(resolvedMission.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend;
+    const phaseGoldDelta = Number(resolvedMission.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
     const updatedAdventurers = adventurers.map(adv => {
       const normalized = normalizeAdventurer(adv);
       const craftedForAdventurer = (resolvedMission.crafted_items || [])
@@ -5555,6 +5770,9 @@ function App() {
           res_required: item.res_required || "",
           expansion: item.expansion || "",
         }, item.payload));
+      const purchasedForAdventurer = (resolvedMission.purchased_items || [])
+        .filter(item => item.adventurerId === normalized.id)
+        .map(item => normalizeInventoryItem(item.payload || { name: item.name, buy: item.price }));
       return normalizeAdventurer({
         ...normalized,
         experiencia: Math.max(0, Number(normalized.experiencia || 0) + xpEach),
@@ -5564,6 +5782,7 @@ function App() {
             return repairedKeys.has(repairKey) ? normalizeInventoryItem({ ...item, broken: false }) : item;
           }),
           ...craftedForAdventurer,
+          ...purchasedForAdventurer,
         ],
       });
     });
@@ -5573,7 +5792,7 @@ function App() {
       currentMission: resolvedMission.next_mission || campaign.currentMission,
       demora: Math.min(12, Math.max(0, Number(campaign.demora || 0) + Number(resolvedMission.demora_cambio || 0))),
       renombre: Math.max(0, Number(campaign.renombre || 0) + Number(resolvedMission.renombre_ganado || 0)),
-      oro: Math.max(0, Number(campaign.oro || 0) + netGold),
+      oro: Math.max(0, Number(campaign.oro || 0) + phaseGoldDelta),
       historial_misiones: [
         ...(campaign.historial_misiones || []),
         {
@@ -5585,7 +5804,7 @@ function App() {
           secondary: resolvedMission.secondary_complete,
           xpEach,
           renombre: Number(resolvedMission.renombre_ganado || 0),
-          oro: netGold,
+          oro: phaseGoldDelta,
           demora: Number(resolvedMission.demora_cambio || 0),
           notes: [
             resolvedMission.loot_notes,
@@ -5595,6 +5814,9 @@ function App() {
               : "",
             (resolvedMission.crafted_items || []).length > 0
               ? "Crafteo: " + resolvedMission.crafted_items.map(item => item.name).join(", ")
+              : "",
+            (resolvedMission.purchased_items || []).length > 0
+              ? "Compras: " + resolvedMission.purchased_items.map(item => item.name).join(", ")
               : "",
             resolvedMission.notas
           ].filter(Boolean).join(" | "),
