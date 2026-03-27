@@ -4550,10 +4550,371 @@ AdventurerSheetV2 = function AdventurerSheetV2Patched({ adv, onUpdate, onBack, o
   );
 };
 
+ThreatTracker = function ThreatTrackerPatched({ level, cara, onLevelChange, magicLevels }) {
+  const bands = THREAT_BANDS[cara] || THREAT_BANDS.A;
+  const magicSet = new Set((magicLevels || []).map(value => Number(value)));
+  let cumulative = 0;
+  let currentBandIdx = 0;
+  for (let i = 0; i < bands.length; i++) {
+    if (level >= cumulative + bands[i].slots) {
+      cumulative += bands[i].slots;
+      currentBandIdx = i + 1;
+    } else break;
+  }
+  const totalSlots = bands.reduce((s, b) => s + b.slots, 0);
+  const activeBand = bands[Math.min(currentBandIdx, bands.length - 1)] || bands[0] || { name: "Disquiet", color: "#22c55e" };
+  const bandName = activeBand.name || "Disquiet";
+  const bandColor = activeBand.color || "#22c55e";
+
+  return (
+    <div style={{ background: "#1a1a2e", borderRadius: 12, padding: 14, border: "1px solid #2d2d44" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+        <div>
+          <div style={{ color: "#d4b896", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+            Amenaza · Lado {cara}
+          </div>
+          <div style={{ color: bandColor, fontSize: 20, fontWeight: 800 }}>{bandName}</div>
+        </div>
+        <div style={{ display: "flex", gap: 6 }}>
+          <button onClick={() => onLevelChange(Math.max(0, level - 1))}
+            style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid #374151",
+              background: "#1e293b", color: "#d4b896", fontSize: 20, cursor: "pointer" }}>-</button>
+          <div style={{ width: 52, height: 44, borderRadius: 8, background: bandColor + "33",
+            border: `2px solid ${bandColor}`, display: "flex", alignItems: "center",
+            justifyContent: "center", color: bandColor, fontSize: 22, fontWeight: 800 }}>{level}</div>
+          <button onClick={() => onLevelChange(Math.min(totalSlots, level + 1))}
+            style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid #374151",
+              background: "#1e293b", color: "#d4b896", fontSize: 20, cursor: "pointer" }}>+</button>
+        </div>
+      </div>
+      <div style={{ display: "flex", gap: 2, height: 18 }}>
+        {bands.map((band, bi) => {
+          const slots = [];
+          for (let s = 0; s < band.slots; s++) {
+            const slotIdx = bands.slice(0, bi).reduce((a, b2) => a + b2.slots, 0) + s;
+            const filled = slotIdx < level;
+            const isMagic = magicSet.has(slotIdx + 1) && filled;
+            slots.push(
+              <div key={s} style={{ flex: 1, height: "100%", borderRadius: 3,
+                background: filled ? (isMagic ? "#3b82f6" : band.color) : band.color + "22",
+                border: `1px solid ${band.color}44`, transition: "background 0.3s" }}/>
+            );
+          }
+          return <div key={bi} style={{ display: "flex", gap: 1, flex: band.slots }}>{slots}</div>;
+        })}
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", marginTop: 4 }}>
+        {bands.map((b, i) => (
+          <span key={i} style={{ fontSize: 8, color: b.color + "aa", textAlign: "center", flex: b.slots }}>{b.name}</span>
+        ))}
+      </div>
+      <div style={{ fontSize: 10, color: "#6b7280", marginTop: 6, textAlign: "center" }}>
+        {`Lado ${cara} · ${level}/${totalSlots} clavijas`}
+      </div>
+    </div>
+  );
+};
+
+CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, missionState, onUpdateMission, onUpdateAdventurer, startMode = "attack", onClose }) {
+  const normalized = normalizeAdventurer(adv);
+  const [selectedCombatDetail, setSelectedCombatDetail] = useState(null);
+  const [localSkillPegs, setLocalSkillPegs] = useState(normalized.habilidad_actual);
+  const equippedItems = summarizeEquippedItems(normalized);
+  const equipment = getEquipmentStats(normalized);
+  const meleeWeaponNames = getCombatEquipmentNames(equippedItems, "melee");
+  const rangedWeaponNames = getCombatEquipmentNames(equippedItems, "ranged");
+  const shieldNames = getCombatEquipmentNames(equippedItems, "shield");
+  const armorNames = getCombatEquipmentNames(equippedItems, "armor");
+  const meleeSkills = getCombatSkillEntries(normalized, ["melee"]).slice(0, 4);
+  const rangedSkills = getCombatSkillEntries(normalized, ["ranged"]).slice(0, 4);
+  const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
+  const supportSkills = getCombatSkillEntries(normalized, ["support", "heal"]).slice(0, 4);
+  const meleeAttributeEntries = getCombatAttributeEntries(equippedItems, "melee");
+  const rangedAttributeEntries = getCombatAttributeEntries(equippedItems, "ranged");
+  const defenseAttributeEntries = getCombatAttributeEntries(equippedItems, "defense");
+  const spells = getCombatSpellEntries(normalized).slice(0, 6);
+  const activeStatuses = [...new Set(normalized.status_effects || [])].map(getStatusMeta).filter(Boolean);
+  const showMagicSection = spells.length > 0 || supportSkills.length > 0 || equipment.magicItems > 0 || normalized.magia_max > 0 || normalized.magia_actual > 0;
+  const attackOptions = [
+    ...(meleeWeaponNames.length > 0 || equipment.meleeDice > 0 ? [{ id: "melee", label: "Ataque C/C" }] : []),
+    ...(rangedWeaponNames.length > 0 || equipment.rangedDice > 0 ? [{ id: "ranged", label: "Ataque Dist" }] : []),
+    ...(showMagicSection ? [{ id: "magic", label: "Magia" }] : []),
+  ];
+  const defaultAttackMode = attackOptions[0]?.id || "melee";
+  const [attackMode, setAttackMode] = useState(defaultAttackMode);
+  const [usedSkillKeys, setUsedSkillKeys] = useState({});
+  const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
+  const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 };
+
+  useEffect(() => {
+    setLocalSkillPegs(normalized.habilidad_actual);
+  }, [normalized.id, normalized.habilidad_actual]);
+
+  useEffect(() => {
+    setAttackMode(defaultAttackMode);
+    setUsedSkillKeys({});
+    setSelectedCombatDetail(null);
+  }, [normalized.id, startMode, defaultAttackMode]);
+
+  const toggleCombatDetail = (detail) => {
+    setSelectedCombatDetail(prev => prev?.label === detail.label && prev?.source === detail.source ? null : detail);
+  };
+
+  const parseDiceBonus = (summary) => {
+    const match = String(summary || "").match(/anad(?:e|es)\s+(\d+)\s+dados?/i);
+    return match ? Number(match[1]) || 0 : 0;
+  };
+
+  const markCombatMagicThreat = () => {
+    if (!missionState || missionState.magia_usada_esta_ronda || typeof onUpdateMission !== "function") return;
+    onUpdateMission(addMagicThreatToMission(missionState));
+  };
+
+  const spendSkill = (skill, modeKey) => {
+    const cost = Math.max(1, Number(skill.level) || 1);
+    const key = `${modeKey}_${skill.name}_${skill.level}`;
+    if (usedSkillKeys[key] || localSkillPegs < cost) return;
+    const nextSkillPegs = Math.max(0, localSkillPegs - cost);
+    setLocalSkillPegs(nextSkillPegs);
+    setUsedSkillKeys(prev => ({ ...prev, [key]: true }));
+    if (typeof onUpdateAdventurer === "function") {
+      onUpdateAdventurer(normalizeAdventurer({ ...normalized, habilidad_actual: nextSkillPegs }));
+    }
+  };
+
+  const renderDetailChips = (entries, tone) => {
+    if (!entries || entries.length === 0) return null;
+    const styleMap = {
+      attack: { color: "#fde68a", border: "#92400e" },
+      range: { color: "#fca5a5", border: "#7f1d1d" },
+      defense: { color: "#bfdbfe", border: "#1d4ed8" },
+      skill: { color: "#d4b896", border: "#374151" },
+      magic: { color: "#c4b5fd", border: "#4338ca" },
+    };
+    const style = styleMap[tone] || styleMap.skill;
+    return (
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+        {entries.map((entry, index) => (
+          <button key={entry.label + "_" + entry.source + "_" + index} onClick={() => toggleCombatDetail(entry)} title={entry.summary}
+            style={{ fontSize: 11, color: style.color, padding: "4px 8px", borderRadius: 999, border: `1px solid ${style.border}`, background: selectedCombatDetail?.label === entry.label && selectedCombatDetail?.source === entry.source ? style.border + "22" : "#111827", cursor: "pointer" }}>
+            {entry.label}
+          </button>
+        ))}
+      </div>
+    );
+  };
+
+  const renderSkillUseList = (skills, modeKey) => {
+    if (!skills || skills.length === 0) return (
+      <div style={{ color: "#6b7280", fontSize: 12 }}>No hay habilidades especiales relevantes ahora mismo.</div>
+    );
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {skills.map((skill, index) => {
+          const cost = Math.max(1, Number(skill.level) || 1);
+          const key = `${modeKey}_${skill.name}_${skill.level}`;
+          const used = !!usedSkillKeys[key];
+          const diceBonus = parseDiceBonus(skill.summary);
+          return (
+            <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                <div>
+                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{skill.name} | Nivel {skill.level}</div>
+                  <div style={{ color: "#6b7280", fontSize: 11 }}>{used ? `Usada ahora (-${cost} SP)` : `Cuesta ${cost} SP`}</div>
+                </div>
+                <button onClick={() => spendSkill(skill, modeKey)} disabled={used || localSkillPegs < cost}
+                  style={{ padding: "8px 10px", borderRadius: 8, border: used ? "1px solid #065f46" : "1px solid #374151",
+                    background: used ? "#065f4622" : "#0f172a", color: used ? "#6ee7b7" : (localSkillPegs < cost ? "#6b7280" : "#d4b896"),
+                    fontSize: 11, fontWeight: 700, cursor: used || localSkillPegs < cost ? "default" : "pointer" }}>
+                  {used ? "Aplicada" : `Usar ahora (-${cost} SP)`}
+                </button>
+              </div>
+              {diceBonus > 0 && (
+                <div style={{ color: "#fde68a", fontSize: 11, marginBottom: 4 }}>{`Aporta +${diceBonus} dados`}</div>
+              )}
+              <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const meleeUsedBonus = meleeSkills.reduce((sum, skill) => sum + (usedSkillKeys[`melee_${skill.name}_${skill.level}`] ? parseDiceBonus(skill.summary) : 0), 0);
+  const rangedUsedBonus = rangedSkills.reduce((sum, skill) => sum + (usedSkillKeys[`ranged_${skill.name}_${skill.level}`] ? parseDiceBonus(skill.summary) : 0), 0);
+
+  return (
+    <ModalSheet title={startMode === "defense" ? "Defensa" : "Ataque"} subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
+      <div style={{ ...cardStyle, marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 10, marginBottom: 4 }}>Clavijas actuales</div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, color: "#d946ef", padding: "4px 8px", borderRadius: 999, border: "1px solid #86198f" }}>SP {localSkillPegs}/{normalized.habilidad_max}</span>
+          <span style={{ fontSize: 12, color: "#3b82f6", padding: "4px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>MP {normalized.magia_actual}/{normalized.magia_max}</span>
+          {!!missionState && <span style={{ fontSize: 12, color: "#9ca3af", padding: "4px 8px", borderRadius: 999, border: "1px solid #374151" }}>Amenaza Lado {missionState.amenaza_cara}</span>}
+        </div>
+      </div>
+
+      {selectedCombatDetail && (
+        <div style={{ ...cardStyle, marginBottom: 12, border: "1px solid #374151" }}>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedCombatDetail.label}</div>
+          <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 6 }}>{selectedCombatDetail.source}</div>
+          <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{selectedCombatDetail.summary}</div>
+        </div>
+      )}
+
+      {startMode === "attack" && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={sectionTitleStyle}>Tipo de ataque</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {attackOptions.map(option => (
+              <button key={option.id} onClick={() => setAttackMode(option.id)}
+                style={{ padding: "8px 12px", borderRadius: 999, border: attackMode === option.id ? "1px solid #eab308" : "1px solid #374151", background: attackMode === option.id ? "#eab30822" : "#111827", color: attackMode === option.id ? "#fde68a" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {option.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {startMode === "attack" && attackMode === "melee" && (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Ataque cuerpo a cuerpo</div>
+            <div style={cardStyle}>
+              <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 6 }}>Arma actual</div>
+              <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                {meleeWeaponNames.length > 0 ? meleeWeaponNames.join(", ") : "Combate sin armas o carta fisica"}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <span style={{ fontSize: 12, color: "#fde68a", padding: "4px 8px", borderRadius: 999, border: "1px solid #92400e" }}>
+                  {equipment.meleeDice > 0 ? `Dados base ${equipment.meleeDice}` : "Usa los dados de la carta"}
+                </span>
+                {meleeUsedBonus > 0 && (
+                  <span style={{ fontSize: 12, color: "#fde68a", padding: "4px 8px", borderRadius: 999, border: "1px solid #92400e" }}>{`Bono actual +${meleeUsedBonus} dados`}</span>
+                )}
+                {equipment.meleeDice > 0 && (
+                  <span style={{ fontSize: 12, color: "#fbbf24", padding: "4px 8px", borderRadius: 999, border: "1px solid #a16207" }}>{`Tira ${equipment.meleeDice + meleeUsedBonus} dados`}</span>
+                )}
+              </div>
+              {renderDetailChips(meleeAttributeEntries, "attack")}
+            </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Habilidades disponibles</div>
+            {renderSkillUseList(meleeSkills, "melee")}
+          </div>
+        </>
+      )}
+
+      {startMode === "attack" && attackMode === "ranged" && (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Ataque a distancia</div>
+            <div style={cardStyle}>
+              <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 6 }}>Arma actual</div>
+              <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>
+                {rangedWeaponNames.length > 0 ? rangedWeaponNames.join(", ") : "Sin arma a distancia"}
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                <span style={{ fontSize: 12, color: "#fca5a5", padding: "4px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>
+                  {equipment.rangedDice > 0 ? `Dados base ${equipment.rangedDice}` : "Usa los dados de la carta"}
+                </span>
+                {rangedUsedBonus > 0 && (
+                  <span style={{ fontSize: 12, color: "#fca5a5", padding: "4px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>{`Bono actual +${rangedUsedBonus} dados`}</span>
+                )}
+                {equipment.rangedDice > 0 && (
+                  <span style={{ fontSize: 12, color: "#fbbf24", padding: "4px 8px", borderRadius: 999, border: "1px solid #a16207" }}>{`Tira ${equipment.rangedDice + rangedUsedBonus} dados`}</span>
+                )}
+              </div>
+              {renderDetailChips(rangedAttributeEntries, "range")}
+            </div>
+          </div>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Habilidades disponibles</div>
+            {renderSkillUseList(rangedSkills, "ranged")}
+          </div>
+        </>
+      )}
+
+      {startMode === "attack" && attackMode === "magic" && (
+        <div style={{ marginBottom: 12 }}>
+          <div style={sectionTitleStyle}>Magia</div>
+          <div style={cardStyle}>
+            {!!missionState && (
+              <button onClick={markCombatMagicThreat} disabled={missionState.magia_usada_esta_ronda}
+                style={{ width: "100%", padding: 10, borderRadius: 8, marginBottom: 8,
+                  border: missionState.magia_usada_esta_ronda ? "2px solid #3b82f6" : "1px solid #374151",
+                  background: missionState.magia_usada_esta_ronda ? "#1d4ed822" : "#111827",
+                  color: missionState.magia_usada_esta_ronda ? "#93c5fd" : "#dbeafe",
+                  fontSize: 12, fontWeight: 700, cursor: missionState.magia_usada_esta_ronda ? "default" : "pointer" }}>
+                {missionState.magia_usada_esta_ronda ? "Magia ya marcada esta ronda (+1 Amenaza azul)" : "Marcar primer uso de magia de la ronda (+1 Amenaza azul)"}
+              </button>
+            )}
+            <div style={{ color: "#93c5fd", fontSize: 12, marginBottom: 8 }}>
+              {`MP actual ${normalized.magia_actual}/${normalized.magia_max}${equipment.magicItems > 0 ? ` · Objetos magicos ${equipment.magicItems}` : ""}`}
+            </div>
+            {spells.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {spells.map((spell, index) => (
+                  <div key={spell.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                    <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{spell.name} | Nivel {spell.level}</div>
+                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{spell.summary}</div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{ color: "#6b7280", fontSize: 12 }}>No hay hechizos aprendidos cargados en esta ficha.</div>
+            )}
+            {supportSkills.length > 0 && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Apoyos relacionados</div>
+                {renderSkillUseList(supportSkills, "magic")}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {startMode === "defense" && (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Defensa actual</div>
+            <div style={cardStyle}>
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, color: "#d4b896", fontSize: 13 }}>
+                <div>{formatCombatStatLine("Escudo", equipment.shield, "Sin escudo", shieldNames)}</div>
+                <div>{armorNames.length > 0 ? `Armadura: ${armorNames.join(", ")}` : "Armadura: Sin armadura adicional"}</div>
+                <div>{formatCombatStatLine("Prot", equipment.armor, "Sin proteccion adicional")}</div>
+              </div>
+              {renderDetailChips(defenseAttributeEntries, "defense")}
+            </div>
+          </div>
+          {activeStatuses.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={sectionTitleStyle}>Estados activos</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {activeStatuses.map(status => (
+                  <span key={status.id} style={{ fontSize: 12, color: status.color, padding: "6px 10px", borderRadius: 999, border: `1px solid ${status.color}55`, background: "#111827" }}>
+                    {status.icon} {status.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Reacciones y habilidades</div>
+            {renderSkillUseList(defenseSkills, "defense")}
+          </div>
+        </>
+      )}
+    </ModalSheet>
+  );
+};
+
 MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign, onUpdateMission, onUpdateAdventurer, onEndMission, onBack }) {
   const mission = MISSIONS[missionState.mision_id];
   const mName = mission?.nombre || missionState.mision_id;
   const [activeCombatAdv, setActiveCombatAdv] = useState(null);
+  const [activeCombatMode, setActiveCombatMode] = useState("attack");
   const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
   const [activeItemAdv, setActiveItemAdv] = useState(null);
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
@@ -4724,10 +5085,14 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-              <button onClick={() => setActiveCombatAdv(normalized.id)}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+              <button onClick={() => { setActiveCombatMode("attack"); setActiveCombatAdv(normalized.id); }}
                 style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
-                Combate
+                Ataque
+              </button>
+              <button onClick={() => { setActiveCombatMode("defense"); setActiveCombatAdv(normalized.id); }}
+                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                Defensa
               </button>
               <button onClick={() => setActiveAbilityAdv(normalized.id)}
                 style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
@@ -4756,6 +5121,8 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           adv={selectedCombatAdv}
           missionState={missionState}
           onUpdateMission={onUpdateMission}
+          onUpdateAdventurer={onUpdateAdventurer}
+          startMode={activeCombatMode}
           onClose={() => setActiveCombatAdv(null)}
         />
       )}
