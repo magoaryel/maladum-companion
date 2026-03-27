@@ -2816,7 +2816,7 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
   );
 }
 
-function CombatQuickReferenceModal({ adv, missionState, onClose }) {
+function CombatQuickReferenceModal({ adv, missionState, onUpdateMission, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [flowMode, setFlowMode] = useState("melee");
   const [selectedCombatDetail, setSelectedCombatDetail] = useState(null);
@@ -2835,6 +2835,7 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
   const defenseAttributeEntries = getCombatAttributeEntries(equippedItems, "defense");
   const spells = getCombatSpellEntries(normalized).slice(0, 5);
   const activeStatuses = [...new Set(normalized.status_effects || [])].map(getStatusMeta).filter(Boolean);
+  const showMagicSection = spells.length > 0 || supportSkills.length > 0 || equipment.magicItems > 0 || normalized.magia_max > 0 || normalized.magia_actual > 0;
   const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
   const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 };
   const flowOptions = [
@@ -2867,6 +2868,10 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
         ];
   const toggleCombatDetail = (detail) => {
     setSelectedCombatDetail(prev => prev?.label === detail.label && prev?.source === detail.source ? null : detail);
+  };
+  const markCombatMagicThreat = () => {
+    if (!missionState || missionState.magia_usada_esta_ronda || typeof onUpdateMission !== "function") return;
+    onUpdateMission(addMagicThreatToMission(missionState));
   };
   const renderDetailChips = (entries, tone) => {
     if (!entries || entries.length === 0) return null;
@@ -3030,10 +3035,20 @@ function CombatQuickReferenceModal({ adv, missionState, onClose }) {
         </div>
       </div>
 
-      {(spells.length > 0 || supportSkills.length > 0 || equipment.magicItems > 0) && (
+      {showMagicSection && (
         <div style={{ marginBottom: 12 }}>
           <div style={sectionTitleStyle}>Magia y apoyo</div>
           <div style={cardStyle}>
+            {!!missionState && (
+              <button onClick={markCombatMagicThreat} disabled={missionState.magia_usada_esta_ronda}
+                style={{ width: "100%", padding: 10, borderRadius: 8, marginBottom: 8,
+                  border: missionState.magia_usada_esta_ronda ? "2px solid #3b82f6" : "1px solid #374151",
+                  background: missionState.magia_usada_esta_ronda ? "#1d4ed822" : "#111827",
+                  color: missionState.magia_usada_esta_ronda ? "#93c5fd" : "#dbeafe",
+                  fontSize: 12, fontWeight: 700, cursor: missionState.magia_usada_esta_ronda ? "default" : "pointer" }}>
+                {missionState.magia_usada_esta_ronda ? "Magia ya marcada esta ronda (+1 Amenaza azul)" : "Usar magia ahora (+1 Amenaza azul si es la primera de la ronda)"}
+              </button>
+            )}
             <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
               {missionState?.magia_usada_esta_ronda
                 ? "La magia de esta ronda ya esta marcada en Amenaza."
@@ -3930,7 +3945,7 @@ function MissionSetupScreen({ campaign, onStartMission, onBack }) {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
           <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
             <div style={{ color: "#6b7280", fontSize: 10 }}>Registro Amenaza</div>
-            <div style={{ color: "#d4b896", fontSize: 16, fontWeight: 800 }}>Cara {mission.amenaza.cara}</div>
+            <div style={{ color: "#d4b896", fontSize: 16, fontWeight: 800 }}>Lado {mission.amenaza.cara}</div>
             <div style={{ color: "#9ca3af", fontSize: 12 }}>{mission.amenaza.clavijas} clavijas iniciales</div>
           </div>
           <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
@@ -4590,6 +4605,9 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
       </div>
 
       <ThreatTracker level={missionState.amenaza_nivel} cara={missionState.amenaza_cara} onLevelChange={handleThreatChange} magicLevels={missionState.magic_threat_levels}/>
+      <div style={{ color: "#6b7280", fontSize: 11, textAlign: "center", marginTop: 6, marginBottom: 2 }}>
+        Registro de Amenaza en Lado {missionState.amenaza_cara} para esta mision
+      </div>
 
       <button onClick={markMagicThreat} disabled={missionState.magia_usada_esta_ronda}
         style={{ width: "100%", padding: 10, borderRadius: 8, marginTop: 8, marginBottom: 12,
@@ -4737,6 +4755,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         <CombatQuickReferenceModal
           adv={selectedCombatAdv}
           missionState={missionState}
+          onUpdateMission={onUpdateMission}
           onClose={() => setActiveCombatAdv(null)}
         />
       )}
