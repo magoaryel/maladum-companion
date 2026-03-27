@@ -28,18 +28,18 @@ const DB = {
 const THREAT_BANDS = {
   A: [
     { name: "Disquiet", color: "#22c55e", slots: 4 },
-    { name: "Unease", color: "#84cc16", slots: 4 },
-    { name: "Distress", color: "#eab308", slots: 4 },
-    { name: "Dismay", color: "#f97316", slots: 4 },
-    { name: "Desperation", color: "#ef4444", slots: 4 },
+    { name: "Distress", color: "#84cc16", slots: 4 },
+    { name: "Dismay", color: "#eab308", slots: 4 },
+    { name: "Desperation", color: "#f97316", slots: 4 },
+    { name: "Disaster", color: "#ef4444", slots: 4 },
     { name: "Doom", color: "#991b1b", slots: 4 },
   ],
   B: [
     { name: "Disquiet", color: "#22c55e", slots: 3 },
-    { name: "Unease", color: "#84cc16", slots: 3 },
-    { name: "Distress", color: "#eab308", slots: 4 },
-    { name: "Dismay", color: "#f97316", slots: 4 },
-    { name: "Desperation", color: "#ef4444", slots: 5 },
+    { name: "Distress", color: "#84cc16", slots: 3 },
+    { name: "Dismay", color: "#eab308", slots: 4 },
+    { name: "Desperation", color: "#f97316", slots: 4 },
+    { name: "Disaster", color: "#ef4444", slots: 5 },
     { name: "Doom", color: "#991b1b", slots: 5 },
   ],
 };
@@ -988,6 +988,15 @@ function addMagicThreatToMission(state) {
 function trimMagicThreatLevels(level, magicThreatLevels) {
   return (magicThreatLevels || []).filter(value => Number(value) <= Number(level));
 }
+
+const MAGIC_DIE_OUTCOMES = {
+  1: "La magia no se resuelve. El personaje queda Fatigado.",
+  2: "Sin efecto adicional del dado magico.",
+  3: "Recupera 1 clavija de Magia.",
+  4: "Otros personajes en 2 casillas se alejan 1 casilla y quedan Derribados. Pueden gastar 1 clavija de Habilidad para evitarlo.",
+  5: "Este y otros personajes en 2 casillas ganan 1 clavija de Magia. Pueden superar su valor inicial.",
+  6: "Resuelve el hechizo como si hubieras gastado 1 clavija extra. No se puede resistir.",
+};
 
 function createCraftedInventoryItem(recipe, payload) {
   if (payload) {
@@ -4615,10 +4624,12 @@ ThreatTracker = function ThreatTrackerPatched({ level, cara, onLevelChange, magi
   );
 };
 
-CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, missionState, onUpdateMission, onUpdateAdventurer, startMode = "attack", onClose }) {
+CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, missionState, onUpdateMission, onUpdateAdventurer, onCastMagic, startMode = "attack", onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [selectedCombatDetail, setSelectedCombatDetail] = useState(null);
   const [localSkillPegs, setLocalSkillPegs] = useState(normalized.habilidad_actual);
+  const [selectedSpellId, setSelectedSpellId] = useState(null);
+  const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
   const equippedItems = summarizeEquippedItems(normalized);
   const equipment = getEquipmentStats(normalized);
   const meleeWeaponNames = getCombatEquipmentNames(equippedItems, "melee");
@@ -4654,6 +4665,8 @@ CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, mis
     setAttackMode(defaultAttackMode);
     setUsedSkillKeys({});
     setSelectedCombatDetail(null);
+    setSelectedSpellId(null);
+    setSelectedMagicPegs(1);
   }, [normalized.id, startMode, defaultAttackMode]);
 
   const toggleCombatDetail = (detail) => {
@@ -4742,6 +4755,33 @@ CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, mis
 
   const meleeUsedBonus = meleeSkills.reduce((sum, skill) => sum + (usedSkillKeys[`melee_${skill.name}_${skill.level}`] ? parseDiceBonus(skill.summary) : 0), 0);
   const rangedUsedBonus = rangedSkills.reduce((sum, skill) => sum + (usedSkillKeys[`ranged_${skill.name}_${skill.level}`] ? parseDiceBonus(skill.summary) : 0), 0);
+  const selectedSpell = spells.find(spell => spell.name === selectedSpellId) || spells[0] || null;
+  const magicPegOptions = Array.from({ length: Math.max(0, normalized.magia_actual) }, (_, index) => index + 1);
+  const computeSpellDice = (spell, pegs) => {
+    const text = `${spell?.summary || ""} ${spell?.notes || ""}`;
+    if (/con\s+x\s+dados?/i.test(text) || /ataque.*x\s+dados?/i.test(text)) return pegs;
+    const fixed = text.match(/con\s+(\d+)\s+dados?/i) || text.match(/ataque.*?(\d+)\s+dados?/i);
+    return fixed ? Number(fixed[1]) || 0 : 0;
+  };
+  const selectedSpellDice = computeSpellDice(selectedSpell, selectedMagicPegs);
+  const castSelectedSpell = () => {
+    if (!selectedSpell || selectedMagicPegs <= 0 || normalized.magia_actual < selectedMagicPegs) return;
+    const nextMagic = Math.max(0, normalized.magia_actual - selectedMagicPegs);
+    if (typeof onUpdateAdventurer === "function") {
+      onUpdateAdventurer(normalizeAdventurer({ ...normalized, magia_actual: nextMagic }));
+    }
+    if (typeof onCastMagic === "function") {
+      onCastMagic({
+        adventurerId: normalized.id,
+        adventurerName: normalized.nombre,
+        spell: selectedSpell,
+        pegs: selectedMagicPegs,
+        dice: selectedSpellDice,
+        magia_restante: nextMagic,
+      });
+    }
+    onClose();
+  };
 
   return (
     <ModalSheet title={startMode === "defense" ? "Defensa" : "Ataque"} subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
@@ -4750,7 +4790,6 @@ CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, mis
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <span style={{ fontSize: 12, color: "#d946ef", padding: "4px 8px", borderRadius: 999, border: "1px solid #86198f" }}>SP {localSkillPegs}/{normalized.habilidad_max}</span>
           <span style={{ fontSize: 12, color: "#3b82f6", padding: "4px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>MP {normalized.magia_actual}/{normalized.magia_max}</span>
-          {!!missionState && <span style={{ fontSize: 12, color: "#9ca3af", padding: "4px 8px", borderRadius: 999, border: "1px solid #374151" }}>Amenaza Lado {missionState.amenaza_cara}</span>}
         </div>
       </div>
 
@@ -4856,19 +4895,38 @@ CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, mis
             {spells.length > 0 ? (
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {spells.map((spell, index) => (
-                  <div key={spell.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                  <button key={spell.name + "_" + index} onClick={() => setSelectedSpellId(spell.name)}
+                    style={{ background: selectedSpell?.name === spell.name ? "#1d4ed822" : "#111827", borderRadius: 8, border: selectedSpell?.name === spell.name ? "1px solid #3b82f6" : "1px solid #1f2937", padding: 8, cursor: "pointer", textAlign: "left" }}>
                     <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{spell.name} | Nivel {spell.level}</div>
                     <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{spell.summary}</div>
-                  </div>
+                  </button>
                 ))}
               </div>
             ) : (
               <div style={{ color: "#6b7280", fontSize: 12 }}>No hay hechizos aprendidos cargados en esta ficha.</div>
             )}
-            {supportSkills.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Apoyos relacionados</div>
-                {renderSkillUseList(supportSkills, "magic")}
+            {selectedSpell && normalized.magia_actual > 0 && (
+              <div style={{ marginTop: 10, background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+                <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{selectedSpell.name}</div>
+                <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Clavijas de Magia a gastar</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  {magicPegOptions.map(value => (
+                    <button key={value} onClick={() => setSelectedMagicPegs(value)}
+                      style={{ padding: "6px 10px", borderRadius: 999, border: selectedMagicPegs === value ? "1px solid #3b82f6" : "1px solid #374151", background: selectedMagicPegs === value ? "#1d4ed822" : "#0f172a", color: selectedMagicPegs === value ? "#dbeafe" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {value}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                  <span style={{ fontSize: 12, color: "#93c5fd", padding: "4px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>{`Gastas ${selectedMagicPegs} MP`}</span>
+                  <span style={{ fontSize: 12, color: "#fde68a", padding: "4px 8px", borderRadius: 999, border: "1px solid #92400e" }}>
+                    {selectedSpellDice > 0 ? `Tira ${selectedSpellDice} dados` : "Usa el efecto del hechizo"}
+                  </span>
+                </div>
+                <button onClick={castSelectedSpell}
+                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #1d4ed8", background: "#1d4ed822", color: "#dbeafe", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  Atacar
+                </button>
               </div>
             )}
           </div>
@@ -4910,11 +4968,49 @@ CombatQuickReferenceModal = function CombatQuickReferenceModalPatched({ adv, mis
   );
 };
 
+function MagicResultModal({ state, onClose }) {
+  const [result, setResult] = useState(null);
+  if (!state) return null;
+  return (
+    <ModalSheet title="Resultado dado magico" subtitle={`${state.adventurerName} | ${state.spell?.name || "Hechizo"}`} onClose={onClose}>
+      <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 12 }}>
+        <div style={{ color: "#93c5fd", fontSize: 12, marginBottom: 6 }}>{`Clavijas gastadas: ${state.pegs} MP`}</div>
+        <div style={{ color: "#fde68a", fontSize: 12, marginBottom: 6 }}>
+          {state.dice > 0 ? `Tira ${state.dice} dados para este ataque.` : "Resuelve el hechizo segun su texto y el dado magico."}
+        </div>
+        <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{state.spell?.summary || "Sin resumen cargado."}</div>
+      </div>
+      <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>
+        ¿Que salio en el dado magico?
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
+        {[1,2,3,4,5,6].map(value => (
+          <button key={value} onClick={() => setResult(value)}
+            style={{ padding: 12, borderRadius: 10, border: result === value ? "1px solid #3b82f6" : "1px solid #374151", background: result === value ? "#1d4ed822" : "#111827", color: result === value ? "#dbeafe" : "#d4b896", fontSize: 16, fontWeight: 800, cursor: "pointer" }}>
+            {value}
+          </button>
+        ))}
+      </div>
+      {result && (
+        <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 12 }}>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{`Resultado ${result}`}</div>
+          <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.6 }}>{MAGIC_DIE_OUTCOMES[result]}</div>
+        </div>
+      )}
+      <button onClick={onClose}
+        style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+        Cerrar
+      </button>
+    </ModalSheet>
+  );
+}
+
 MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign, onUpdateMission, onUpdateAdventurer, onEndMission, onBack }) {
   const mission = MISSIONS[missionState.mision_id];
   const mName = mission?.nombre || missionState.mision_id;
   const [activeCombatAdv, setActiveCombatAdv] = useState(null);
   const [activeCombatMode, setActiveCombatMode] = useState("attack");
+  const [magicResultState, setMagicResultState] = useState(null);
   const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
   const [activeItemAdv, setActiveItemAdv] = useState(null);
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
@@ -4950,6 +5046,10 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
   const selectedCombatAdv = adventurers.find(a => a.id === activeCombatAdv) || null;
   const selectedAbilityAdv = adventurers.find(a => a.id === activeAbilityAdv) || null;
   const selectedItemAdv = adventurers.find(a => a.id === activeItemAdv) || null;
+  const handleCastMagic = (payload) => {
+    setMagicResultState(payload);
+    setActiveCombatAdv(null);
+  };
 
   return (
     <div style={{ padding: 16 }}>
@@ -5122,8 +5222,16 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           missionState={missionState}
           onUpdateMission={onUpdateMission}
           onUpdateAdventurer={onUpdateAdventurer}
+          onCastMagic={handleCastMagic}
           startMode={activeCombatMode}
           onClose={() => setActiveCombatAdv(null)}
+        />
+      )}
+
+      {magicResultState && (
+        <MagicResultModal
+          state={magicResultState}
+          onClose={() => setMagicResultState(null)}
         />
       )}
 

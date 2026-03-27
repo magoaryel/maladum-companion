@@ -106,6 +106,20 @@ Todos los datos se guardan automáticamente en tu dispositivo. No necesitas inte
 
 ---
 
+## Pendiente acordado
+
+Replantear la fase post mision como asistente por pasos:
+
+- Fase de Huida
+- Experiencia
+- Posada o Bosque
+- Reparar
+- Vender
+- Comprar / Craftear
+- Resumen final
+
+---
+
 ## Licencia
 
 Maladum: Dungeons of Enveron es propiedad de Hayland Terrain. Esta app es una herramienta no oficial creada por fans.
