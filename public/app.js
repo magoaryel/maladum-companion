@@ -1793,6 +1793,62 @@ function BottomNavIcon({ id, active }) {
   );
 }
 
+function PhaseIcon({ id }) {
+  const common = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: "#d4b896", strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+
+  if (id === "dread") {
+    return (
+      <svg {...common}>
+        <path d="M13 2L5 14h5l-1 8 8-12h-5l1-8z" />
+      </svg>
+    );
+  }
+
+  if (id === "adventurers") {
+    return (
+      <svg {...common}>
+        <circle cx="9" cy="8" r="2.5" />
+        <circle cx="16.5" cy="9" r="2" />
+        <path d="M4.5 18c.8-2.5 2.7-4 4.5-4s3.7 1.5 4.5 4" />
+        <path d="M13.5 18c.5-1.8 1.8-3 3.4-3 1.2 0 2.4.7 3.1 2" />
+      </svg>
+    );
+  }
+
+  if (id === "adversary") {
+    return (
+      <svg {...common}>
+        <path d="M8 6l2-2 2 2 2-2 2 2" />
+        <path d="M7 10c0-2.2 2.2-4 5-4s5 1.8 5 4v5c0 2.2-2.2 4-5 4s-5-1.8-5-4v-5z" />
+        <path d="M10 13h.01" />
+        <path d="M14 13h.01" />
+        <path d="M10 17c.8.7 1.6 1 2 1s1.2-.3 2-1" />
+      </svg>
+    );
+  }
+
+  if (id === "npc") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="7.5" r="2.5" />
+        <path d="M7.5 20c.7-3 2.4-5 4.5-5s3.8 2 4.5 5" />
+        <path d="M5 11l2 1" />
+        <path d="M19 11l-2 1" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <path d="M6 4.5h12" />
+      <path d="M6 9h12" />
+      <path d="M6 13.5h8" />
+      <path d="M6 18h6" />
+      <path d="M17 16l1.5 1.5L21 14" />
+    </svg>
+  );
+}
+
 // --- STATUS EFFECT TOGGLE ---
 function StatusEffects({ effects, onChange }) {
   return (
@@ -1900,10 +1956,10 @@ function PhaseChecklist({ phases, completedPhases, completedSteps, onTogglePhase
             <button onClick={() => setExpanded(isOpen ? null : phase.id)}
               style={{ width: "100%", padding: "12px 14px", background: "transparent", border: "none",
                 display: "flex", alignItems: "center", gap: 10, cursor: "pointer", color: "#d4b896" }}>
-              <span style={{ fontSize: 20 }}>{phase.icon}</span>
+              <PhaseIcon id={phase.id} />
               <span style={{ flex: 1, textAlign: "left", fontSize: 14, fontWeight: 700 }}>{phase.name}</span>
               {allDone && <span style={{ color: "#22c55e", fontSize: 18 }}>OK</span>}
-              <span style={{ fontSize: 12, transform: isOpen ? "rotate(180deg)" : "", transition: "0.2s" }}>v</span>
+              <span style={{ color: "#d4b896", fontSize: 12, transform: isOpen ? "rotate(180deg)" : "", transition: "0.2s" }}>⌄</span>
             </button>
             {isOpen && (
               <div style={{ padding: "0 14px 12px" }}>
