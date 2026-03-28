@@ -4797,8 +4797,11 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         ))}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0f172a", borderRadius: 8, padding: "8px 10px", marginBottom: 6 }}>
           <span style={{ color: "#9ca3af", fontSize: 12 }}>Oro extra manual</span>
-          <input type="number" min="0" value={manualGoldGain} onChange={e => patchMission({ oro_ganado: Math.max(0, Number(e.target.value) || 0) })}
-            style={{ width: 120, padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 14, textAlign: "right", boxSizing: "border-box" }} />
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={() => adjustNumber("oro_ganado", -1)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+            <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, minWidth: 40, textAlign: "center" }}>{manualGoldGain}G</span>
+            <button onClick={() => adjustNumber("oro_ganado", 1)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+          </div>
         </div>
       </div>
       )}
