@@ -4,7 +4,13 @@
   "description": "PWA Companion App para Maladum: Dungeons of Enveron",
   "private": true,
   "scripts": {
+    "check:jsx": "babel public/app.js --out-file .codex-build-check/app.js --presets @babel/preset-react",
     "dev": "npx serve public -l 3000",
     "start": "npx serve public -l 3000"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.28.6",
+    "@babel/core": "^7.29.0",
+    "@babel/preset-react": "^7.28.5"
   }
 }

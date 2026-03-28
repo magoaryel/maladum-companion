@@ -8,3 +8,5 @@
 *.tiff
 
 .codex-inline-check.cjs
+node_modules/
+.codex-build-check/
