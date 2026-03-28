@@ -45,16 +45,16 @@ const THREAT_BANDS = {
 };
 
 const STATUS_EFFECTS = [
-  { id: "fatigued", name: "Fatigado", icon: "ðŸ˜°", color: "#eab308" },
-  { id: "poisoned", name: "Envenenado", icon: "â˜ ï¸", color: "#22c55e" },
-  { id: "cursed", name: "Maldito", icon: "ðŸ’€", color: "#7c3aed" },
-  { id: "burning", name: "Quemando", icon: "ðŸ”¥", color: "#ef4444" },
-  { id: "terrified", name: "Aterrorizado", icon: "ðŸ˜±", color: "#a855f7" },
-  { id: "stunned", name: "Aturdido", icon: "ðŸ’«", color: "#3b82f6" },
-  { id: "wounded", name: "Herido", icon: "ðŸ©¸", color: "#dc2626" },
-  { id: "blessed", name: "Bendito", icon: "âœ¨", color: "#fbbf24" },
-  { id: "corrupted", name: "Corrompido", icon: "ðŸŒ‘", color: "#1e1b4b" },
-  { id: "prone", name: "Derribado", icon: "â¬‡ï¸", color: "#6b7280" },
+  { id: "fatigued", name: "Fatigado", icon: "FAT", color: "#eab308" },
+  { id: "poisoned", name: "Envenenado", icon: "VEN", color: "#22c55e" },
+  { id: "cursed", name: "Maldito", icon: "MAL", color: "#7c3aed" },
+  { id: "burning", name: "Quemando", icon: "FUE", color: "#ef4444" },
+  { id: "terrified", name: "Aterrorizado", icon: "TER", color: "#a855f7" },
+  { id: "stunned", name: "Aturdido", icon: "ATU", color: "#3b82f6" },
+  { id: "wounded", name: "Herido", icon: "HER", color: "#dc2626" },
+  { id: "blessed", name: "Bendito", icon: "BEN", color: "#fbbf24" },
+  { id: "corrupted", name: "Corrompido", icon: "COR", color: "#1e1b4b" },
+  { id: "prone", name: "Derribado", icon: "DER", color: "#6b7280" },
 ];
 
 const BASE_CHARACTERS = [
@@ -64,7 +64,7 @@ const BASE_CHARACTERS = [
   { nombre: "Syrio", especie: "Eld", salud_max: 6, habilidad_max: 4, magia_max: 3, acciones: 2, coste: 64, innatas: ["Reflexes"] },
   { nombre: "Callan", especie: "Human", salud_max: 5, habilidad_max: 4, magia_max: 3, acciones: 2, coste: 54, innatas: ["Frenzy"] },
   { nombre: "Nerinda", especie: "Human", salud_max: 5, habilidad_max: 4, magia_max: 2, acciones: 2, coste: 80, innatas: ["Weapons Master 1"] },
-  { nombre: "Unger", especie: "Tregar", salud_max: 4, habilidad_max: 3, magia_max: 1, acciones: 2, coste: 73, innatas: ["PersuasiÃ³n", "Detect"] },
+  { nombre: "Unger", especie: "Tregar", salud_max: 4, habilidad_max: 3, magia_max: 1, acciones: 2, coste: 73, innatas: ["Persuasion", "Detect"] },
   { nombre: "Kriga", especie: "Human", salud_max: 4, habilidad_max: 3, magia_max: 1, acciones: 2, coste: 73, innatas: [] },
   { nombre: "Beren", especie: "Human", salud_max: 4, habilidad_max: 4, magia_max: 2, acciones: 2, coste: 71, innatas: ["Natural Remedies", "Ready for Anything"] },
   { nombre: "Hendley", especie: "Dwella", salud_max: 4, habilidad_max: 3, magia_max: 1, acciones: 2, coste: 75, innatas: ["Night Vision", "Smithing"] },
@@ -647,62 +647,62 @@ const TERM_GLOSSARY = [
 const MISSIONS = {
   Intro: {
     id: "Intro", nombre: "De Moneda y Gloria", pagina: 4,
-    condicion: "MisiÃ³n independiente rejugable. Puede jugarse antes de la campaÃ±a o entre misiones (cuesta 1 espacio de Demora si se juega dentro de la campaÃ±a).",
+    condicion: "Mision independiente rejugable. Puede jugarse antes de la campana o entre misiones (cuesta 1 espacio de Demora si se juega dentro de la campana).",
     objetivo_primario: "Recolectar armas, armaduras y recursos. Ganar experiencia de combate.",
     objetivo_secundario: "Recuperar Objetivos 7 y 8 de la bolsa de fichas. Cada uno vale 1 Renombre en Mercado.",
     reglas_especiales: [
-      { nombre: "Mecanismos Antiguos", desc: "4 palancas activas. Al interactuar con cada una, girar la ficha y resolver: 1=roto sin efecto, 2=abre tragaluz/retira Oscuridad, 3=cierra tragaluz/aÃ±ade Oscuridad, 4=cierra puerta al azar, 5=desbloquea puerta al azar, 6=retira pared amarilla â†’ acceso a CÃ¡mara del Arcanista." }
+      { nombre: "Mecanismos Antiguos", desc: "4 palancas activas. Al interactuar con cada una, girar la ficha y resolver: 1=roto sin efecto, 2=abre tragaluz/retira Oscuridad, 3=cierra tragaluz/anade Oscuridad, 4=cierra puerta al azar, 5=desbloquea puerta al azar, 6=retira pared amarilla -> acceso a Camara del Arcanista." }
     ],
     amenaza: { cara: "A", clavijas: 0 },
-    mazo_eventos: "8Ã— Lamentor, 2Ã— Hellfront, 8Ã— Mapa, 2Ã— Malagaunt + dificultad",
-    consecuencias: "Ninguna (misiÃ³n independiente). Si se juega en campaÃ±a: +1 Demora.",
+    mazo_eventos: "8x Lamentor, 2x Hellfront, 8x Mapa, 2x Malagaunt + dificultad",
+    consecuencias: "Ninguna (mision independiente). Si se juega en campana: +1 Demora.",
   },
   A: {
     id: "A", nombre: "Secretos en la Oscuridad", pagina: 6,
-    condicion: "Primera misiÃ³n de la campaÃ±a.",
-    objetivo_primario: "Recuperar Reliquias de Objetivos 1-8 (una por cada caja, cofre y tumba). Cada reliquia vale 6â‚² en Mercado. Anotar nÃºmero de reliquias recuperadas en Registro.",
+    condicion: "Primera mision de la campana.",
+    objetivo_primario: "Recuperar Reliquias de Objetivos 1-8 (una por cada caja, cofre y tumba). Cada reliquia vale 6G en Mercado. Anotar numero de reliquias recuperadas en Registro.",
     objetivo_secundario: "Recuperar Objetivo 9 del Escritorio del Arcanista. Representa mapas y diarios. Si se recupera: descartarlo en Descanso y marcar Logro Parafernalia Oculta.",
     reglas_especiales: [],
     amenaza: { cara: "A", clavijas: 0 },
-    mazo_eventos: "8Ã— Lamentor, 8Ã— Mapa, 2Ã— Hellfront, 2Ã— Malagaunt + dificultad",
-    asignacion_busqueda: "Dejar 2 negras aparte. 6Ã— fichas + 1Ã— mapa en terreno buscable.",
-    consecuencias: "Si recuperaste Objetivo 1 â†’ puedes jugar MisiÃ³n B. Si 5+ reliquias â†’ MisiÃ³n C. Si 4 o menos â†’ MisiÃ³n D.",
+    mazo_eventos: "8x Lamentor, 8x Mapa, 2x Hellfront, 2x Malagaunt + dificultad",
+    asignacion_busqueda: "Dejar 2 negras aparte. 6x fichas + 1x mapa en terreno buscable.",
+    consecuencias: "Si recuperaste Objetivo 1 -> puedes jugar Mision B. Si 5+ reliquias -> Mision C. Si 4 o menos -> Mision D.",
   },
   B: {
     id: "B", nombre: "La Reliquia", pagina: 8,
-    condicion: "Opcional. Se juega despuÃ©s de A si recuperaste Objetivo 1.",
-    objetivo_primario: "Encontrar al familiar del aldeano atrinchado. Si se rescata por Punto de Reagrupamiento: familia paga 10â‚² + 2 Renombre + marcar Logro Deuda de Favor.",
+    condicion: "Opcional. Se juega despues de A si recuperaste Objetivo 1.",
+    objetivo_primario: "Encontrar al familiar del aldeano atrincherado. Si se rescata por Punto de Reagrupamiento: familia paga 10G + 2 Renombre + marcar Logro Deuda de Favor.",
     objetivo_secundario: "Saquear todo lo posible.",
     reglas_especiales: [
-      { nombre: "Oscuridad", desc: "Toda el Ã¡rea sigue reglas de Oscuridad. El Habitante no se activa hasta que un Aventurero entre en contacto corto o sea atacado â†’ aumenta Amenaza en 3." }
+      { nombre: "Oscuridad", desc: "Toda el area sigue reglas de Oscuridad. El Habitante no se activa hasta que un Aventurero entre en contacto corto o sea atacado -> aumenta Amenaza en 3." }
     ],
     amenaza: { cara: "A", clavijas: 2 },
-    mazo_eventos: "8Ã— Lamentor, 8Ã— Mapa, 3Ã— Hellfront, 1Ã— Malagaunt + dificultad",
-    consecuencias: "+1 Demora. Luego: 5+ reliquias â†’ C, 4 o menos â†’ D.",
+    mazo_eventos: "8x Lamentor, 8x Mapa, 3x Hellfront, 1x Malagaunt + dificultad",
+    consecuencias: "+1 Demora. Luego: 5+ reliquias -> C, 4 o menos -> D.",
   },
   C: {
     id: "C", nombre: "Un Nuevo Poder en Ascenso", pagina: 10,
-    condicion: "Recuperaste 5+ reliquias en MisiÃ³n A.",
-    objetivo_primario: "Recuperar partes de criaturas derrotadas como Objetivos: Primer Lamentor tras Amenaza â‰¥ Distress â†’ Obj 1-3. Primera Myria tras â‰¥ Distress â†’ Obj 4-5. Primer Hellfront â†’ Obj 6. Rot Troll â†’ Obj 9.",
-    objetivo_secundario: "Recuperar Objetivos 7 y 8. Si ambos: marcar Logro Rastro EsquelÃ©tico.",
+    condicion: "Recuperaste 5+ reliquias en Mision A.",
+    objetivo_primario: "Recuperar partes de criaturas derrotadas como Objetivos: Primer Lamentor tras Amenaza >= Distress -> Obj 1-3. Primera Myria tras >= Distress -> Obj 4-5. Primer Hellfront -> Obj 6. Rot Troll -> Obj 9.",
+    objetivo_secundario: "Recuperar Objetivos 7 y 8. Si ambos: marcar Logro Rastro Esqueletico.",
     reglas_especiales: [
-      { nombre: "Sombras Cambiantes", desc: "Oscuridad activa. Al inicio lanzar Dado MÃ¡gico 3 veces â†’ colocar Luz. Desde Distress: mover luz al siguiente nro. mÃ¡s alto. Palancas para mover luz." }
+      { nombre: "Sombras Cambiantes", desc: "Oscuridad activa. Al inicio lanzar Dado Magico 3 veces -> colocar Luz. Desde Distress: mover luz al siguiente numero mas alto. Palancas para mover luz." }
     ],
     amenaza: { cara: "A", clavijas: 2 },
-    mazo_eventos: "8Ã— Lamentor, 8Ã— Mapa, 2Ã— Hellfront, 2Ã— Malagaunt + dificultad",
-    consecuencias: "Si Obj 7 u 8 â†’ elegir ruta. Carretera â†’ MisiÃ³n E. TÃºneles â†’ MisiÃ³n F. Sin Obj 7/8 â†’ MisiÃ³n E.",
+    mazo_eventos: "8x Lamentor, 8x Mapa, 2x Hellfront, 2x Malagaunt + dificultad",
+    consecuencias: "Si Obj 7 u 8 -> elegir ruta. Carretera -> Mision E. Tuneles -> Mision F. Sin Obj 7/8 -> Mision E.",
   },
   D: {
     id: "D", nombre: "Resurrectionistas", pagina: 12,
-    condicion: "Recuperaste 4 o menos reliquias en MisiÃ³n A.",
-    objetivo_primario: "Acumular botÃ­n. 1 Renombre por cada 20â‚² de aumento en Mercado.",
-    objetivo_secundario: "Mapeo de TÃºneles: Interactuar con puntos de entrada para mapearlos. Robo de Tumbas: Buscar en Espacios de Sepultura. Anotar en Registro.",
+    condicion: "Recuperaste 4 o menos reliquias en Mision A.",
+    objetivo_primario: "Acumular botin. 1 Renombre por cada 20G de aumento en Mercado.",
+    objetivo_secundario: "Mapeo de Tuneles: Interactuar con puntos de entrada para mapearlos. Robo de Tumbas: Buscar en Espacios de Sepultura. Anotar en Registro.",
     reglas_especiales: [
-      { nombre: "Spawn", desc: "Si Revenants llegan y no hay ninguno activo â†’ colocarlos en punto de entrada mÃ¡s cercano." }
+      { nombre: "Spawn", desc: "Si Revenants llegan y no hay ninguno activo -> colocarlos en punto de entrada mas cercano." }
     ],
     amenaza: { cara: "A", clavijas: 1 },
-    mazo_eventos: "7Ã— Lamentor, 2Ã— Malagaunt, 6Ã— Mapa, 2Ã— Hellfront, 3Ã— Malagaunt, 1Ã— Omega + dificultad",
-    consecuencias: "Siguiente misiÃ³n: MisiÃ³n F.",
+    mazo_eventos: "7x Lamentor, 2x Malagaunt, 6x Mapa, 2x Hellfront, 3x Malagaunt, 1x Omega + dificultad",
+    consecuencias: "Siguiente mision: Mision F.",
   },
 };
 
@@ -759,24 +759,24 @@ const DEMORA_EFFECTS = [
   { min: 0, max: 2, desc: "Sin efectos negativos." },
   { min: 3, max: 4, desc: "Aumenta la dificultad base de las misiones." },
   { min: 5, max: 6, desc: "Efectos moderados en las misiones." },
-  { min: 7, max: 8, desc: "Efectos severos. La situaciÃ³n empeora." },
-  { min: 9, max: 10, desc: "Casi al lÃ­mite. Consecuencias graves." },
-  { min: 11, max: 12, desc: "MÃ¡xima presiÃ³n. El tiempo se acaba." },
+  { min: 7, max: 8, desc: "Efectos severos. La situacion empeora." },
+  { min: 9, max: 10, desc: "Casi al limite. Consecuencias graves." },
+  { min: 11, max: 12, desc: "Maxima presion. El tiempo se acaba." },
 ];
 
 const TURN_PHASES = [
   {
-    id: "dread", name: "Fase de Amenaza", icon: "âš¡",
+    id: "dread", name: "Fase de Amenaza", icon: "AM",
     steps: [
       "Avanzar Amenaza +1",
-      "Si magia fue usada esta ronda â†’ +1 adicional",
-      "Si clavija entra en espacio rojo â†’ lanzar Dado MÃ¡gico",
+      "Si magia fue usada esta ronda -> +1 adicional",
+      "Si clavija entra en espacio rojo -> lanzar Dado Magico",
       "Robar Carta de Evento (desde ronda 2)",
-      "Resolver efecto segÃºn nivel de Amenaza actual",
+      "Resolver efecto segun nivel de Amenaza actual",
     ]
   },
   {
-    id: "adventurers", name: "Fase de Aventureros", icon: "âš”ï¸",
+    id: "adventurers", name: "Fase de Aventureros", icon: "AV",
     steps: [
       "Activar Aventureros alternando entre jugadores",
       "Cada Aventurero: hasta 2 acciones + 1 sin esfuerzo",
@@ -784,26 +784,26 @@ const TURN_PHASES = [
     ]
   },
   {
-    id: "adversary", name: "Fase de Adversarios", icon: "ðŸ‘¹",
+    id: "adversary", name: "Fase de Adversarios", icon: "EN",
     steps: [
-      "Nuevas llegadas segÃºn banda de Amenaza",
+      "Nuevas llegadas segun banda de Amenaza",
       "Activar Adversarios por Rango (mayor primero)",
       "Resolver IA de cada uno",
     ]
   },
   {
-    id: "npc", name: "Fase de PNJs", icon: "ðŸ§™",
+    id: "npc", name: "Fase de PNJs", icon: "PNJ",
     steps: [
       "Activar Wandering Beasts",
       "Activar Denizens / Habitantes",
     ]
   },
   {
-    id: "assessment", name: "Fase de EvaluaciÃ³n", icon: "ðŸ“‹",
+    id: "assessment", name: "Fase de Evaluacion", icon: "EV",
     steps: [
       "Resolver efectos de estado (Burning, Poisoned, etc.)",
-      "Retirar contadores segÃºn reglas",
-      "Retirar contadores de ActivaciÃ³n",
+      "Retirar contadores segun reglas",
+      "Retirar contadores de Activacion",
       "Siguiente primer jugador en sentido horario",
     ]
   },
@@ -1397,6 +1397,71 @@ function getCombatSpellEntries(adv) {
   }));
 }
 
+function getRelevantCombatAttributes(item, mode) {
+  const allowed = COMBAT_ATTRIBUTE_GROUPS[mode] || new Set();
+  return (item?.attributes || [])
+    .filter(attr => allowed.has(attr))
+    .map(attr => ({
+      id: attr,
+      label: getAttributeEntry(attr)?.label || titleCaseToken(attr),
+      summary: getAttributeEntry(attr)?.summary || "Detalle pendiente.",
+    }));
+}
+
+function getCombatWeaponOptions(adv, mode) {
+  return summarizeEquippedItems(adv)
+    .filter(item => {
+      const attrs = new Set(item?.attributes || []);
+      if (mode === "melee") {
+        return item?.meleeDice > 0 || attrs.has("melee") || attrs.has("forceful_melee") || attrs.has("quickstrike") || attrs.has("parry") || attrs.has("reach");
+      }
+      if (mode === "ranged") {
+        return item?.rangedDice > 0 || (item?.range || []).length > 0 || attrs.has("ammo_arrow") || attrs.has("ammo_bullet") || attrs.has("blast") || attrs.has("trap_melee");
+      }
+      return false;
+    })
+    .map(item => ({
+      id: item.id,
+      name: item.name,
+      summary: item.summary || summarizeCatalogEntry(item) || "",
+      dice: mode === "melee" ? Number(item.meleeDice || 0) : Number(item.rangedDice || 0),
+      range: Array.isArray(item.range) ? item.range.filter(value => Number(value) > 0) : [],
+      attributes: getRelevantCombatAttributes(item, mode),
+      rawAttributes: Array.isArray(item.attributes) ? item.attributes : [],
+    }));
+}
+
+function getFrenzyBonusDice(level) {
+  if (level >= 3) return 4;
+  if (level === 2) return 3;
+  if (level === 1) return 2;
+  return 0;
+}
+
+function applyAdventurerResourceSpend(adv, costs = {}) {
+  const normalized = normalizeAdventurer(adv);
+  return normalizeAdventurer({
+    ...normalized,
+    magia_actual: Math.max(0, normalized.magia_actual - Math.max(0, Number(costs.magic) || 0)),
+    habilidad_actual: Math.max(0, normalized.habilidad_actual - Math.max(0, Number(costs.skill) || 0)),
+    salud_actual: Math.max(0, normalized.salud_actual - Math.max(0, Number(costs.health) || 0)),
+  });
+}
+
+function getSpellCastingPreview(spell, pegs) {
+  if (!spell) return "Resuelve el texto oficial del hechizo.";
+  const amount = Math.max(1, Number(pegs) || 1);
+  const summary = String(spell.summary || "").toLowerCase();
+  if (summary.includes("x dados") || summary.includes("x dado")) {
+    return `Tira ${amount} dado${amount === 1 ? "" : "s"}.`;
+  }
+  return `Usa X = ${amount} y resuelve el texto oficial del hechizo.`;
+}
+
+function getMagicPegOptions(currentMagic) {
+  return Array.from({ length: Math.max(0, Number(currentMagic) || 0) }, (_, index) => index + 1);
+}
+
 function getStatusMeta(effectId) {
   return STATUS_EFFECTS.find(effect => effect.id === effectId) || null;
 }
@@ -1687,13 +1752,13 @@ function StatusEffects({ effects, onChange }) {
                 color: active ? se.color : "#6b7280", fontSize: 12, cursor: "pointer",
                 display: "flex", alignItems: "center", gap: 3 }}>
               <span>{se.icon}</span>
-              {count > 1 && <span style={{fontWeight:700}}>Ã—{count}</span>}
+              {count > 1 && <span style={{fontWeight:700}}>x{count}</span>}
             </button>
             {active && (
               <button onClick={() => { const i = effects.indexOf(se.id); if(i>-1){const n=[...effects];n.splice(i,1);onChange(n);} }}
                 style={{ width: 24, height: 24, borderRadius: "50%", border: "1px solid #ef4444",
                   background: "transparent", color: "#ef4444", fontSize: 14, cursor: "pointer",
-                  display: "flex", alignItems: "center", justifyContent: "center" }}>âˆ’</button>
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>-</button>
             )}
           </div>
         );
@@ -1728,7 +1793,7 @@ function ThreatTracker({ level, cara, onLevelChange, magicLevels }) {
         <div style={{ display: "flex", gap: 6 }}>
           <button onClick={() => onLevelChange(Math.max(0, level - 1))}
             style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid #374151",
-              background: "#1e293b", color: "#d4b896", fontSize: 20, cursor: "pointer" }}>âˆ’</button>
+              background: "#1e293b", color: "#d4b896", fontSize: 20, cursor: "pointer" }}>-</button>
           <div style={{ width: 52, height: 44, borderRadius: 8, background: bandColor + "33",
             border: `2px solid ${bandColor}`, display: "flex", alignItems: "center",
             justifyContent: "center", color: bandColor, fontSize: 22, fontWeight: 800 }}>{level}</div>
@@ -1759,7 +1824,7 @@ function ThreatTracker({ level, cara, onLevelChange, magicLevels }) {
         ))}
       </div>
       <div style={{ fontSize: 10, color: "#6b7280", marginTop: 6, textAlign: "center" }}>
-        Cara {cara} Â· {level}/{totalSlots} clavijas
+        Cara {cara} | {level}/{totalSlots} clavijas
       </div>
     </div>
   );
@@ -1780,8 +1845,8 @@ function PhaseChecklist({ phases, completedPhases, completedSteps, onTogglePhase
                 display: "flex", alignItems: "center", gap: 10, cursor: "pointer", color: "#d4b896" }}>
               <span style={{ fontSize: 20 }}>{phase.icon}</span>
               <span style={{ flex: 1, textAlign: "left", fontSize: 14, fontWeight: 700 }}>{phase.name}</span>
-              {allDone && <span style={{ color: "#22c55e", fontSize: 18 }}>âœ“</span>}
-              <span style={{ fontSize: 12, transform: isOpen ? "rotate(180deg)" : "", transition: "0.2s" }}>â–¼</span>
+              {allDone && <span style={{ color: "#22c55e", fontSize: 18 }}>OK</span>}
+              <span style={{ fontSize: 12, transform: isOpen ? "rotate(180deg)" : "", transition: "0.2s" }}>v</span>
             </button>
             {isOpen && (
               <div style={{ padding: "0 14px 12px" }}>
@@ -1796,7 +1861,7 @@ function PhaseChecklist({ phases, completedPhases, completedSteps, onTogglePhase
                         border: done ? "2px solid #22c55e" : "2px solid #4b5563",
                         background: done ? "#22c55e22" : "transparent",
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        color: "#22c55e", fontSize: 14 }}>{done ? "âœ“" : ""}</div>
+                        color: "#22c55e", fontSize: 14 }}>{done ? "OK" : ""}</div>
                       <span style={{ color: done ? "#6b7280" : "#d4b896", fontSize: 13,
                         textDecoration: done ? "line-through" : "none" }}>{step}</span>
                     </button>
@@ -1821,7 +1886,7 @@ function Collapsible({ title, icon, children, defaultOpen }) {
           display: "flex", alignItems: "center", gap: 8, cursor: "pointer", color: "#d4b896" }}>
         {icon && <span style={{ fontSize: 18 }}>{icon}</span>}
         <span style={{ flex: 1, textAlign: "left", fontSize: 14, fontWeight: 700 }}>{title}</span>
-        <span style={{ fontSize: 12, transform: open ? "rotate(180deg)" : "", transition: "0.2s" }}>â–¼</span>
+        <span style={{ fontSize: 12, transform: open ? "rotate(180deg)" : "", transition: "0.2s" }}>v</span>
       </button>
       {open && <div style={{ padding: "0 14px 14px" }}>{children}</div>}
     </div>
@@ -1901,7 +1966,7 @@ function InventoryEditor({ adv, onUpdate }) {
   };
 
   return (
-    <Collapsible title="Inventario y Equipo" icon="ðŸ“¦">
+    <Collapsible title="Inventario y Equipo" icon="INV">
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Registra aqui lo que lleva el aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
       </div>
@@ -2398,12 +2463,12 @@ function SpellbookEditor({ adv, onUpdate }) {
   };
 
   return (
-    <Collapsible title="Libro de Hechizos" icon="ðŸ“˜" defaultOpen>
+    <Collapsible title="Libro de Hechizos" icon="MAG" defaultOpen>
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo es tu rango actual.
       </div>
       <div style={{ color: "#c4b5fd", fontSize: 12, marginBottom: 10 }}>
-        Rango actual: {rank} Â· PX libre: {remainingXP}
+        Rango actual: {rank} | PX libre: {remainingXP}
       </div>
 
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
@@ -2412,7 +2477,7 @@ function SpellbookEditor({ adv, onUpdate }) {
           style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8 }}>
           <option value="">{officialOptions.length ? "Selecciona un hechizo oficial" : "No hay hechizos oficiales disponibles a este rango"}</option>
           {officialOptions.map(spell => (
-            <option key={spell.id} value={spell.id}>Nivel {spell.level} Â· {spell.name}</option>
+            <option key={spell.id} value={spell.id}>Nivel {spell.level} | {spell.name}</option>
           ))}
         </select>
         {selectedOfficial && (
@@ -2743,10 +2808,12 @@ SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
   );
 };
 
-function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
+function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onCastMagic, onClose }) {
+  const normalized = normalizeAdventurer(adv);
   const [filter, setFilter] = useState("all");
-  const learnedSkills = getLearnedSkills(adv);
-  const spells = getKnownSpells(adv);
+  const learnedSkills = getLearnedSkills(normalized);
+  const spells = getKnownSpells(normalized);
+  const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
   const filters = [
     { id: "all", label: "Todo" },
     { id: "magic", label: "Magia" },
@@ -2768,6 +2835,7 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
       accent: "#93c5fd",
       meta: spell.school || "Oficial",
       magic: true,
+      spell,
     })),
     ...learnedSkills.map((skill, index) => ({
       id: "skill_" + slugKey(skill.name) + "_" + index,
@@ -2777,8 +2845,9 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
       summary: skill.summary,
       tags: skill.tags || [],
       accent: "#d4b896",
-      meta: skill.tags?.length ? skill.tags.join(" Â· ") : skill.source,
+      meta: skill.tags?.length ? skill.tags.join(" | ") : skill.source,
       magic: (skill.tags || []).includes("magic") || (skill.tags || []).includes("spell"),
+      spell: null,
     })),
   ];
 
@@ -2789,17 +2858,38 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
     onUpdateMission(addMagicThreatToMission(missionState));
   };
 
+  const castSpellFromAbilities = (spell, pegs) => {
+    if (!spell || typeof onCastMagic !== "function") return;
+    onCastMagic({
+      adventurerId: normalized.id,
+      adventurerName: normalized.nombre,
+      spell: {
+        name: spell.name,
+        level: spell.level,
+        summary: spell.summary || spell.notes || "",
+      },
+      pegs,
+    });
+    onClose();
+  };
+
   return (
-    <ModalSheet title="Habilidades" subtitle={adv.nombre + (adv.clase ? " Â· " + adv.clase : "")} onClose={onClose}>
-      {adv.magia_max > 0 && (
-        <button onClick={markFirstMagicUse} disabled={!missionState || missionState.magia_usada_esta_ronda}
-          style={{ width: "100%", padding: 12, borderRadius: 8, marginBottom: 12,
-            border: missionState?.magia_usada_esta_ronda ? "1px solid #1d4ed8" : "1px solid #3b82f6",
-            background: missionState?.magia_usada_esta_ronda ? "#1d4ed822" : "#3b82f622",
-            color: missionState?.magia_usada_esta_ronda ? "#93c5fd" : "#dbeafe",
-            fontSize: 13, fontWeight: 700, cursor: missionState?.magia_usada_esta_ronda ? "default" : "pointer" }}>
-          {missionState?.magia_usada_esta_ronda ? "Magia ya marcada esta ronda" : "Marcar primer uso de magia (+1 Amenaza)"}
-        </button>
+    <ModalSheet title="Habilidades" subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
+      {normalized.magia_max > 0 && (
+        <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 12 }}>
+          <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+            MP actual {normalized.magia_actual}/{normalized.magia_max}
+          </div>
+          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginBottom: !missionState?.magia_usada_esta_ronda ? 8 : 0 }}>
+            Si lanzas un hechizo desde aqui, se descontaran las clavijas automaticamente y se abrira el resultado del dado magico.
+          </div>
+          {!missionState?.magia_usada_esta_ronda && (
+            <button onClick={markFirstMagicUse}
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f622", color: "#dbeafe", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+              Marcar primer uso de magia (+1 Amenaza)
+            </button>
+          )}
+        </div>
       )}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
@@ -2819,30 +2909,38 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {visible.map(entry => (
             <div key={entry.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
-                    <span style={{ color: entry.accent, fontSize: 14, fontWeight: 700 }}>{entry.name}</span>
-                    <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{entry.source}</span>
-                    <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Nivel {entry.level}</span>
-                    {entry.meta && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{entry.meta}</span>}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
+                <span style={{ color: entry.accent, fontSize: 14, fontWeight: 700 }}>{entry.name}</span>
+                <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{entry.source}</span>
+                <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Nivel {entry.level}</span>
+                {entry.meta && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{entry.meta}</span>}
+              </div>
+              {entry.tags?.length > 0 && (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                  {entry.tags.map(tag => (
+                    <span key={tag} style={{ fontSize: 10, color: "#9ca3af", padding: "2px 6px", borderRadius: 999, border: "1px solid #374151", textTransform: "capitalize" }}>{tag}</span>
+                  ))}
+                </div>
+              )}
+              <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{entry.summary}</div>
+
+              {entry.source === "Hechizo" && (
+                <div style={{ marginTop: 10, background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+                  <div style={{ color: "#93c5fd", fontSize: 11, marginBottom: 8 }}>
+                    {normalized.magia_actual > 0 ? "Elige cuantas clavijas gastar para lanzarlo." : "Sin clavijas de Magia disponibles."}
                   </div>
-                  {entry.tags?.length > 0 && (
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
-                      {entry.tags.map(tag => (
-                        <span key={tag} style={{ fontSize: 10, color: "#9ca3af", padding: "2px 6px", borderRadius: 999, border: "1px solid #374151", textTransform: "capitalize" }}>{tag}</span>
+                  {magicPegOptions.length > 0 && (
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {magicPegOptions.map(value => (
+                        <button key={value} onClick={() => castSpellFromAbilities(entry.spell, value)}
+                          style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #3b82f6", background: "#1d4ed822", color: "#dbeafe", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          Usar {value}
+                        </button>
                       ))}
                     </div>
                   )}
-                  <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{entry.summary}</div>
                 </div>
-                {entry.magic && !missionState?.magia_usada_esta_ronda && (
-                  <button onClick={markFirstMagicUse}
-                    style={{ minWidth: 44, minHeight: 44, padding: "0 8px", borderRadius: 8, border: "1px solid #3b82f6", background: "#3b82f622", color: "#dbeafe", cursor: "pointer", fontSize: 12 }}>
-                    + Amenaza
-                  </button>
-                )}
-              </div>
+              )}
             </div>
           ))}
         </div>
@@ -2853,77 +2951,71 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onClose }) {
   );
 }
 
-function CombatQuickReferenceModal({ adv, missionState, onUpdateMission, onCastMagic, startMode, onClose }) {
+function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdventurerUpdate, startMode, onClose }) {
   const normalized = normalizeAdventurer(adv);
-  const preferredFlowMode = startMode === "defense" ? "defense" : "melee";
-  const [flowMode, setFlowMode] = useState(preferredFlowMode);
-  const [selectedCombatDetail, setSelectedCombatDetail] = useState(null);
-  const [selectedSpellId, setSelectedSpellId] = useState(null);
-  const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
-  const equipment = getEquipmentStats(normalized);
   const equippedItems = summarizeEquippedItems(normalized);
-  const meleeWeaponNames = getCombatEquipmentNames(equippedItems, "melee");
-  const rangedWeaponNames = getCombatEquipmentNames(equippedItems, "ranged");
+  const equipment = getEquipmentStats(normalized);
   const shieldNames = getCombatEquipmentNames(equippedItems, "shield");
   const armorNames = getCombatEquipmentNames(equippedItems, "armor");
-  const meleeSkills = getCombatSkillEntries(normalized, ["melee"]).slice(0, 4);
-  const rangedSkills = getCombatSkillEntries(normalized, ["ranged"]).slice(0, 4);
+  const meleeWeapons = getCombatWeaponOptions(normalized, "melee");
+  const rangedWeapons = getCombatWeaponOptions(normalized, "ranged");
+  const spells = getCombatSpellEntries(normalized).slice(0, 8);
   const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
-  const supportSkills = getCombatSkillEntries(normalized, ["support", "heal"]).slice(0, 4);
-  const meleeAttributeEntries = getCombatAttributeEntries(equippedItems, "melee");
-  const rangedAttributeEntries = getCombatAttributeEntries(equippedItems, "ranged");
   const defenseAttributeEntries = getCombatAttributeEntries(equippedItems, "defense");
-  const spells = getCombatSpellEntries(normalized).slice(0, 5);
-  const selectedSpell = spells.find(spell => spell.name === selectedSpellId) || spells[0] || null;
-  const magicPegOptions = selectedSpell
-    ? Array.from({ length: Math.max(0, Number(normalized.magia_actual) || 0) }, (_, index) => index + 1)
-    : [];
   const activeStatuses = [...new Set(normalized.status_effects || [])].map(getStatusMeta).filter(Boolean);
-  const showMagicSection = spells.length > 0 || supportSkills.length > 0 || equipment.magicItems > 0 || normalized.magia_max > 0 || normalized.magia_actual > 0;
+  const frenzyEntry = getLearnedSkills(normalized).find(skill => skill.name === "Frenzy") || null;
+  const canUseFrenzy = !!frenzyEntry && normalized.habilidad_actual > 0;
+  const availableAttackModes = [
+    { id: "melee", label: "Ataque C/C", enabled: true },
+    { id: "ranged", label: "Ataque Dist", enabled: rangedWeapons.length > 0 || equipment.rangedDice > 0 },
+    { id: "magic", label: "Magia", enabled: spells.length > 0 && normalized.magia_actual > 0 },
+  ].filter(option => option.enabled);
+  const defaultAttackMode = availableAttackModes[0]?.id || "melee";
+  const forcedAttackMode = ["melee", "ranged", "magic"].includes(startMode) ? startMode : null;
+  const [mode, setMode] = useState(startMode === "defense" ? "defense" : (forcedAttackMode && availableAttackModes.some(option => option.id === forcedAttackMode) ? forcedAttackMode : defaultAttackMode));
+  const [selectedMeleeId, setSelectedMeleeId] = useState(meleeWeapons[0]?.id || null);
+  const [selectedRangedId, setSelectedRangedId] = useState(rangedWeapons[0]?.id || null);
+  const [selectedSpellId, setSelectedSpellId] = useState(spells[0]?.name || null);
+  const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
+  const [useFrenzy, setUseFrenzy] = useState(false);
+  const [useForceful, setUseForceful] = useState(false);
   const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
-  const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 };
-  const flowOptions = [
-    { id: "melee", label: "Ataque C/C" },
-    { id: "ranged", label: "Ataque Dist" },
-    { id: "defense", label: "Defensa" },
-  ];
-  const activeFlowSteps = flowMode === "melee"
-    ? [
-        `1. Elige arma cuerpo a cuerpo: ${meleeWeaponNames.length > 0 ? meleeWeaponNames.join(", ") : "usa Combate sin armas o la carta del arma que lleves."}`,
-        "2. Aplica skills o efectos que digan 'antes del ataque' antes de tirar dados.",
-        "3. Tira con el perfil del arma/carta fisica y suma los dados o impactos extra que aporten skills y equipo.",
-        "4. Aplica criticos, Parry/Quickstrike/Forceful u otros atributos del arma si se activan.",
-        "5. El defensor reduce por Proteccion, Parry, Shield Block u otros efectos y luego aplica dano y estados.",
-      ]
-    : flowMode === "ranged"
-      ? [
-          `1. Elige arma a distancia: ${rangedWeaponNames.length > 0 ? rangedWeaponNames.join(", ") : "si no tienes una, no hay ataque a distancia equipado."}`,
-          "2. Confirma alcance, cobertura y si el arma usa municion o reglas especiales de disparo.",
-          "3. Aplica skills o hechizos que mejoren el disparo antes de tirar.",
-          "4. Tira usando el perfil de la carta fisica y resuelve atributos como Piercing, Blast, Sharp o similares.",
-          "5. El objetivo reduce impactos por cobertura/armadura si procede y luego aplica dano o estados.",
-        ]
-      : [
-          "1. Identifica si el ataque es cuerpo a cuerpo, a distancia o magico.",
-          `2. Revisa tu defensa base: Escudo ${equipment.shield || 0}, Proteccion ${equipment.armor || 0}${armorNames.length > 0 ? `, Armadura ${armorNames.join(", ")}` : ""}.`,
-          "3. Antes de aplicar el dano, usa reacciones disponibles: Parry, Shield Block, rerolls defensivos o skills de reaccion.",
-          "4. Si el ataque ignora armadura fisica, no apliques Proteccion ni algunos rerolls defensivos.",
-          "5. Con los impactos finales, ajusta Salud y estados que correspondan.",
-        ];
-  const toggleCombatDetail = (detail) => {
-    setSelectedCombatDetail(prev => prev?.label === detail.label && prev?.source === detail.source ? null : detail);
-  };
+  const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 };
+  const selectedMelee = meleeWeapons.find(item => item.id === selectedMeleeId) || meleeWeapons[0] || null;
+  const selectedRanged = rangedWeapons.find(item => item.id === selectedRangedId) || rangedWeapons[0] || null;
+  const selectedSpell = spells.find(spell => spell.name === selectedSpellId) || spells[0] || null;
+  const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
+  const frenzyBonus = useFrenzy ? getFrenzyBonusDice(frenzyEntry?.level || 0) : 0;
+  const meleeDiceTotal = (selectedMelee?.dice || equipment.meleeDice || 0) + frenzyBonus;
 
   useEffect(() => {
-    setFlowMode(startMode === "defense" ? "defense" : "melee");
-  }, [startMode]);
-
-  useEffect(() => {
-    if (!spells.length) {
-      setSelectedSpellId(null);
+    if (startMode === "defense") {
+      setMode("defense");
       return;
     }
-    if (!selectedSpellId || !spells.some(spell => spell.name === selectedSpellId)) {
+    if (forcedAttackMode && availableAttackModes.some(option => option.id === forcedAttackMode)) {
+      setMode(forcedAttackMode);
+      return;
+    }
+    if (mode === "defense" || !availableAttackModes.some(option => option.id === mode)) {
+      setMode(defaultAttackMode);
+    }
+  }, [availableAttackModes, defaultAttackMode, forcedAttackMode, mode, startMode]);
+
+  useEffect(() => {
+    if (meleeWeapons.length && !meleeWeapons.some(item => item.id === selectedMeleeId)) {
+      setSelectedMeleeId(meleeWeapons[0].id);
+    }
+  }, [meleeWeapons, selectedMeleeId]);
+
+  useEffect(() => {
+    if (rangedWeapons.length && !rangedWeapons.some(item => item.id === selectedRangedId)) {
+      setSelectedRangedId(rangedWeapons[0].id);
+    }
+  }, [rangedWeapons, selectedRangedId]);
+
+  useEffect(() => {
+    if (spells.length && !spells.some(spell => spell.name === selectedSpellId)) {
       setSelectedSpellId(spells[0].name);
     }
   }, [selectedSpellId, spells]);
@@ -2934,241 +3026,292 @@ function CombatQuickReferenceModal({ adv, missionState, onUpdateMission, onCastM
       return;
     }
     if (!magicPegOptions.includes(selectedMagicPegs)) {
-      setSelectedMagicPegs(1);
+      setSelectedMagicPegs(magicPegOptions[0]);
     }
   }, [magicPegOptions, selectedMagicPegs]);
 
+  useEffect(() => {
+    if (!canUseFrenzy) setUseFrenzy(false);
+  }, [canUseFrenzy]);
+
+  useEffect(() => {
+    if (!selectedMelee?.rawAttributes?.includes("forceful_melee")) {
+      setUseForceful(false);
+    }
+  }, [selectedMelee]);
+
+  const applyPhysicalAttack = () => {
+    if (useFrenzy && typeof onApplyAdventurerUpdate === "function") {
+      onApplyAdventurerUpdate(applyAdventurerResourceSpend(normalized, { skill: 1 }));
+    }
+    onClose();
+  };
+
   const castSelectedSpell = () => {
     if (!selectedSpell || !selectedMagicPegs || typeof onCastMagic !== "function") return;
-    if (!missionState?.magia_usada_esta_ronda && typeof onUpdateMission === "function") {
-      onUpdateMission(addMagicThreatToMission(missionState));
-    }
     onCastMagic({
       adventurerId: normalized.id,
       adventurerName: normalized.nombre,
       spell: selectedSpell,
       pegs: selectedMagicPegs,
     });
+    onClose();
   };
 
-  const renderDetailChips = (entries, tone) => {
+  const renderTagList = (entries, tone = "neutral") => {
     if (!entries || entries.length === 0) return null;
     const styleMap = {
+      neutral: { color: "#d4b896", border: "#374151" },
       attack: { color: "#fde68a", border: "#92400e" },
-      range: { color: "#fca5a5", border: "#7f1d1d" },
       defense: { color: "#bfdbfe", border: "#1d4ed8" },
-      skill: { color: "#d4b896", border: "#374151" },
     };
-    const style = styleMap[tone] || styleMap.skill;
+    const style = styleMap[tone] || styleMap.neutral;
     return (
       <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
         {entries.map((entry, index) => (
-          <button key={entry.label + "_" + entry.source + "_" + index} onClick={() => toggleCombatDetail(entry)} title={entry.summary}
-            style={{ fontSize: 11, color: style.color, padding: "4px 8px", borderRadius: 999, border: `1px solid ${style.border}`, background: selectedCombatDetail?.label === entry.label && selectedCombatDetail?.source === entry.source ? style.border + "22" : "#111827", cursor: "pointer" }}>
-            {entry.label}
-          </button>
+          <span key={(entry.id || entry.label || entry.name) + "_" + index}
+            title={entry.summary || ""}
+            style={{ fontSize: 11, color: style.color, padding: "4px 8px", borderRadius: 999, border: `1px solid ${style.border}`, background: "#111827" }}>
+            {entry.label || entry.name}
+          </span>
         ))}
       </div>
     );
   };
 
+  const modalTitle = mode === "defense"
+    ? "Defensa"
+    : mode === "ranged"
+      ? "Ataque Dist"
+      : mode === "magic"
+        ? "Magia"
+        : "Ataque C/C";
+
   return (
-    <ModalSheet title="Combate" subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-        <div style={cardStyle}>
-          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Ataque base</div>
-          <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
-            {formatCombatStatLine("C/C", equipment.meleeDice, "Sin arma o Combate sin armas", meleeWeaponNames)}
-            <br />
-            {formatCombatStatLine("Dist", equipment.rangedDice, "Sin arma a distancia", rangedWeaponNames)}
-          </div>
-          {(meleeWeaponNames.length > 0 || rangedWeaponNames.length > 0) && (
-            <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
-              Si el arma no muestra dados aqui, usa el perfil de su carta fisica.
-            </div>
-          )}
-          {renderDetailChips([
-            ...meleeSkills.map(skill => ({ label: skill.name, summary: skill.summary, source: `Skill ${skill.level}` })),
-            ...meleeAttributeEntries,
-            ...(rangedWeaponNames.length > 0 ? rangedAttributeEntries : []),
-          ], "attack")}
+    <ModalSheet title={modalTitle} subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
+      <div style={{ ...cardStyle, marginBottom: 12 }}>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: "#22c55e", padding: "4px 8px", borderRadius: 999, border: "1px solid #166534" }}>HP {normalized.salud_actual}/{normalized.salud_max}</span>
+          <span style={{ fontSize: 11, color: "#d946ef", padding: "4px 8px", borderRadius: 999, border: "1px solid #86198f" }}>SP {normalized.habilidad_actual}/{normalized.habilidad_max}</span>
+          <span style={{ fontSize: 11, color: "#60a5fa", padding: "4px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>MP {normalized.magia_actual}/{normalized.magia_max}</span>
         </div>
-        <div style={cardStyle}>
-          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Defensa base</div>
-          <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
-            {formatCombatStatLine("Escudo", equipment.shield, "Sin bloqueo adicional", shieldNames)}
-            <br />
-            {armorNames.length > 0 ? `Armadura: ${armorNames.join(", ")}` : "Armadura: Sin armadura adicional"}
-            <br />
-            {formatCombatStatLine("Prot", equipment.armor, "Sin proteccion adicional")}
-          </div>
-          {armorNames.length > 0 && (
-            <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
-              La armadura equipada aporta la proteccion indicada por su carta y sus atributos.
+        {activeStatuses.length > 0 && (
+          <div style={{ marginTop: 8 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Estados activos</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {activeStatuses.map(status => (
+                <span key={status.id} style={{ fontSize: 11, color: status.color, padding: "4px 8px", borderRadius: 999, border: `1px solid ${status.color}55`, background: "#111827" }}>
+                  {status.name}
+                </span>
+              ))}
             </div>
-          )}
-          {renderDetailChips([
-            ...defenseAttributeEntries,
-            ...defenseSkills.map(skill => ({ label: skill.name, summary: skill.summary, source: `Skill ${skill.level}` })),
-          ], "defense")}
-        </div>
+          </div>
+        )}
       </div>
 
-      {selectedCombatDetail && (
-        <div style={{ ...cardStyle, marginBottom: 12, border: "1px solid #374151" }}>
-          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{selectedCombatDetail.label}</div>
-          <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 6 }}>{selectedCombatDetail.source}</div>
-          <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{selectedCombatDetail.summary}</div>
-        </div>
-      )}
-
-      <div style={{ marginBottom: 12 }}>
-        <div style={sectionTitleStyle}>Flujo rapido</div>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 8 }}>
-          {flowOptions.map(option => (
-            <button key={option.id} onClick={() => setFlowMode(option.id)}
-              style={{ padding: "8px 12px", borderRadius: 999, border: flowMode === option.id ? "1px solid #eab308" : "1px solid #374151", background: flowMode === option.id ? "#eab30822" : "#111827", color: flowMode === option.id ? "#fde68a" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-              {option.label}
-            </button>
-          ))}
-        </div>
-        <div style={cardStyle}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {activeFlowSteps.map((step, index) => (
-              <div key={flowMode + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8, color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
-                {step}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {activeStatuses.length > 0 && (
+      {mode !== "defense" && !forcedAttackMode && availableAttackModes.length > 1 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={sectionTitleStyle}>Estados activos</div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-            {activeStatuses.map(status => (
-              <span key={status.id} style={{ fontSize: 12, color: status.color, padding: "6px 10px", borderRadius: 999, border: `1px solid ${status.color}55`, background: "#111827" }}>
-                {status.icon} {status.name}
-              </span>
+          <div style={sectionTitleStyle}>Tipo de ataque</div>
+          <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            {availableAttackModes.map(option => (
+              <button key={option.id} onClick={() => setMode(option.id)}
+                style={{ padding: "8px 12px", borderRadius: 999, border: mode === option.id ? "1px solid #eab308" : "1px solid #374151", background: mode === option.id ? "#eab30822" : "#111827", color: mode === option.id ? "#fde68a" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                {option.label}
+              </button>
             ))}
           </div>
         </div>
       )}
 
-      <div style={{ marginBottom: 12 }}>
-        <div style={sectionTitleStyle}>Ataque cuerpo a cuerpo</div>
-        <div style={{ ...cardStyle, marginBottom: 8 }}>
-          <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
-            Usa el arma o equipo cuerpo a cuerpo que lleves encima. Si una habilidad dice "antes del ataque", aplicala antes de tirar.
-          </div>
-          {meleeSkills.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-              {meleeSkills.map((skill, index) => (
-                <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
-                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
-                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+      {mode === "melee" && (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Arma cuerpo a cuerpo</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {meleeWeapons.length > 0 ? meleeWeapons.map(item => (
+                <button key={item.id} onClick={() => setSelectedMeleeId(item.id)}
+                  style={{ ...cardStyle, textAlign: "left", cursor: "pointer", border: selectedMelee?.id === item.id ? "1px solid #eab308" : "1px solid #2d2d44" }}>
+                  <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{item.name}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11 }}>
+                    {item.dice > 0 ? `Tira ${item.dice} dado${item.dice === 1 ? "" : "s"}.` : "Usa el perfil de la carta del arma."}
+                  </div>
+                </button>
+              )) : (
+                <div style={cardStyle}>
+                  <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Combate sin armas</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11 }}>No hay arma melee cargada. Usa el perfil oficial que corresponda.</div>
                 </div>
-              ))}
+              )}
             </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ marginBottom: 12 }}>
-        <div style={sectionTitleStyle}>Ataque a distancia</div>
-        <div style={cardStyle}>
-          <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
-            Revisa el perfil de alcance del arma y aplica cobertura, armadura y atributos del disparo.
           </div>
-          {rangedSkills.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-              {rangedSkills.map((skill, index) => (
-                <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
-                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
-                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
 
-      <div style={{ marginBottom: 12 }}>
-        <div style={sectionTitleStyle}>Defensa y reacciones</div>
-        <div style={cardStyle}>
-          <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>
-            Si vas a defenderte, combina Proteccion, Escudo, Parry, Shield Block y cualquier reaccion disponible antes de aplicar el dano final.
-          </div>
-          {defenseSkills.length > 0 && (
-            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-              {defenseSkills.map((skill, index) => (
-                <div key={skill.name + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
-                  <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
-                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {showMagicSection && (
-        <div style={{ marginBottom: 12 }}>
-          <div style={sectionTitleStyle}>Magia y apoyo</div>
-          <div style={cardStyle}>
-            <div style={{ color: "#93c5fd", fontSize: 12, marginBottom: 8 }}>
-              {`MP actual ${normalized.magia_actual}/${normalized.magia_max}${equipment.magicItems > 0 ? ` | Objetos magicos ${equipment.magicItems}` : ""}`}
-            </div>
-            {normalized.magia_actual > 0 && (
-              <div style={{ color: missionState?.magia_usada_esta_ronda ? "#93c5fd" : "#60a5fa", fontSize: 11, lineHeight: 1.5, marginBottom: 10 }}>
-                {missionState?.magia_usada_esta_ronda
-                  ? "La Amenaza azul por usar magia ya esta marcada en esta ronda."
-                  : "Si este es el primer uso de magia de la ronda, al lanzar el hechizo se marcara automaticamente +1 Amenaza azul."}
+          {selectedMelee && (
+            <div style={{ ...cardStyle, marginBottom: 12 }}>
+              <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{selectedMelee.name}</div>
+              <div style={{ color: "#fde68a", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                {selectedMelee.dice > 0 ? `Tira ${selectedMelee.dice} dado${selectedMelee.dice === 1 ? "" : "s"} base.` : "Usa el perfil de la carta del arma."}
               </div>
-            )}
-            {spells.length > 0 ? (
+              {!!selectedMelee.summary && <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{selectedMelee.summary}</div>}
+              {renderTagList(selectedMelee.attributes, "attack")}
+            </div>
+          )}
+
+          {(selectedMelee?.rawAttributes?.includes("forceful_melee") || frenzyEntry) && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={sectionTitleStyle}>Opciones de ataque</div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {spells.map((spell, index) => (
-                  <button key={spell.name + "_" + index} onClick={() => setSelectedSpellId(spell.name)}
-                    style={{ background: selectedSpell?.name === spell.name ? "#1d4ed822" : "#111827", borderRadius: 8, border: selectedSpell?.name === spell.name ? "1px solid #3b82f6" : "1px solid #1f2937", padding: 8, cursor: "pointer", textAlign: "left" }}>
-                    <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>{spell.name} | Nivel {spell.level}</div>
-                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{spell.summary}</div>
+                {selectedMelee?.rawAttributes?.includes("forceful_melee") && (
+                  <button onClick={() => setUseForceful(prev => !prev)}
+                    style={{ ...cardStyle, cursor: "pointer", textAlign: "left", border: useForceful ? "1px solid #eab308" : "1px solid #2d2d44" }}>
+                    <div style={{ color: useForceful ? "#fde68a" : "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Potenciar</div>
+                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                      {useForceful ? "Marcado. Aplica el efecto exacto de Forceful segun la carta del arma." : "Disponible en esta arma. Marcalo aqui si quieres recordarlo al resolver el ataque."}
+                    </div>
+                  </button>
+                )}
+                {frenzyEntry && (
+                  <button onClick={() => canUseFrenzy && setUseFrenzy(prev => !prev)} disabled={!canUseFrenzy}
+                    style={{ ...cardStyle, cursor: canUseFrenzy ? "pointer" : "default", textAlign: "left", opacity: canUseFrenzy ? 1 : 0.5, border: useFrenzy ? "1px solid #d946ef" : "1px solid #2d2d44" }}>
+                    <div style={{ color: useFrenzy ? "#f5d0fe" : "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                      Frenzy {frenzyEntry.level ? `| Nivel ${frenzyEntry.level}` : ""}
+                    </div>
+                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                      {canUseFrenzy ? `Anade ${getFrenzyBonusDice(frenzyEntry.level)} dado${getFrenzyBonusDice(frenzyEntry.level) === 1 ? "" : "s"} y descuenta 1 SP al confirmar.` : "No hay SP disponible para activar Frenzy ahora."}
+                    </div>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          <div style={{ ...cardStyle, marginBottom: 12 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Resumen</div>
+            <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
+              {selectedMelee ? (selectedMelee.dice > 0 ? `Dados a tirar: ${meleeDiceTotal}` : "Dados: usa la carta del arma.") : "Sin arma melee seleccionada."}
+            </div>
+            {useFrenzy && <div style={{ color: "#d946ef", fontSize: 11, marginTop: 6 }}>Al confirmar se descontara 1 SP.</div>}
+            {useForceful && <div style={{ color: "#fde68a", fontSize: 11, marginTop: 6 }}>Potenciar queda marcado como recordatorio.</div>}
+          </div>
+
+          <button onClick={applyPhysicalAttack}
+            style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #92400e", background: "#92400e22", color: "#fde68a", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            Atacar
+          </button>
+        </>
+      )}
+
+      {mode === "ranged" && (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Arma a distancia</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {rangedWeapons.length > 0 ? rangedWeapons.map(item => (
+                <button key={item.id} onClick={() => setSelectedRangedId(item.id)}
+                  style={{ ...cardStyle, textAlign: "left", cursor: "pointer", border: selectedRanged?.id === item.id ? "1px solid #eab308" : "1px solid #2d2d44" }}>
+                  <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{item.name}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11 }}>
+                    {item.dice > 0 ? `Tira ${item.dice} dado${item.dice === 1 ? "" : "s"}.` : "Usa el perfil de la carta del arma."}
+                    {item.range.length > 0 ? ` Alcance ${item.range.join("/")}.` : ""}
+                  </div>
+                </button>
+              )) : (
+                <div style={cardStyle}>
+                  <div style={{ color: "#9ca3af", fontSize: 11 }}>No hay arma a distancia cargada en la ficha.</div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {selectedRanged && (
+            <div style={{ ...cardStyle, marginBottom: 12 }}>
+              <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{selectedRanged.name}</div>
+              <div style={{ color: "#fca5a5", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+                {selectedRanged.dice > 0 ? `Tira ${selectedRanged.dice} dado${selectedRanged.dice === 1 ? "" : "s"}.` : "Usa el perfil de la carta del arma."}
+              </div>
+              {selectedRanged.range.length > 0 && <div style={{ color: "#d4b896", fontSize: 12, marginBottom: 6 }}>Alcance: {selectedRanged.range.join("/")}</div>}
+              {!!selectedRanged.summary && <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{selectedRanged.summary}</div>}
+              {renderTagList(selectedRanged.attributes, "attack")}
+            </div>
+          )}
+
+          <button onClick={applyPhysicalAttack}
+            style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            Atacar
+          </button>
+        </>
+      )}
+
+      {mode === "magic" && (
+        <>
+          <div style={{ marginBottom: 12 }}>
+            <div style={sectionTitleStyle}>Hechizo</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {spells.map((spell, index) => (
+                <button key={spell.name + "_" + index} onClick={() => setSelectedSpellId(spell.name)}
+                  style={{ ...cardStyle, textAlign: "left", cursor: "pointer", border: selectedSpell?.name === spell.name ? "1px solid #3b82f6" : "1px solid #2d2d44" }}>
+                  <div style={{ color: "#93c5fd", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{spell.name} | Nivel {spell.level}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{spell.summary}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {selectedSpell && (
+            <div style={{ ...cardStyle, marginBottom: 12 }}>
+              <div style={{ color: "#93c5fd", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>{selectedSpell.name}</div>
+              <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Clavijas de Magia a gastar</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                {magicPegOptions.map(value => (
+                  <button key={value} onClick={() => setSelectedMagicPegs(value)}
+                    style={{ padding: "6px 10px", borderRadius: 999, border: selectedMagicPegs === value ? "1px solid #3b82f6" : "1px solid #374151", background: selectedMagicPegs === value ? "#1d4ed822" : "#0f172a", color: selectedMagicPegs === value ? "#dbeafe" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                    {value}
                   </button>
                 ))}
               </div>
-            ) : (
-              <div style={{ color: "#6b7280", fontSize: 12 }}>No hay hechizos aprendidos cargados en esta ficha.</div>
-            )}
-            {selectedSpell && normalized.magia_actual > 0 && (
-              <div style={{ marginTop: 10, background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
-                <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>{selectedSpell.name}</div>
-                <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Clavijas de Magia a gastar</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                  {magicPegOptions.map(value => (
-                    <button key={value} onClick={() => setSelectedMagicPegs(value)}
-                      style={{ padding: "6px 10px", borderRadius: 999, border: selectedMagicPegs === value ? "1px solid #3b82f6" : "1px solid #374151", background: selectedMagicPegs === value ? "#1d4ed822" : "#0f172a", color: selectedMagicPegs === value ? "#dbeafe" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                      {value}
-                    </button>
-                  ))}
-                </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
-                  <span style={{ fontSize: 12, color: "#93c5fd", padding: "4px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>{`Gastas ${selectedMagicPegs} MP`}</span>
-                  <span style={{ fontSize: 12, color: "#fde68a", padding: "4px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Resuelve el hechizo con su texto oficial</span>
-                </div>
-                <button onClick={castSelectedSpell}
-                  style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #1d4ed8", background: "#1d4ed822", color: "#dbeafe", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  Lanzar hechizo
-                </button>
+              <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6, marginBottom: 6 }}>
+                {getSpellCastingPreview(selectedSpell, selectedMagicPegs)}
               </div>
-            )}
-            {spells.length === 0 && supportSkills.length > 0 && (
-              <div style={{ marginTop: 10, color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
-                Este personaje no tiene hechizos cargados, pero si habilidades o equipo de apoyo. Resuelvelos segun la carta o el manual.
+              <div style={{ color: missionState?.magia_usada_esta_ronda ? "#93c5fd" : "#60a5fa", fontSize: 11, lineHeight: 1.5 }}>
+                {missionState?.magia_usada_esta_ronda ? "La Amenaza azul de esta ronda ya esta marcada." : "Si es la primera magia de la ronda, al confirmar se marcara automaticamente +1 Amenaza azul."}
               </div>
-            )}
+            </div>
+          )}
+
+          <button onClick={castSelectedSpell} disabled={!selectedSpell || !selectedMagicPegs}
+            style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #1d4ed8", background: selectedSpell ? "#1d4ed822" : "#111827", color: selectedSpell ? "#dbeafe" : "#6b7280", fontSize: 12, fontWeight: 700, cursor: selectedSpell ? "pointer" : "default" }}>
+            Atacar con magia
+          </button>
+        </>
+      )}
+
+      {mode === "defense" && (
+        <>
+          <div style={{ ...cardStyle, marginBottom: 12 }}>
+            <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>Defensa actual</div>
+            <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
+              {formatCombatStatLine("Escudo", equipment.shield, "Sin escudo adicional", shieldNames)}
+              <br />
+              {formatCombatStatLine("Prot", equipment.armor, "Sin proteccion adicional")}
+              <br />
+              {armorNames.length > 0 ? `Armadura: ${armorNames.join(", ")}` : "Armadura: sin armadura adicional"}
+            </div>
+            {renderTagList(defenseAttributeEntries, "defense")}
           </div>
-        </div>
+
+          {defenseSkills.length > 0 && (
+            <div style={{ marginBottom: 12 }}>
+              <div style={sectionTitleStyle}>Reacciones y skills</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {defenseSkills.map((skill, index) => (
+                  <div key={skill.name + "_" + index} style={cardStyle}>
+                    <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{skill.name} | Nivel {skill.level}</div>
+                    <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </ModalSheet>
   );
@@ -3194,13 +3337,16 @@ function MagicResultModal({ state, onApplyResult, onClose }) {
     <ModalSheet title="Resultado dado magico" subtitle={`${state.adventurerName} | ${state.spell?.name || "Hechizo"}`} onClose={onClose}>
       <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 12 }}>
         <div style={{ color: "#93c5fd", fontSize: 12, marginBottom: 6 }}>{`Clavijas gastadas: ${state.pegs} MP`}</div>
+        {typeof state.magia_antes === "number" && typeof state.magia_despues === "number" && (
+          <div style={{ color: "#60a5fa", fontSize: 11, marginBottom: 6 }}>{`MP ${state.magia_antes} -> ${state.magia_despues}`}</div>
+        )}
         <div style={{ color: "#fde68a", fontSize: 12, marginBottom: 6 }}>
           Resuelve el hechizo segun su texto oficial y aplica tambien este resultado del dado magico.
         </div>
         <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{state.spell?.summary || "Sin resumen cargado."}</div>
       </div>
       <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>
-        Â¿Que salio en el dado magico?
+        Que salio en el dado magico?
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 12 }}>
         {[1,2,3,4,5,6].map(value => (
@@ -3338,7 +3484,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
   const mission = MISSIONS[missionState.mision_id];
   const mName = mission?.nombre || missionState.mision_id;
   const [activeCombatAdv, setActiveCombatAdv] = useState(null);
-  const [activeCombatMode, setActiveCombatMode] = useState("attack");
+  const [activeCombatMode, setActiveCombatMode] = useState("melee");
   const [magicResultState, setMagicResultState] = useState(null);
   const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
   const [activeItemAdv, setActiveItemAdv] = useState(null);
@@ -3378,18 +3524,37 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
   const selectedItemAdv = adventurers.find(a => a.id === activeItemAdv) || null;
   const selectedRestAdv = adventurers.find(a => a.id === activeRestAdv) || null;
   const handleCastMagic = (payload) => {
-    setMagicResultState(payload);
+    if (!payload?.adventurerId) return;
+    const adventurer = adventurers.find(entry => entry.id === payload.adventurerId);
+    if (!adventurer) return;
+    const normalized = normalizeAdventurer(adventurer);
+    const pegs = Math.max(1, Math.min(Number(payload.pegs) || 1, normalized.magia_actual));
+    const updatedAdventurer = applyAdventurerResourceSpend(normalized, { magic: pegs });
+    onUpdateAdventurer(updatedAdventurer);
+    if (!missionState.magia_usada_esta_ronda) {
+      onUpdateMission(addMagicThreatToMission(missionState));
+    }
+    setMagicResultState({
+      ...payload,
+      pegs,
+      magia_antes: normalized.magia_actual,
+      magia_despues: updatedAdventurer.magia_actual,
+    });
     setActiveCombatAdv(null);
+    setActiveAbilityAdv(null);
   };
   const handleMagicResultApply = (result, payload) => {
     if (result !== 3 || !payload?.adventurerId) return;
     const adventurer = adventurers.find(entry => entry.id === payload.adventurerId);
     if (!adventurer) return;
     const normalized = normalizeAdventurer(adventurer);
-    if (normalized.magia_actual >= normalized.magia_max) return;
+    const baseMagic = typeof payload.magia_despues === "number"
+      ? Math.max(0, Math.min(normalized.magia_max, Number(payload.magia_despues) || 0))
+      : normalized.magia_actual;
+    if (baseMagic >= normalized.magia_max) return;
     onUpdateAdventurer({
       ...normalized,
-      magia_actual: Math.min(normalized.magia_max, normalized.magia_actual + 1),
+      magia_actual: Math.min(normalized.magia_max, baseMagic + 1),
     });
   };
   const handleMissionRest = (updatedAdventurer) => {
@@ -3431,7 +3596,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         </div>
         <button onClick={() => patchMission({ primary_complete: !missionState.primary_complete })}
           style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, marginBottom: 10, cursor: "pointer", textAlign: "left" }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "âœ“" : ""}</div>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "OK" : ""}</div>
           <div>
             <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo primario</div>
             <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_primario || "Sin texto cargado."}</div>
@@ -3439,7 +3604,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         </button>
         <button onClick={() => patchMission({ secondary_complete: !missionState.secondary_complete })}
           style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "âœ“" : ""}</div>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "OK" : ""}</div>
           <div>
             <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo secundario</div>
             <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_secundario || "Sin objetivo secundario."}</div>
@@ -3492,6 +3657,16 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         const normalized = normalizeAdventurer(a);
         const equipment = getEquipmentStats(normalized);
         const equipped = summarizeEquippedItems(normalized);
+        const knownSpells = getKnownSpells(normalized);
+        const actionButtons = [
+          { id: "melee", label: "Ataque C/C", enabled: true, tone: "attack" },
+          { id: "ranged", label: "Ataque Dist", enabled: equipment.rangedDice > 0 || equipped.some(item => (item.ranged || 0) > 0), tone: "ranged" },
+          { id: "magic", label: "Magia", enabled: knownSpells.length > 0, disabled: normalized.magia_actual <= 0, tone: "magic" },
+          { id: "defense", label: "Defensa", enabled: true, tone: "defense" },
+          { id: "rest", label: "Descansar", enabled: true, tone: "rest" },
+          { id: "abilities", label: "Habilidades", enabled: true, tone: "neutral" },
+          { id: "items", label: "Items", enabled: true, tone: "neutral" },
+        ].filter(button => button.enabled);
         return (
           <div key={a.id} style={{ background: "#1a1a2e", borderRadius: 10, padding: 12,
             border: "1px solid #2d2d44", marginBottom: 8 }}>
@@ -3522,7 +3697,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
               {equipment.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{equipment.rangedDice}</span>}
               {equipment.shield > 0 && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {equipment.shield}</span>}
               {equipment.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot +{equipment.armor}</span>}
-              {getKnownSpells(normalized).length > 0 && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{getKnownSpells(normalized).length} hechizos</span>}
+              {knownSpells.length > 0 && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{knownSpells.length} hechizos</span>}
             </div>
 
             {equipped.length > 0 && (
@@ -3531,27 +3706,42 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
               </div>
             )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 8 }}>
-              <button onClick={() => { setActiveCombatMode("attack"); setActiveCombatAdv(normalized.id); }}
-                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
-                Ataque
-              </button>
-              <button onClick={() => { setActiveCombatMode("defense"); setActiveCombatAdv(normalized.id); }}
-                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
-                Defensa
-              </button>
-              <button onClick={() => setActiveRestAdv(normalized.id)}
-                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
-                Descansar
-              </button>
-              <button onClick={() => setActiveAbilityAdv(normalized.id)}
-                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
-                Habilidades
-              </button>
-              <button onClick={() => setActiveItemAdv(normalized.id)}
-                style={{ padding: 12, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", color: "#d4b896", fontSize: 12, cursor: "pointer" }}>
-                Items
-              </button>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 8 }}>
+              {actionButtons.map(button => {
+                const palette = {
+                  attack: { border: "#92400e", background: "#92400e22", color: "#fde68a" },
+                  ranged: { border: "#7f1d1d", background: "#7f1d1d22", color: "#fca5a5" },
+                  magic: { border: "#1d4ed8", background: "#1d4ed822", color: "#dbeafe" },
+                  defense: { border: "#1d4ed8", background: "#1d4ed822", color: "#bfdbfe" },
+                  rest: { border: "#166534", background: "#16653422", color: "#bbf7d0" },
+                  neutral: { border: "#2d2d44", background: "#0f172a", color: "#d4b896" },
+                };
+                const style = palette[button.tone] || palette.neutral;
+                const disabled = !!button.disabled;
+                const handleClick = () => {
+                  if (disabled) return;
+                  if (button.id === "rest") {
+                    setActiveRestAdv(normalized.id);
+                    return;
+                  }
+                  if (button.id === "abilities") {
+                    setActiveAbilityAdv(normalized.id);
+                    return;
+                  }
+                  if (button.id === "items") {
+                    setActiveItemAdv(normalized.id);
+                    return;
+                  }
+                  setActiveCombatMode(button.id);
+                  setActiveCombatAdv(normalized.id);
+                };
+                return (
+                  <button key={button.id} onClick={handleClick} disabled={disabled}
+                    style={{ padding: 12, borderRadius: 8, border: `1px solid ${style.border}`, background: disabled ? "#111827" : style.background, color: disabled ? "#4b5563" : style.color, fontSize: 12, fontWeight: 700, cursor: disabled ? "default" : "pointer" }}>
+                    {button.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
         );
@@ -3570,8 +3760,8 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         <CombatQuickReferenceModal
           adv={selectedCombatAdv}
           missionState={missionState}
-          onUpdateMission={onUpdateMission}
           onCastMagic={handleCastMagic}
+          onApplyAdventurerUpdate={onUpdateAdventurer}
           startMode={activeCombatMode}
           onClose={() => setActiveCombatAdv(null)}
         />
@@ -3590,6 +3780,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           adv={selectedAbilityAdv}
           missionState={missionState}
           onUpdateMission={onUpdateMission}
+          onCastMagic={handleCastMagic}
           onClose={() => setActiveAbilityAdv(null)}
         />
       )}
@@ -3834,7 +4025,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         </div>
         <button onClick={() => patchMission({ primary_complete: !missionState.primary_complete })}
           style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, marginBottom: 10, cursor: "pointer", textAlign: "left" }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "âœ“" : ""}</div>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "OK" : ""}</div>
           <div>
             <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo primario</div>
             <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_primario || "Sin texto cargado."}</div>
@@ -3842,7 +4033,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         </button>
         <button onClick={() => patchMission({ secondary_complete: !missionState.secondary_complete })}
           style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "âœ“" : ""}</div>
+          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "OK" : ""}</div>
           <div>
             <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo secundario</div>
             <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_secundario || "Sin objetivo secundario."}</div>
@@ -4633,7 +4824,7 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         <button onClick={() => updateField(path, Math.max(0, val - 1))}
           style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid #374151",
-            background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>âˆ’</button>
+            background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
         <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 28, textAlign: "center" }}>{val}</span>
         <button onClick={() => updateField(path, val + 1)}
           style={{ width: 32, height: 32, borderRadius: 6, border: "1px solid #374151",
@@ -4648,7 +4839,7 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
         borderRadius: 8, background: "#0f172a", border: "none", marginBottom: 4, cursor: "pointer", textAlign: "left" }}>
       <div style={{ width: 22, height: 22, borderRadius: 4, border: val ? "2px solid #22c55e" : "2px solid #4b5563",
         background: val ? "#22c55e22" : "transparent", display: "flex", alignItems: "center",
-        justifyContent: "center", color: "#22c55e", fontSize: 14, flexShrink: 0 }}>{val ? "âœ“" : ""}</div>
+        justifyContent: "center", color: "#22c55e", fontSize: 14, flexShrink: 0 }}>{val ? "OK" : ""}</div>
       <span style={{ color: val ? "#d4b896" : "#6b7280", fontSize: 13 }}>{label}</span>
     </button>
   );
@@ -4678,8 +4869,8 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
 
   return (
     <div style={{ padding: 16 }}>
-      <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>â† Volver</button>
-      <h2 style={{ color: "#d4b896", fontSize: 18, fontWeight: 800, margin: "0 0 16px" }}>ðŸ“œ Registro de CampaÃ±a</h2>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>&lt;- Volver</button>
+      <h2 style={{ color: "#d4b896", fontSize: 18, fontWeight: 800, margin: "0 0 16px" }}>REG Registro de Campana</h2>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
         {campaignStatCard("Renombre", Math.max(0, Number(campaign.renombre || 0) || 0), "#fbbf24", "", "renombre")}
@@ -4699,7 +4890,7 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
           <div style={{ display: "flex", gap: 6 }}>
             <button onClick={() => onUpdate({ ...campaign, demora: Math.max(0, campaign.demora - 1) })}
               style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid #374151",
-                background: "#0f172a", color: "#d4b896", fontSize: 20, cursor: "pointer" }}>âˆ’</button>
+                background: "#0f172a", color: "#d4b896", fontSize: 20, cursor: "pointer" }}>-</button>
             <button onClick={() => onUpdate({ ...campaign, demora: Math.min(12, campaign.demora + 1) })}
               style={{ width: 44, height: 44, borderRadius: 8, border: "1px solid #374151",
                 background: "#0f172a", color: "#d4b896", fontSize: 20, cursor: "pointer" }}>+</button>
@@ -4712,10 +4903,10 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
       </div>
 
       {/* Contadores */}
-      <Collapsible title="Contadores" icon="ðŸ”¢" defaultOpen>
+      <Collapsible title="Contadores" icon="NUM" defaultOpen>
         {numField("Malagaunt derrotado", "malagauntDerrotado", reg.malagauntDerrotado)}
         {numField("Reliquias encontradas", "reliquias_encontradas", reg.reliquias_encontradas)}
-        {numField("CadÃ¡veres examinados", "cadaveres_examinados", reg.cadaveres_examinados)}
+        {numField("Cadaveres examinados", "cadaveres_examinados", reg.cadaveres_examinados)}
         {numField("Sepulturas registradas", "sepulturas_registradas", reg.sepulturas_registradas)}
         {numField("Invasores escapados", "invasores_escapados", reg.invasores_escapados)}
         {numField("Disminuir la horda", "disminuir_horda", reg.disminuir_horda)}
@@ -4723,33 +4914,33 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
       </Collapsible>
 
       {/* Logros */}
-      <Collapsible title="Logros" icon="ðŸ†">
+      <Collapsible title="Logros" icon="LOG">
         {boolField("Deuda de Favor", "logros.deuda_de_favor", reg.logros.deuda_de_favor)}
-        {boolField("Rastro EsquelÃ©tico", "logros.rastro_esqueletico", reg.logros.rastro_esqueletico)}
+        {boolField("Rastro Esqueletico", "logros.rastro_esqueletico", reg.logros.rastro_esqueletico)}
         {boolField("Parafernalia Oculta", "logros.parafernalia_oculta", reg.logros.parafernalia_oculta)}
         {boolField("Aprendiz Derrotado", "logros.aprendiz_derrotado", reg.logros.aprendiz_derrotado)}
         {boolField("Aprendiz Liberado", "logros.aprendiz_liberado", reg.logros.aprendiz_liberado)}
         {boolField("Troll Derrotado", "logros.troll_derrotado_logro", reg.logros.troll_derrotado_logro)}
-        {boolField("InvestigaciÃ³n en Curso", "logros.investigacion_en_curso", reg.logros.investigacion_en_curso)}
+        {boolField("Investigacion en Curso", "logros.investigacion_en_curso", reg.logros.investigacion_en_curso)}
         {boolField("Escudo de Almas", "logros.escudo_de_almas", reg.logros.escudo_de_almas)}
       </Collapsible>
 
       {/* Recompensas */}
-      <Collapsible title="Recompensas" icon="ðŸŽ">
-        {numField("Perspectiva TÃ¡ctica", "recompensas.perspectiva_tactica", reg.recompensas.perspectiva_tactica)}
-        {numField("SabidurÃ­a de Mazmorra", "recompensas.sabiduria_de_mazmorra", reg.recompensas.sabiduria_de_mazmorra)}
+      <Collapsible title="Recompensas" icon="REP">
+        {numField("Perspectiva Tactica", "recompensas.perspectiva_tactica", reg.recompensas.perspectiva_tactica)}
+        {numField("Sabiduria de Mazmorra", "recompensas.sabiduria_de_mazmorra", reg.recompensas.sabiduria_de_mazmorra)}
         {boolField("Resistencia al Veneno", "recompensas.resistencia_al_veneno", reg.recompensas.resistencia_al_veneno)}
         {boolField("Debilidad del Objetivo", "recompensas.debilidad_del_objetivo", reg.recompensas.debilidad_del_objetivo)}
         {boolField("Experiencia de Combate", "recompensas.experiencia_de_combate", reg.recompensas.experiencia_de_combate)}
         {boolField("Saqueo de Sepulturas", "recompensas.saqueo_de_sepulturas", reg.recompensas.saqueo_de_sepulturas)}
         {boolField("Signos Reveladores", "recompensas.signos_reveladores", reg.recompensas.signos_reveladores)}
-        {boolField("Ritual de ConsagraciÃ³n", "recompensas.ritual_de_consagracion", reg.recompensas.ritual_de_consagracion)}
+        {boolField("Ritual de Consagracion", "recompensas.ritual_de_consagracion", reg.recompensas.ritual_de_consagracion)}
         {boolField("Oferta de Ayuda", "recompensas.oferta_de_ayuda", reg.recompensas.oferta_de_ayuda)}
         {boolField("Contactos en Gremio", "recompensas.contactos_en_gremio", reg.recompensas.contactos_en_gremio)}
       </Collapsible>
 
       {/* Puntos de Entrada Mapeados */}
-      <Collapsible title="Puntos de Entrada Mapeados" icon="ðŸ—ºï¸">
+      <Collapsible title="Puntos de Entrada Mapeados" icon="MAP">
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           {[1,2,3,4,5,6].map(n => {
             const mapped = reg.puntos_entrada_mapeados.includes(n);
@@ -4771,7 +4962,7 @@ function RegistryScreen({ campaign, onUpdate, onBack }) {
       </Collapsible>
 
       {/* Mission selector */}
-      <Collapsible title="MisiÃ³n Actual" icon="ðŸ“">
+      <Collapsible title="Mision Actual" icon="ACT">
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {MISSION_IDS.map(m => (
             <button key={m} onClick={() => onUpdate({ ...campaign, currentMission: m })}
@@ -5014,7 +5205,7 @@ function App() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "center",
         height: "100vh", background: "#0c0c1d", color: "#d4b896", fontSize: 18 }}>
         <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 48, marginBottom: 12 }}>âš”ï¸</div>
+          <div style={{ fontSize: 48, marginBottom: 12 }}>AV</div>
           <div>Cargando...</div>
         </div>
       </div>
@@ -5082,10 +5273,10 @@ function App() {
           width: "100%", maxWidth: 500, background: "#0c0c1dee", backdropFilter: "blur(10px)",
           borderTop: "1px solid #2d2d44", display: "flex", zIndex: 100 }}>
           {[
-            { id: "hub", icon: "ðŸ ", label: "Hub" },
-            { id: "adventurers", icon: "ðŸ›¡ï¸", label: "Grupo" },
-            { id: "board", icon: "âš”ï¸", label: "Partida" },
-            { id: "registry", icon: "ðŸ“œ", label: "Registro" },
+            { id: "hub", icon: "HB", label: "Hub" },
+            { id: "adventurers", icon: "GR", label: "Grupo" },
+            { id: "board", icon: "AV", label: "Partida" },
+            { id: "registry", icon: "REG", label: "Registro" },
           ].map(tab => (
             <button key={tab.id} onClick={() => handleNav(tab.id)}
               style={{ flex: 1, padding: "10px 0", background: "none", border: "none",
@@ -5098,7 +5289,7 @@ function App() {
           <button onClick={goHome}
             style={{ padding: "10px 16px", background: "none", border: "none", borderLeft: "1px solid #2d2d44",
               cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <span style={{ fontSize: 20 }}>ðŸšª</span>
+            <span style={{ fontSize: 20 }}>OUT</span>
             <span style={{ fontSize: 9, color: "#4b5563" }}>Salir</span>
           </button>
         </div>
