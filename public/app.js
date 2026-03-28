@@ -909,6 +909,7 @@ function defaultMissionState(campId, missionId) {
     crafted_items: [],
     purchased_items: [],
     repaired_items: [],
+    sold_items: [],
     notas: "",
     loot_notes: "",
   };
@@ -966,6 +967,7 @@ function normalizeMissionState(state) {
     crafted_items: Array.isArray(state.crafted_items) ? state.crafted_items : [],
     purchased_items: Array.isArray(state.purchased_items) ? state.purchased_items : [],
     repaired_items: Array.isArray(state.repaired_items) ? state.repaired_items : [],
+    sold_items: Array.isArray(state.sold_items) ? state.sold_items : [],
     fases_completadas: state.fases_completadas || {},
     steps_completados: state.steps_completados || {},
     notas: String(state.notas || ""),
@@ -1545,8 +1547,12 @@ function getRepairCost(item) {
   return null;
 }
 
-function makeRepairKey(adventurerId, itemId) {
+function makeOwnedItemKey(adventurerId, itemId) {
   return `${adventurerId}::${itemId}`;
+}
+
+function makeRepairKey(adventurerId, itemId) {
+  return makeOwnedItemKey(adventurerId, itemId);
 }
 
 const COMBAT_ATTRIBUTE_GROUPS = {
@@ -3997,6 +4003,15 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
 function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdateMission, onConfirm, onBack }) {
   const mission = MISSIONS[missionState.mision_id];
   const suggestedNextMissionIds = getSuggestedNextMissionIds(missionState.mision_id);
+  const postMissionSteps = [
+    { id: "escape", label: "Fase de Huida" },
+    { id: "xp", label: "Experiencia" },
+    { id: "rest", label: "Posada o Bosque" },
+    { id: "repair", label: "Reparar" },
+    { id: "sell", label: "Vender" },
+    { id: "market", label: "Comprar / Craftear" },
+    { id: "summary", label: "Resumen final" },
+  ];
   const xpEach = Math.max(1, Number(missionState.xp_base || 1)) + Math.max(0, Number(missionState.xp_extra || 0));
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
   const [craftingCatalog, setCraftingCatalog] = useState([]);
@@ -4006,6 +4021,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const [marketQuery, setMarketQuery] = useState("");
   const [marketSource, setMarketSource] = useState("all");
   const [selectedMarketKey, setSelectedMarketKey] = useState("");
+  const [activeStepIndex, setActiveStepIndex] = useState(0);
   const adjustNumber = (field, delta, min = 0) => {
     patchMission({ [field]: Math.max(min, Number(missionState[field] || 0) + delta) });
   };
@@ -4032,10 +4048,13 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const craftedSpend = (missionState.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
   const marketSpend = (missionState.purchased_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
   const repairSpend = (missionState.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
-  const availableGoldBeforeCraft = currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - repairSpend - marketSpend;
-  const availableGoldBeforeMarket = currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
-  const phaseGoldDelta = Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
+  const soldIncome = (missionState.sold_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.price) || 0), 0);
+  const availableGoldBeforeCraft = currentGroupGold + Number(missionState.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - repairSpend - marketSpend;
+  const availableGoldBeforeMarket = currentGroupGold + Number(missionState.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
+  const phaseGoldDelta = Number(missionState.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
   const totalGoldAfterPhase = Math.max(0, currentGroupGold + phaseGoldDelta);
+  const totalGoldAfterRest = Math.max(0, currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost);
+  const currentStep = postMissionSteps[activeStepIndex] || postMissionSteps[0];
   useEffect(() => {
     loadCraftingCatalog()
       .then(setCraftingCatalog)
@@ -4096,6 +4115,45 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         ...(missionState.materials_gained || {}),
         [letter]: Math.max(0, Number((missionState.materials_gained || {})[letter] || 0) + delta),
       },
+    });
+  };
+
+  const sellableItems = adventurers.flatMap(adv => {
+    const normalized = normalizeAdventurer(adv);
+    return (normalized.inventario || [])
+      .filter(item => Number.isFinite(Number(item.sell)) && Number(item.sell) >= 0)
+      .map(item => {
+        const key = makeOwnedItemKey(normalized.id, item.id);
+        const selected = (missionState.sold_items || []).find(entry => entry.key === key);
+        return {
+          key,
+          adventurerId: normalized.id,
+          adventurerName: normalized.nombre,
+          item,
+          selected,
+        };
+      });
+  });
+
+  const toggleSoldItem = (entry) => {
+    const existing = (missionState.sold_items || []).find(item => item.key === entry.key);
+    if (existing) {
+      patchMission({
+        sold_items: (missionState.sold_items || []).filter(item => item.key !== entry.key),
+      });
+      return;
+    }
+    patchMission({
+      sold_items: [
+        ...(missionState.sold_items || []),
+        {
+          key: entry.key,
+          adventurerId: entry.adventurerId,
+          itemId: entry.item.id,
+          itemName: entry.item.name,
+          price: Math.max(0, Number(entry.item.sell) || 0),
+        },
+      ],
     });
   };
 
@@ -4193,42 +4251,57 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           Cierre de mision
         </div>
         <h2 style={{ color: "#d4b896", fontSize: 20, fontWeight: 800, margin: "4px 0" }}>{mission?.nombre || missionState.mision_id}</h2>
-        <div style={{ color: "#6b7280", fontSize: 12 }}>Ronda final {missionState.ronda} | Amenaza {missionState.amenaza_nivel}</div>
+        <div style={{ color: "#6b7280", fontSize: 12 }}>Paso {activeStepIndex + 1} de {postMissionSteps.length} | {currentStep.label}</div>
+        <div style={{ color: "#4b5563", fontSize: 11, marginTop: 4 }}>Ronda final {missionState.ronda} | Amenaza {missionState.amenaza_nivel}</div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-        <button onClick={() => patchMission({ success: true })}
-          style={{ padding: 12, borderRadius: 10, border: missionState.success ? "2px solid #166534" : "1px solid #374151", background: missionState.success ? "#16653422" : "#1a1a2e", color: missionState.success ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
-          Mision superada
-        </button>
-        <button onClick={() => patchMission({ success: false })}
-          style={{ padding: 12, borderRadius: 10, border: !missionState.success ? "2px solid #7f1d1d" : "1px solid #374151", background: !missionState.success ? "#7f1d1d22" : "#1a1a2e", color: !missionState.success ? "#fca5a5" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
-          Retirada / derrota
-        </button>
+      <div style={{ display: "flex", gap: 8, overflowX: "auto", paddingBottom: 4, marginBottom: 12 }}>
+        {postMissionSteps.map((step, index) => (
+          <button key={step.id} onClick={() => setActiveStepIndex(index)}
+            style={{ flex: "0 0 auto", padding: "10px 12px", borderRadius: 999, border: index === activeStepIndex ? "1px solid #eab308" : "1px solid #374151", background: index === activeStepIndex ? "#eab30822" : "#111827", color: index === activeStepIndex ? "#fde68a" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}>
+            {index + 1}. {step.label}
+          </button>
+        ))}
       </div>
 
-      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
-        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
-          Resultado de objetivos
-        </div>
-        <button onClick={() => patchMission({ primary_complete: !missionState.primary_complete })}
-          style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, marginBottom: 10, cursor: "pointer", textAlign: "left" }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "OK" : ""}</div>
-          <div>
-            <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo primario</div>
-            <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_primario || "Sin texto cargado."}</div>
+      {activeStepIndex === 0 && (
+        <>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+            <button onClick={() => patchMission({ success: true })}
+              style={{ padding: 12, borderRadius: 10, border: missionState.success ? "2px solid #166534" : "1px solid #374151", background: missionState.success ? "#16653422" : "#1a1a2e", color: missionState.success ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
+              Mision superada
+            </button>
+            <button onClick={() => patchMission({ success: false })}
+              style={{ padding: 12, borderRadius: 10, border: !missionState.success ? "2px solid #7f1d1d" : "1px solid #374151", background: !missionState.success ? "#7f1d1d22" : "#1a1a2e", color: !missionState.success ? "#fca5a5" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
+              Retirada / derrota
+            </button>
           </div>
-        </button>
-        <button onClick={() => patchMission({ secondary_complete: !missionState.secondary_complete })}
-          style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
-          <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "OK" : ""}</div>
-          <div>
-            <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo secundario</div>
-            <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_secundario || "Sin objetivo secundario."}</div>
-          </div>
-        </button>
-      </div>
 
+          <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+            <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+              Resultado de objetivos
+            </div>
+            <button onClick={() => patchMission({ primary_complete: !missionState.primary_complete })}
+              style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, marginBottom: 10, cursor: "pointer", textAlign: "left" }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.primary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.primary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.primary_complete ? "OK" : ""}</div>
+              <div>
+                <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo primario</div>
+                <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_primario || "Sin texto cargado."}</div>
+              </div>
+            </button>
+            <button onClick={() => patchMission({ secondary_complete: !missionState.secondary_complete })}
+              style={{ width: "100%", display: "flex", gap: 10, alignItems: "flex-start", background: "transparent", border: "none", padding: 0, cursor: "pointer", textAlign: "left" }}>
+              <div style={{ width: 22, height: 22, borderRadius: 6, border: missionState.secondary_complete ? "2px solid #22c55e" : "2px solid #4b5563", background: missionState.secondary_complete ? "#22c55e22" : "transparent", color: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, fontSize: 14 }}>{missionState.secondary_complete ? "OK" : ""}</div>
+              <div>
+                <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo secundario</div>
+                <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_secundario || "Sin objetivo secundario."}</div>
+              </div>
+            </button>
+          </div>
+        </>
+      )}
+
+      {activeStepIndex === 1 && (
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Recompensas del grupo
@@ -4264,10 +4337,12 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             style={{ width: 120, padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 14, textAlign: "right", boxSizing: "border-box" }} />
         </div>
       </div>
+      )}
 
+      {activeStepIndex === 2 && (
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
-          Descanso y mantenimiento
+          Posada o Bosque
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
           <button onClick={() => patchMission({ rest_mode: "posada" })}
@@ -4276,9 +4351,14 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           </button>
           <button onClick={() => patchMission({ rest_mode: "naturaleza" })}
             style={{ padding: 12, borderRadius: 10, border: missionState.rest_mode === "naturaleza" ? "2px solid #166534" : "1px solid #374151", background: missionState.rest_mode === "naturaleza" ? "#16653422" : "#0f172a", color: missionState.rest_mode === "naturaleza" ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
-            Naturaleza
+            Bosque
           </button>
         </div>
+        {missionState.rest_mode === "none" && (
+          <div style={{ background: "#7f1d1d22", borderRadius: 8, padding: 10, border: "1px solid #7f1d1d", color: "#fca5a5", fontSize: 11, marginBottom: 8 }}>
+            Falta elegir si el grupo va a Posada o a Bosque.
+          </div>
+        )}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
           <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
             <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Mantenimiento</div>
@@ -4288,17 +4368,17 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
             <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Descanso</div>
             <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{lodgingCost}G</div>
-            <div style={{ color: "#6b7280", fontSize: 11 }}>{missionState.rest_mode === "posada" ? "2G por aventurero" : "Naturaleza gratis"}</div>
+            <div style={{ color: "#6b7280", fontSize: 11 }}>{missionState.rest_mode === "posada" ? "2G por aventurero" : "Bosque sin coste"}</div>
           </div>
         </div>
         <div style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
-          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro actual del grupo</div>
-          <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{currentGroupGold}G</div>
+          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro del grupo tras mision, mantenimiento y descanso</div>
+          <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{totalGoldAfterRest}G</div>
         </div>
         <div style={{ background: phaseGoldDelta >= 0 ? "#132034" : "#3a1212", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
-          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Balance neto de oro de esta fase</div>
+          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Balance neto provisional del cierre</div>
           <div style={{ color: phaseGoldDelta >= 0 ? "#bbf7d0" : "#fca5a5", fontSize: 20, fontWeight: 800 }}>{phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G</div>
-          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado - mantenimiento - descanso - reparaciones - crafteo - compras</div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado + ventas - mantenimiento - descanso - reparaciones - crafteo - compras</div>
         </div>
         <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro total del grupo tras este cierre</div>
@@ -4315,10 +4395,12 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           </div>
         )}
         <textarea value={missionState.rest_notes || ""} onChange={e => patchMission({ rest_notes: e.target.value })}
-          placeholder="Anota aqui el resultado de la Posada o de la Naturaleza, bendiciones, PX extra, renombre, penalizaciones..."
+          placeholder="Anota aqui el resultado de la Posada o del Bosque, bendiciones, PX extra, renombre, penalizaciones..."
           style={{ width: "100%", minHeight: 76, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", padding: 10, resize: "vertical", fontFamily: "inherit", fontSize: 12, lineHeight: 1.5 }} />
       </div>
+      )}
 
+      {activeStepIndex === 3 && (
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Reparacion de objetos
@@ -4374,7 +4456,69 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           <div style={{ color: "#6b7280", fontSize: 12 }}>No hay objetos rotos pendientes de reparar.</div>
         )}
       </div>
+      )}
 
+      {activeStepIndex === 4 && (
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+          Vender
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+          Marca aqui los objetos del inventario que vas a vender. Su valor se suma al oro del grupo y el objeto se retirara al aplicar el cierre.
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 8, color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
+          <span>Objetos vendibles: {sellableItems.length}</span>
+          <span>Ingreso por ventas: +{soldIncome}G</span>
+        </div>
+        {sellableItems.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {sellableItems.map(entry => {
+              const selected = !!entry.selected;
+              return (
+                <div key={entry.key} style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1f2937" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start" }}>
+                    <div>
+                      <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{entry.item.name}</div>
+                      <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                        {entry.adventurerName} | Venta {Math.max(0, Number(entry.item.sell) || 0)}G
+                      </div>
+                    </div>
+                    <button onClick={() => toggleSoldItem(entry)}
+                      style={{ padding: "8px 10px", borderRadius: 8, border: selected ? "1px solid #166534" : "1px solid #374151", background: selected ? "#16653422" : "#132034", color: selected ? "#bbf7d0" : "#d4b896", cursor: "pointer" }}>
+                      {selected ? "Venta marcada" : "Vender"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div style={{ color: "#6b7280", fontSize: 12 }}>No hay objetos con valor de venta registrado en el grupo.</div>
+        )}
+        {(missionState.sold_items || []).length > 0 && (
+          <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 1 }}>
+              Ventas preparadas
+            </div>
+            {(missionState.sold_items || []).map(item => (
+              <div key={item.key} style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center" }}>
+                <div>
+                  <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{item.itemName}</div>
+                  <div style={{ color: "#9ca3af", fontSize: 11 }}>+{item.price || 0}G</div>
+                </div>
+                <button onClick={() => patchMission({ sold_items: (missionState.sold_items || []).filter(entry => entry.key !== item.key) })}
+                  style={{ padding: "8px 10px", borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>
+                  Quitar
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      )}
+
+      {activeStepIndex === 5 && (
+      <>
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Crafteo y materiales
@@ -4614,7 +4758,11 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           </div>
         )}
       </div>
+      </>
+      )}
 
+      {activeStepIndex === 6 && (
+      <>
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Siguiente paso de campana
@@ -4669,6 +4817,11 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             Objetos reparados: {(missionState.repaired_items || []).map(item => `${item.itemName || "Objeto"} (${item.cost || 0}G)`).join(" | ")}
           </div>
         )}
+        {(missionState.sold_items || []).length > 0 && (
+          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+            Ventas: {(missionState.sold_items || []).map(item => `${item.itemName || "Objeto"} (+${item.price || 0}G)`).join(" | ")}
+          </div>
+        )}
         {(missionState.crafted_items || []).length > 0 && (
           <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
             Items crafteados: {(missionState.crafted_items || []).map(item => {
@@ -4698,6 +4851,21 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         style={{ width: "100%", padding: 16, borderRadius: 10, border: "2px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
         Aplicar cierre de mision
       </button>
+      </>
+      )}
+
+      <div style={{ display: "grid", gridTemplateColumns: activeStepIndex === 6 ? "1fr" : "1fr 1fr", gap: 8, marginTop: 12 }}>
+        {activeStepIndex < 6 && (
+          <button onClick={() => setActiveStepIndex(index => Math.min(6, index + 1))}
+            style={{ padding: 14, borderRadius: 10, border: "2px solid #eab308", background: "#eab30815", color: "#fde68a", fontSize: 13, fontWeight: 800, cursor: "pointer", order: 2 }}>
+            Continuar
+          </button>
+        )}
+        <button onClick={() => setActiveStepIndex(index => Math.max(0, index - 1))} disabled={activeStepIndex === 0}
+          style={{ padding: 14, borderRadius: 10, border: "1px solid #374151", background: activeStepIndex === 0 ? "#111827" : "#1a1a2e", color: activeStepIndex === 0 ? "#4b5563" : "#d4b896", fontSize: 13, fontWeight: 700, cursor: activeStepIndex === 0 ? "default" : "pointer", order: 1 }}>
+          Paso anterior
+        </button>
+      </div>
     </div>
   );
 }
@@ -5295,9 +5463,12 @@ function App() {
     const craftedSpend = (resolvedMission.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
     const marketSpend = (resolvedMission.purchased_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
     const repairSpend = (resolvedMission.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
+    const soldIncome = (resolvedMission.sold_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.price) || 0), 0);
     const repairedKeys = new Set((resolvedMission.repaired_items || []).map(item => makeRepairKey(item.adventurerId, item.itemId)));
+    const soldKeys = new Set((resolvedMission.sold_items || []).map(item => makeOwnedItemKey(item.adventurerId, item.itemId)));
     const repairedLabels = (resolvedMission.repaired_items || []).map(item => `${item.itemName || "Objeto"} (${item.cost || 0}G)`);
-    const phaseGoldDelta = Number(resolvedMission.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
+    const soldLabels = (resolvedMission.sold_items || []).map(item => `${item.itemName || "Objeto"} (${item.price || 0}G)`);
+    const phaseGoldDelta = Number(resolvedMission.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
     const updatedAdventurers = adventurers.map(adv => {
       const normalized = normalizeAdventurer(adv);
       const craftedForAdventurer = (resolvedMission.crafted_items || [])
@@ -5318,9 +5489,10 @@ function App() {
         experiencia: Math.max(0, Number(normalized.experiencia || 0) + xpEach),
         inventario: [
           ...(normalized.inventario || []).map(item => {
+            if (soldKeys.has(makeOwnedItemKey(normalized.id, item.id))) return null;
             const repairKey = makeRepairKey(normalized.id, item.id);
             return repairedKeys.has(repairKey) ? normalizeInventoryItem({ ...item, broken: false }) : item;
-          }),
+          }).filter(Boolean),
           ...craftedForAdventurer,
           ...purchasedForAdventurer,
         ],
@@ -5351,6 +5523,9 @@ function App() {
             resolvedMission.rest_notes,
             repairedLabels.length > 0
               ? "Reparaciones: " + repairedLabels.join(", ")
+              : "",
+            soldLabels.length > 0
+              ? "Ventas: " + soldLabels.join(", ")
               : "",
             (resolvedMission.crafted_items || []).length > 0
               ? "Crafteo: " + resolvedMission.crafted_items.map(item => item.name).join(", ")
