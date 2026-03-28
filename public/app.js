@@ -889,6 +889,7 @@ function defaultMissionState(campId, missionId) {
     ronda: 1,
     amenaza_nivel: m?.amenaza?.clavijas || 0,
     amenaza_cara: m?.amenaza?.cara || "A",
+    demora_aplicada_inicio: 0,
     fase_actual: "dread",
     magia_usada_esta_ronda: false,
     fases_completadas: {},
@@ -954,6 +955,7 @@ function normalizeMissionState(state) {
     ...base,
     ...state,
     amenaza_nivel: Math.max(0, Number(state.amenaza_nivel ?? base.amenaza_nivel) || 0),
+    demora_aplicada_inicio: Math.max(0, Number(state.demora_aplicada_inicio ?? 0) || 0),
     ronda: Math.max(1, Number(state.ronda ?? base.ronda) || 1),
     primary_complete: !!state.primary_complete,
     secondary_complete: !!state.secondary_complete,
@@ -5606,6 +5608,9 @@ function MissionSetupScreen({ campaign, adventurers, onStartMission, onBack }) {
   const availableAdventurers = adventurers.filter(canAdventurerJoinMission);
   const recoveringAdventurers = adventurers.filter(adv => !isAdventurerDead(adv) && !canAdventurerJoinMission(adv));
   const fallenAdventurers = adventurers.filter(isAdventurerDead);
+  const delayThreatBonus = Math.max(0, Number(campaign?.demora || 0) || 0);
+  const baseThreat = Math.max(0, Number(mission?.amenaza?.clavijas || 0) || 0);
+  const projectedThreat = baseThreat + delayThreatBonus;
 
   if (!mission) {
     return (
@@ -5652,8 +5657,13 @@ function MissionSetupScreen({ campaign, adventurers, onStartMission, onBack }) {
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Preparacion rapida</div>
         <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, marginBottom: 8 }}>
-          Amenaza inicial: lado {mission.amenaza?.cara || "A"} · {mission.amenaza?.clavijas || 0} clavijas
+          Amenaza inicial: lado {mission.amenaza?.cara || "A"} · {projectedThreat} clavijas
         </div>
+        {delayThreatBonus > 0 && (
+          <div style={{ color: "#fbbf24", fontSize: 12, lineHeight: 1.5, marginBottom: 8 }}>
+            Base {baseThreat} + {delayThreatBonus} por Demora acumulada. Al comenzar la partida, esa Demora se aplicara a la Amenaza inicial y se quitara del marcador de campana.
+          </div>
+        )}
         {mission.mazo_eventos && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 6 }}>Mazo de eventos: {mission.mazo_eventos}</div>}
         {mission.asignacion_busqueda && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{mission.asignacion_busqueda}</div>}
       </div>
@@ -5998,10 +6008,19 @@ function App() {
 
   const startMission = () => {
     if (availableMissionAdventurers.length === 0) return;
+    const appliedDelayThreat = Math.max(0, Number(campaign?.demora || 0) || 0);
     const ms = normalizeMissionState({
       ...defaultMissionState(campaign.id, campaign.currentMission),
       participant_ids: availableMissionAdventurers.map(adv => adv.id),
+      amenaza_nivel: Math.max(0, Number(MISSIONS[campaign.currentMission]?.amenaza?.clavijas || 0) || 0) + appliedDelayThreat,
+      demora_aplicada_inicio: appliedDelayThreat,
     });
+    if (appliedDelayThreat > 0) {
+      setCampaign(prev => normalizeCampaign({
+        ...prev,
+        demora: Math.max(0, Number(prev?.demora || 0) - appliedDelayThreat),
+      }));
+    }
     setMissionState(ms);
     setSubScreen("board");
   };
