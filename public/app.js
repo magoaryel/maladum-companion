@@ -4323,6 +4323,292 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   );
 }
 
+function HomeScreen({ onCreateCampaign, onLoadCampaign, campaigns }) {
+  const [newName, setNewName] = useState("");
+  const [showCreate, setShowCreate] = useState(false);
+
+  return (
+    <div style={{ padding: 16, maxWidth: 500, margin: "0 auto" }}>
+      <div style={{ textAlign: "center", marginBottom: 32, paddingTop: 24 }}>
+        <div style={{ fontSize: 42, marginBottom: 8 }}>⚔️</div>
+        <h1 style={{ color: "#d4b896", fontSize: 26, fontWeight: 800, margin: 0, fontFamily: "'Cinzel', serif", letterSpacing: 2 }}>MALADUM</h1>
+        <div style={{ color: "#9ca3af", fontSize: 13, marginTop: 4, letterSpacing: 3, textTransform: "uppercase" }}>Companion App</div>
+        <div style={{ width: 60, height: 2, background: "linear-gradient(90deg, transparent, #b91c1c, transparent)", margin: "12px auto" }} />
+      </div>
+
+      {campaigns.length > 0 && (
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Campanas guardadas</div>
+          {campaigns.map(c => (
+            <button key={c.id} onClick={() => onLoadCampaign(c)}
+              style={{ width: "100%", padding: 14, borderRadius: 10, border: "1px solid #2d2d44", background: "#1a1a2e", marginBottom: 8, cursor: "pointer", textAlign: "left" }}>
+              <div style={{ color: "#d4b896", fontSize: 15, fontWeight: 700 }}>{c.name}</div>
+              <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 12, color: "#9ca3af" }}>
+                <span>Mision: {c.currentMission}</span>
+                <span>Demora: {c.demora}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!showCreate ? (
+        <button onClick={() => setShowCreate(true)}
+          style={{ width: "100%", padding: 16, borderRadius: 10, border: "2px solid #b91c1c", background: "#b91c1c22", color: "#fca5a5", fontSize: 16, fontWeight: 700, cursor: "pointer", letterSpacing: 1 }}>
+          + Nueva Campana
+        </button>
+      ) : (
+        <div style={{ background: "#1a1a2e", borderRadius: 12, padding: 16, border: "1px solid #2d2d44" }}>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Nombre de la campana</div>
+          <input value={newName} onChange={e => setNewName(e.target.value)}
+            placeholder="Ej: Campana de los Aventureros"
+            style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 15, boxSizing: "border-box" }} />
+          <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+            <button onClick={() => setShowCreate(false)}
+              style={{ flex: 1, padding: 12, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: "#9ca3af", fontSize: 14, cursor: "pointer" }}>
+              Cancelar
+            </button>
+            <button onClick={() => {
+              if (newName.trim()) {
+                onCreateCampaign(newName.trim());
+                setNewName("");
+                setShowCreate(false);
+              }
+            }}
+              style={{ flex: 1, padding: 12, borderRadius: 8, border: "none", background: "#b91c1c", color: "#fff", fontSize: 14, fontWeight: 700, cursor: "pointer" }}>
+              Crear
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CampaignHub({ campaign, adventurers, onNavigate }) {
+  const demoraEffect = DEMORA_EFFECTS.find(d => campaign.demora >= d.min && campaign.demora <= d.max);
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2 }}>Campana</div>
+        <h2 style={{ color: "#d4b896", fontSize: 20, fontWeight: 800, margin: "4px 0" }}>{campaign.name}</h2>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Mision Actual</div>
+          <div style={{ color: "#d4b896", fontSize: 24, fontWeight: 800 }}>{campaign.currentMission}</div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>{MISSIONS[campaign.currentMission]?.nombre || ""}</div>
+        </div>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Demora</div>
+          <div style={{ color: campaign.demora >= 7 ? "#ef4444" : campaign.demora >= 4 ? "#eab308" : "#22c55e", fontSize: 24, fontWeight: 800 }}>{campaign.demora}/12</div>
+          <div style={{ color: "#6b7280", fontSize: 10 }}>{demoraEffect?.desc}</div>
+        </div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Renombre</div>
+          <div style={{ color: "#fbbf24", fontSize: 22, fontWeight: 800 }}>{campaign.renombre || 0}</div>
+          <div style={{ color: "#6b7280", fontSize: 10 }}>Total del grupo</div>
+        </div>
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", textAlign: "center" }}>
+          <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase" }}>Oro</div>
+          <div style={{ color: "#d4b896", fontSize: 22, fontWeight: 800 }}>{campaign.oro || 0}G</div>
+          <div style={{ color: "#6b7280", fontSize: 10 }}>Reserva del grupo</div>
+        </div>
+      </div>
+
+      {adventurers.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Grupo ({adventurers.length})</div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+            {adventurers.map(a => (
+              <div key={a.id} style={{ background: "#1a1a2e", borderRadius: 8, padding: "6px 12px", border: "1px solid #2d2d44", fontSize: 13, color: "#d4b896" }}>
+                {a.nombre} {a.clase && `(${a.clase})`}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        <NavButton icon="⚔️" label="Comenzar Mision" sub="Setup y partida" onClick={() => onNavigate("mission-setup")} accent />
+        <NavButton icon="🛡️" label="Gestionar Grupo" sub="Fichas de aventureros" onClick={() => onNavigate("adventurers")} />
+        <NavButton icon="📜" label="Registro de Campana" sub="Logros y recompensas" onClick={() => onNavigate("registry")} />
+      </div>
+    </div>
+  );
+}
+
+function NavButton({ icon, label, sub, onClick, accent }) {
+  return (
+    <button onClick={onClick}
+      style={{ display: "flex", alignItems: "center", gap: 14, padding: 14, borderRadius: 10, border: accent ? "2px solid #b91c1c" : "1px solid #2d2d44", background: accent ? "#b91c1c18" : "#1a1a2e", cursor: "pointer", textAlign: "left", width: "100%" }}>
+      <span style={{ fontSize: 24, width: 40, textAlign: "center" }}>{icon}</span>
+      <div>
+        <div style={{ color: accent ? "#fca5a5" : "#d4b896", fontSize: 15, fontWeight: 700 }}>{label}</div>
+        {sub && <div style={{ color: "#6b7280", fontSize: 12 }}>{sub}</div>}
+      </div>
+    </button>
+  );
+}
+
+function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
+  const [selected, setSelected] = useState(null);
+  const [showAdd, setShowAdd] = useState(adventurers.length === 0);
+
+  useEffect(() => {
+    if (adventurers.length === 0) setShowAdd(true);
+  }, [adventurers.length]);
+
+  if (selected) {
+    const adv = adventurers.find(a => a.id === selected);
+    if (!adv) {
+      setSelected(null);
+      return null;
+    }
+    return (
+      <AdventurerSheetV2
+        adv={adv}
+        onUpdate={updated => onUpdate(updated)}
+        onBack={() => setSelected(null)}
+        onRemove={() => {
+          onRemove(adv.id);
+          setSelected(null);
+        }}
+      />
+    );
+  }
+
+  return (
+    <div style={{ padding: 16 }}>
+      <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>Aventureros del Grupo</div>
+      {adventurers.length === 0 && (
+        <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+          <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Arma tu grupo inicial</div>
+          <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>Anade aventureros, revisa su ficha y pulsa "Grupo finalizado" cuando termines.</div>
+        </div>
+      )}
+
+      {adventurers.map(a => (
+        <button key={a.id} onClick={() => setSelected(a.id)}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 10, border: "1px solid #2d2d44", background: "#1a1a2e", marginBottom: 8, cursor: "pointer", textAlign: "left" }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ color: "#d4b896", fontSize: 15, fontWeight: 700 }}>{a.nombre}</div>
+            <div style={{ color: "#6b7280", fontSize: 12 }}>{a.especie} · {a.clase || "Sin clase"} · Rango {a.rango}</div>
+          </div>
+          <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
+            <span style={{ color: "#22c55e" }}>HP {a.salud_actual}</span>
+            <span style={{ color: "#3b82f6" }}>MP {a.magia_actual}</span>
+            <span style={{ color: "#eab308" }}>SP {a.habilidad_actual}</span>
+          </div>
+        </button>
+      ))}
+
+      {!showAdd ? (
+        <button onClick={() => setShowAdd(true)}
+          style={{ width: "100%", padding: 14, borderRadius: 10, border: "2px dashed #374151", background: "transparent", color: "#9ca3af", fontSize: 14, cursor: "pointer", marginTop: 8 }}>
+          + Anadir Aventurero
+        </button>
+      ) : (
+        <div style={{ background: "#1a1a2e", borderRadius: 12, padding: 12, border: "1px solid #2d2d44", marginTop: 8 }}>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Selecciona personaje</div>
+          <div style={{ maxHeight: 300, overflowY: "auto" }}>
+            {BASE_CHARACTERS.map(ch => (
+              <button key={ch.nombre} onClick={() => {
+                const created = onAdd(ch);
+                setShowAdd(false);
+                if (created?.id) setSelected(created.id);
+              }}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", marginBottom: 4, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div>
+                  <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 600 }}>{ch.nombre}</div>
+                  <div style={{ color: "#6b7280", fontSize: 11 }}>{ch.especie} · HP {ch.salud_max} · MP {ch.magia_max} · SP {ch.habilidad_max}</div>
+                </div>
+                <div style={{ color: "#9ca3af", fontSize: 11 }}>{ch.coste}G</div>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowAdd(false)}
+            style={{ width: "100%", marginTop: 8, padding: 10, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: "#9ca3af", fontSize: 13, cursor: "pointer" }}>
+            Cancelar
+          </button>
+        </div>
+      )}
+
+      <button onClick={onDone} disabled={adventurers.length === 0}
+        style={{ width: "100%", padding: 14, marginTop: 12, borderRadius: 10, border: adventurers.length === 0 ? "1px solid #374151" : "2px solid #b91c1c", background: adventurers.length === 0 ? "#111827" : "#b91c1c22", color: adventurers.length === 0 ? "#4b5563" : "#fca5a5", fontSize: 14, fontWeight: 700, cursor: adventurers.length === 0 ? "not-allowed" : "pointer" }}>
+        Grupo finalizado
+      </button>
+    </div>
+  );
+}
+
+function MissionSetupScreen({ campaign, onStartMission, onBack }) {
+  const mission = MISSIONS[campaign.currentMission];
+
+  if (!mission) {
+    return (
+      <div style={{ padding: 16 }}>
+        <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12 }}>Volver</button>
+        <div style={{ color: "#d4b896", textAlign: "center", padding: 40 }}>Mision {campaign.currentMission} aun no implementada en esta fase.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding: 16 }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>Volver</button>
+
+      <div style={{ textAlign: "center", marginBottom: 16 }}>
+        <div style={{ color: "#b91c1c", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 2 }}>Mision {mission.id}</div>
+        <h2 style={{ color: "#d4b896", fontSize: 20, fontWeight: 800, margin: "4px 0" }}>{mission.nombre}</h2>
+        <div style={{ color: "#6b7280", fontSize: 12 }}>Libro de Campana p.{mission.pagina}</div>
+      </div>
+
+      <Collapsible title="Condicion de entrada" icon="🔑" defaultOpen>
+        <p style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, margin: 0 }}>{mission.condicion}</p>
+      </Collapsible>
+
+      <Collapsible title="Objetivo Primario" icon="🎯" defaultOpen>
+        <p style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, margin: 0 }}>{mission.objetivo_primario}</p>
+      </Collapsible>
+
+      <Collapsible title="Objetivo Secundario" icon="📌">
+        <p style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, margin: 0 }}>{mission.objetivo_secundario}</p>
+      </Collapsible>
+
+      {mission.reglas_especiales.length > 0 && (
+        <Collapsible title="Reglas Especiales" icon="📖">
+          {mission.reglas_especiales.map((rule, index) => (
+            <div key={index} style={{ marginBottom: index < mission.reglas_especiales.length - 1 ? 10 : 0 }}>
+              <div style={{ color: "#fca5a5", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{rule.nombre}</div>
+              <p style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, margin: 0 }}>{rule.desc}</p>
+            </div>
+          ))}
+        </Collapsible>
+      )}
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Preparacion rapida</div>
+        <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, marginBottom: 8 }}>
+          Amenaza inicial: lado {mission.amenaza?.cara || "A"} · {mission.amenaza?.clavijas || 0} clavijas
+        </div>
+        {mission.mazo_eventos && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 6 }}>Mazo de eventos: {mission.mazo_eventos}</div>}
+        {mission.asignacion_busqueda && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{mission.asignacion_busqueda}</div>}
+      </div>
+
+      <button onClick={onStartMission}
+        style={{ width: "100%", padding: 16, borderRadius: 10, border: "2px solid #b91c1c", background: "#b91c1c22", color: "#fca5a5", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
+        Comenzar Partida
+      </button>
+    </div>
+  );
+}
+
 // --- CAMPAIGN REGISTRY ---
 function RegistryScreen({ campaign, onUpdate, onBack }) {
   const reg = campaign.registro;
