@@ -1715,8 +1715,9 @@ async function loadCraftingCatalog() {
 
 // --- PEG BAR ---
 function PegBar({ label, icon, current, max, color, onChange }) {
+  const displayMax = Math.max(Number(max) || 0, Number(current) || 0);
   const pegs = [];
-  for (let i = 0; i < max; i++) {
+  for (let i = 0; i < displayMax; i++) {
     pegs.push(
       <button key={i} onClick={() => onChange(i < current ? i : i + 1)}
         style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid " + (i < current ? color : "#374151"),
@@ -3430,14 +3431,19 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
   );
 }
 
-function MagicResultModal({ state, onApplyResult, onClose }) {
+function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
   const [result, setResult] = useState(null);
   const [appliedRecovery, setAppliedRecovery] = useState(false);
+  const [selectedNearbyIds, setSelectedNearbyIds] = useState([]);
+  const [appliedNearbyMagic, setAppliedNearbyMagic] = useState(false);
   if (!state) return null;
+  const nearbyCandidates = (adventurers || []).filter(adv => adv.id !== state.adventurerId).map(normalizeAdventurer);
 
   useEffect(() => {
     setResult(null);
     setAppliedRecovery(false);
+    setSelectedNearbyIds([]);
+    setAppliedNearbyMagic(false);
   }, [state?.adventurerId, state?.spell?.name, state?.pegs]);
 
   useEffect(() => {
@@ -3445,6 +3451,18 @@ function MagicResultModal({ state, onApplyResult, onClose }) {
     onApplyResult(3, state);
     setAppliedRecovery(true);
   }, [appliedRecovery, onApplyResult, result, state]);
+
+  const toggleNearbyAdventurer = (adventurerId) => {
+    setSelectedNearbyIds(prev => prev.includes(adventurerId)
+      ? prev.filter(id => id !== adventurerId)
+      : [...prev, adventurerId]);
+  };
+
+  const applyNearbyMagicResult = () => {
+    if (typeof onApplyResult !== "function" || appliedNearbyMagic) return;
+    onApplyResult(5, { ...state, nearbyAdventurerIds: selectedNearbyIds });
+    setAppliedNearbyMagic(true);
+  };
 
   return (
     <ModalSheet title="Resultado dado magico" subtitle={`${state.adventurerName} | ${state.spell?.name || "Hechizo"}`} onClose={onClose}>
@@ -3476,6 +3494,34 @@ function MagicResultModal({ state, onApplyResult, onClose }) {
           {result === 3 && (
             <div style={{ color: "#93c5fd", fontSize: 11, marginTop: 8 }}>
               {appliedRecovery ? "Se ha aplicado +1 MP a la ficha del aventurero, hasta su maximo." : "Se aplicara +1 MP al aventurero."}
+            </div>
+          )}
+          {result === 5 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ color: "#93c5fd", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                El lanzador gana +1 MP siempre. Marca aqui que otros aventureros estan a 2 casillas para darles tambien +1 MP. Este resultado puede superar el maximo inicial.
+              </div>
+              {nearbyCandidates.length > 0 ? (
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  {nearbyCandidates.map(adv => {
+                    const selected = selectedNearbyIds.includes(adv.id);
+                    return (
+                      <button key={adv.id} onClick={() => toggleNearbyAdventurer(adv.id)}
+                        style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #3b82f6" : "1px solid #374151", background: selected ? "#1d4ed822" : "#111827", color: selected ? "#dbeafe" : "#d4b896", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                        {adv.nombre}
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>
+                  No hay otros aventureros cargados para elegir.
+                </div>
+              )}
+              <button onClick={applyNearbyMagicResult} disabled={appliedNearbyMagic}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: appliedNearbyMagic ? "1px solid #166534" : "1px solid #3b82f6", background: appliedNearbyMagic ? "#16653422" : "#1d4ed822", color: appliedNearbyMagic ? "#bbf7d0" : "#dbeafe", fontSize: 12, fontWeight: 700, cursor: appliedNearbyMagic ? "default" : "pointer" }}>
+                {appliedNearbyMagic ? "Resultado 5 aplicado" : "Aplicar +1 MP al lanzador y cercanos"}
+              </button>
             </div>
           )}
         </div>
@@ -3657,18 +3703,36 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
     setActiveAbilityAdv(null);
   };
   const handleMagicResultApply = (result, payload) => {
-    if (result !== 3 || !payload?.adventurerId) return;
-    const adventurer = adventurers.find(entry => entry.id === payload.adventurerId);
-    if (!adventurer) return;
-    const normalized = normalizeAdventurer(adventurer);
-    const baseMagic = typeof payload.magia_despues === "number"
-      ? Math.max(0, Math.min(normalized.magia_max, Number(payload.magia_despues) || 0))
-      : normalized.magia_actual;
-    if (baseMagic >= normalized.magia_max) return;
-    onUpdateAdventurer({
-      ...normalized,
-      magia_actual: Math.min(normalized.magia_max, baseMagic + 1),
-    });
+    if (!payload?.adventurerId) return;
+    if (result === 3) {
+      const adventurer = adventurers.find(entry => entry.id === payload.adventurerId);
+      if (!adventurer) return;
+      const normalized = normalizeAdventurer(adventurer);
+      const baseMagic = typeof payload.magia_despues === "number"
+        ? Math.max(0, Math.min(normalized.magia_max, Number(payload.magia_despues) || 0))
+        : normalized.magia_actual;
+      if (baseMagic >= normalized.magia_max) return;
+      onUpdateAdventurer({
+        ...normalized,
+        magia_actual: Math.min(normalized.magia_max, baseMagic + 1),
+      });
+      return;
+    }
+    if (result === 5) {
+      const targetIds = Array.from(new Set([payload.adventurerId, ...(payload.nearbyAdventurerIds || [])]));
+      targetIds.forEach(targetId => {
+        const adventurer = adventurers.find(entry => entry.id === targetId);
+        if (!adventurer) return;
+        const normalized = normalizeAdventurer(adventurer);
+        const nextMagic = targetId === payload.adventurerId && typeof payload.magia_despues === "number"
+          ? Math.max(0, Number(payload.magia_despues) || 0) + 1
+          : Math.max(0, Number(normalized.magia_actual) || 0) + 1;
+        onUpdateAdventurer({
+          ...normalized,
+          magia_actual: nextMagic,
+        });
+      });
+    }
   };
   const handleMissionRest = (updatedAdventurer) => {
     onUpdateAdventurer(updatedAdventurer);
@@ -3805,6 +3869,16 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
             <PegBar label="MP" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
               color="#3b82f6" onChange={v => onUpdateAdventurer({ ...normalized, magia_actual: v })}/>
 
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ color: "#6b7280", fontSize: 10, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 4 }}>
+                Estados
+              </div>
+              <StatusEffects
+                effects={normalized.status_effects || []}
+                onChange={status_effects => onUpdateAdventurer({ ...normalized, status_effects })}
+              />
+            </div>
+
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
               {equipment.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{equipment.meleeDice}</span>}
               {equipment.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{equipment.rangedDice}</span>}
@@ -3883,6 +3957,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
       {magicResultState && (
         <MagicResultModal
           state={magicResultState}
+          adventurers={adventurers}
           onApplyResult={handleMagicResultApply}
           onClose={() => setMagicResultState(null)}
         />
