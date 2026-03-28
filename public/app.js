@@ -3540,6 +3540,22 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
   );
 }
 
+function InventoryModal({ adv, onUpdateAdventurer, onClose }) {
+  const normalized = normalizeAdventurer(adv);
+  return (
+    <ModalSheet
+      title="Items encontrados"
+      subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")}
+      onClose={onClose}
+    >
+      <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 12 }}>
+        Aqui puedes anadir, equipar o ajustar los objetos del aventurero durante la mision sin salir del tablero.
+      </div>
+      <InventoryEditor adv={normalized} onUpdate={onUpdateAdventurer} />
+    </ModalSheet>
+  );
+}
+
 function MissionRestModal({ adv, onConfirm, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const hasBurning = (normalized.status_effects || []).includes("burning");
