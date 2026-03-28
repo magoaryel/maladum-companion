@@ -1727,12 +1727,69 @@ function PegBar({ label, icon, current, max, color, onChange }) {
   return (
     <div style={{ marginBottom: 8 }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-        <span style={{ fontSize: 16 }}>{icon}</span>
         <span style={{ color: "#d4b896", fontSize: 13, fontWeight: 600 }}>{label}</span>
         <span style={{ color: "#9ca3af", fontSize: 12, marginLeft: "auto" }}>{current}/{max}</span>
       </div>
       <div style={{ display: "flex", flexWrap: "wrap", gap: 2 }}>{pegs}</div>
     </div>
+  );
+}
+
+function BottomNavIcon({ id, active }) {
+  const color = active ? "#d4b896" : "#6b7280";
+  const common = { width: 20, height: 20, viewBox: "0 0 24 24", fill: "none", stroke: color, strokeWidth: 1.8, strokeLinecap: "round", strokeLinejoin: "round" };
+
+  if (id === "hub") {
+    return (
+      <svg {...common}>
+        <path d="M3 11.5L12 4l9 7.5" />
+        <path d="M6 10.5V20h12v-9.5" />
+        <path d="M10 20v-5h4v5" />
+      </svg>
+    );
+  }
+
+  if (id === "adventurers") {
+    return (
+      <svg {...common}>
+        <circle cx="9" cy="8" r="2.5" />
+        <circle cx="16.5" cy="9" r="2" />
+        <path d="M4.5 18c.8-2.5 2.7-4 4.5-4s3.7 1.5 4.5 4" />
+        <path d="M13.5 18c.5-1.8 1.8-3 3.4-3 1.2 0 2.4.7 3.1 2" />
+      </svg>
+    );
+  }
+
+  if (id === "board") {
+    return (
+      <svg {...common}>
+        <path d="M12 3v18" />
+        <path d="M8.5 6.5L12 3l3.5 3.5" />
+        <path d="M8.5 17.5L12 21l3.5-3.5" />
+        <path d="M5 12h14" />
+      </svg>
+    );
+  }
+
+  if (id === "registry") {
+    return (
+      <svg {...common}>
+        <path d="M7 4.5h8l3 3V19a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1z" />
+        <path d="M15 4.5V8h3" />
+        <path d="M9 12h6" />
+        <path d="M9 15.5h6" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg {...common}>
+      <path d="M8 8l8 8" />
+      <path d="M16 8l-8 8" />
+      <path d="M5 4h6" />
+      <path d="M5 20h6" />
+      <path d="M19 6v12" />
+    </svg>
   );
 }
 
@@ -5273,15 +5330,15 @@ function App() {
           width: "100%", maxWidth: 500, background: "#0c0c1dee", backdropFilter: "blur(10px)",
           borderTop: "1px solid #2d2d44", display: "flex", zIndex: 100 }}>
           {[
-            { id: "hub", icon: "HB", label: "Hub" },
-            { id: "adventurers", icon: "GR", label: "Grupo" },
-            { id: "board", icon: "AV", label: "Partida" },
-            { id: "registry", icon: "REG", label: "Registro" },
+            { id: "hub", label: "Hub" },
+            { id: "adventurers", label: "Grupo" },
+            { id: "board", label: "Partida" },
+            { id: "registry", label: "Registro" },
           ].map(tab => (
             <button key={tab.id} onClick={() => handleNav(tab.id)}
               style={{ flex: 1, padding: "10px 0", background: "none", border: "none",
                 cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-              <span style={{ fontSize: 20 }}>{tab.icon}</span>
+              <BottomNavIcon id={tab.id} active={subScreen === tab.id} />
               <span style={{ fontSize: 9, color: subScreen === tab.id ? "#d4b896" : "#4b5563",
                 fontWeight: subScreen === tab.id ? 700 : 400 }}>{tab.label}</span>
             </button>
@@ -5289,7 +5346,7 @@ function App() {
           <button onClick={goHome}
             style={{ padding: "10px 16px", background: "none", border: "none", borderLeft: "1px solid #2d2d44",
               cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-            <span style={{ fontSize: 20 }}>OUT</span>
+            <BottomNavIcon id="exit" active={false} />
             <span style={{ fontSize: 9, color: "#4b5563" }}>Salir</span>
           </button>
         </div>
