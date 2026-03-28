@@ -1039,6 +1039,30 @@ const LEFT_FOR_DEAD_OUTCOMES = {
   },
 };
 
+const MISSION_OBJECTIVE_REWARD_RULES = {
+  B: {
+    primary: { gold: 10, renown: 2, note: "Aplicado si el rescate se resolvio por Punto de Reagrupamiento." },
+  },
+};
+
+const MISSION_OBJECTIVE_MANUAL_HINTS = {
+  Intro: {
+    secondary: "Cada Objetivo 7 y 8 vale 1 Renombre. Ajusta Renombre manualmente segun hayas recuperado 0, 1 o 2.",
+  },
+  A: {
+    primary: "Cada reliquia vale 6G en Mercado. Ese ingreso se refleja mejor en Vender o como ajuste manual de oro.",
+    secondary: "Si recuperaste el Objetivo 9, marca manualmente el logro Parafernalia Oculta en Registro.",
+  },
+  C: {
+    primary: "Las partes recuperadas dependen de cuantos objetivos obtuviste. Ajusta manualmente cualquier recompensa adicional si hace falta.",
+    secondary: "Si recuperaste los Objetivos 7 y 8, marca manualmente el logro Rastro Esqueletico.",
+  },
+  D: {
+    primary: "Otorga 1 Renombre por cada 20G de aumento en Mercado. Ajusta Renombre manualmente segun el valor real.",
+    secondary: "Anota manualmente en Registro el mapeo de tuneles y el robo de tumbas.",
+  },
+};
+
 function createCraftedInventoryItem(recipe, payload) {
   if (payload) {
     return normalizeInventoryItem({
@@ -1607,6 +1631,41 @@ function applyLeftForDeadOutcomeToAdventurer(adv, resolution) {
     return normalizeAdventurer(base);
   }
   return normalizeAdventurer(base);
+}
+
+function getMissionObjectiveResolution(state) {
+  const missionId = state?.mision_id;
+  const rewardRules = MISSION_OBJECTIVE_REWARD_RULES[missionId] || {};
+  const manualHints = MISSION_OBJECTIVE_MANUAL_HINTS[missionId] || {};
+  const entries = [];
+  let gold = 0;
+  let renown = 0;
+  let xpExtra = 0;
+
+  [
+    { key: "primary", checked: !!state?.primary_complete, label: "Objetivo primario" },
+    { key: "secondary", checked: !!state?.secondary_complete, label: "Objetivo secundario" },
+  ].forEach(entry => {
+    const rule = rewardRules[entry.key] || null;
+    const hint = manualHints[entry.key] || "";
+    if (entry.checked && rule) {
+      gold += Math.max(0, Number(rule.gold) || 0);
+      renown += Math.max(0, Number(rule.renown) || 0);
+      xpExtra += Math.max(0, Number(rule.xpExtra) || 0);
+    }
+    entries.push({
+      ...entry,
+      rule,
+      hint,
+    });
+  });
+
+  return {
+    gold,
+    renown,
+    xpExtra,
+    entries,
+  };
 }
 
 function applyMissionRestToAdventurer(adv, options = {}) {
@@ -4153,14 +4212,20 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const suggestedNextMissionIds = getSuggestedNextMissionIds(missionState.mision_id);
   const postMissionSteps = [
     { id: "escape", label: "Fase de Huida" },
+    { id: "sell", label: "Vender" },
     { id: "xp", label: "Experiencia" },
     { id: "rest", label: "Posada o Bosque" },
     { id: "repair", label: "Reparar" },
-    { id: "sell", label: "Vender" },
     { id: "market", label: "Comprar / Craftear" },
     { id: "summary", label: "Resumen final" },
   ];
-  const xpEach = Math.max(1, Number(missionState.xp_base || 1)) + Math.max(0, Number(missionState.xp_extra || 0));
+  const objectiveResolution = getMissionObjectiveResolution(missionState);
+  const manualXpExtra = Math.max(0, Number(missionState.xp_extra || 0) || 0);
+  const manualRenownGain = Math.max(0, Number(missionState.renombre_ganado || 0) || 0);
+  const manualGoldGain = Math.max(0, Number(missionState.oro_ganado || 0) || 0);
+  const xpEach = Math.max(1, Number(missionState.xp_base || 1)) + objectiveResolution.xpExtra + manualXpExtra;
+  const totalRenownGain = objectiveResolution.renown + manualRenownGain;
+  const totalGoldGain = objectiveResolution.gold + manualGoldGain;
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
   const [craftingCatalog, setCraftingCatalog] = useState([]);
   const [officialItems, setOfficialItems] = useState([]);
@@ -4206,11 +4271,11 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const marketSpend = (missionState.purchased_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
   const repairSpend = (missionState.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
   const soldIncome = (missionState.sold_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.price) || 0), 0);
-  const availableGoldBeforeCraft = currentGroupGold + Number(missionState.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - repairSpend - marketSpend;
-  const availableGoldBeforeMarket = currentGroupGold + Number(missionState.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
-  const phaseGoldDelta = Number(missionState.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
+  const availableGoldBeforeCraft = currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost - repairSpend - marketSpend;
+  const availableGoldBeforeMarket = currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
+  const phaseGoldDelta = totalGoldGain + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
   const totalGoldAfterPhase = Math.max(0, currentGroupGold + phaseGoldDelta);
-  const totalGoldAfterRest = Math.max(0, currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost);
+  const totalGoldAfterRest = Math.max(0, currentGroupGold + totalGoldGain - maintenanceCost - lodgingCost);
   const currentStep = postMissionSteps[activeStepIndex] || postMissionSteps[0];
   useEffect(() => {
     loadCraftingCatalog()
@@ -4497,6 +4562,18 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
               <div>
                 <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo primario</div>
                 <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_primario || "Sin texto cargado."}</div>
+                {objectiveResolution.entries.find(entry => entry.key === "primary")?.rule && (
+                  <div style={{ color: "#86efac", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+                    Al marcarlo, la app aplica automaticamente
+                    {objectiveResolution.entries.find(entry => entry.key === "primary")?.rule?.gold ? ` +${objectiveResolution.entries.find(entry => entry.key === "primary")?.rule?.gold}G` : ""}
+                    {objectiveResolution.entries.find(entry => entry.key === "primary")?.rule?.renown ? ` +${objectiveResolution.entries.find(entry => entry.key === "primary")?.rule?.renown} Renombre` : ""}.
+                  </div>
+                )}
+                {objectiveResolution.entries.find(entry => entry.key === "primary")?.hint && (
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+                    {objectiveResolution.entries.find(entry => entry.key === "primary")?.hint}
+                  </div>
+                )}
               </div>
             </button>
             <button onClick={() => patchMission({ secondary_complete: !missionState.secondary_complete })}
@@ -4505,6 +4582,18 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
               <div>
                 <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>Objetivo secundario</div>
                 <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.5 }}>{mission?.objetivo_secundario || "Sin objetivo secundario."}</div>
+                {objectiveResolution.entries.find(entry => entry.key === "secondary")?.rule && (
+                  <div style={{ color: "#86efac", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+                    Al marcarlo, la app aplica automaticamente
+                    {objectiveResolution.entries.find(entry => entry.key === "secondary")?.rule?.gold ? ` +${objectiveResolution.entries.find(entry => entry.key === "secondary")?.rule?.gold}G` : ""}
+                    {objectiveResolution.entries.find(entry => entry.key === "secondary")?.rule?.renown ? ` +${objectiveResolution.entries.find(entry => entry.key === "secondary")?.rule?.renown} Renombre` : ""}.
+                  </div>
+                )}
+                {objectiveResolution.entries.find(entry => entry.key === "secondary")?.hint && (
+                  <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+                    {objectiveResolution.entries.find(entry => entry.key === "secondary")?.hint}
+                  </div>
+                )}
               </div>
             </button>
           </div>
@@ -4639,45 +4728,80 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         </>
       )}
 
-      {activeStepIndex === 1 && (
+      {currentStep.id === "xp" && (
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
-          Recompensas del grupo
+          Experiencia y recompensas
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
           <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
             <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>PX base por aventurero</div>
-            <div style={{ color: "#bbf7d0", fontSize: 22, fontWeight: 800 }}>1</div>
+            <div style={{ color: "#bbf7d0", fontSize: 22, fontWeight: 800 }}>{Math.max(1, Number(missionState.xp_base || 1))}</div>
           </div>
           <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
             <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>PX total por aventurero</div>
             <div style={{ color: "#fde68a", fontSize: 22, fontWeight: 800 }}>{xpEach}</div>
           </div>
         </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Renombre total preparado</div>
+            <div style={{ color: "#fbbf24", fontSize: 22, fontWeight: 800 }}>{totalRenownGain}</div>
+          </div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
+            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro por objetivos y extras</div>
+            <div style={{ color: "#d4b896", fontSize: 22, fontWeight: 800 }}>{totalGoldGain}G</div>
+          </div>
+        </div>
+
+        <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
+          <div style={{ color: "#93c5fd", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2, marginBottom: 6 }}>
+            Resuelto desde objetivos marcados
+          </div>
+          <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
+            {objectiveResolution.gold > 0 || objectiveResolution.renown > 0 || objectiveResolution.xpExtra > 0
+              ? `Objetivos: ${objectiveResolution.gold > 0 ? `+${objectiveResolution.gold}G ` : ""}${objectiveResolution.renown > 0 ? `+${objectiveResolution.renown} Renombre ` : ""}${objectiveResolution.xpExtra > 0 ? `+${objectiveResolution.xpExtra} PX por aventurero` : ""}`.trim()
+              : "Esta mision no tiene una recompensa fija automatizada por los objetivos marcados, o depende de conteos del manual."}
+          </div>
+          {soldIncome > 0 && (
+            <div style={{ color: "#86efac", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+              Ventas ya preparadas en el paso anterior: +{soldIncome}G.
+            </div>
+          )}
+          {objectiveResolution.entries.some(entry => entry.checked && entry.hint) && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+              {objectiveResolution.entries.filter(entry => entry.checked && entry.hint).map(entry => (
+                <div key={entry.key} style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                  {entry.label}: {entry.hint}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         {[
-          { field: "xp_extra", label: "PX extra por aventurero", suffix: "" },
-          { field: "renombre_ganado", label: "Renombre ganado", suffix: "" },
-          { field: "demora_cambio", label: "Demora a sumar", suffix: "" },
-        ].map(({ field, label, suffix }) => (
+          { field: "xp_extra", label: "PX extra manual por aventurero", suffix: "", value: manualXpExtra },
+          { field: "renombre_ganado", label: "Renombre extra manual", suffix: "", value: manualRenownGain },
+          { field: "demora_cambio", label: "Demora a sumar", suffix: "", value: missionState.demora_cambio || 0 },
+        ].map(({ field, label, suffix, value }) => (
           <div key={field} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0f172a", borderRadius: 8, padding: "8px 10px", marginBottom: 6 }}>
             <span style={{ color: "#9ca3af", fontSize: 12 }}>{label}</span>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
               <button onClick={() => adjustNumber(field, -1)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
-              <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, width: 34, textAlign: "center" }}>{missionState[field] || 0}{suffix}</span>
+              <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700, minWidth: 34, textAlign: "center" }}>{value}{suffix}</span>
               <button onClick={() => adjustNumber(field, 1)} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
             </div>
           </div>
         ))}
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#0f172a", borderRadius: 8, padding: "8px 10px", marginBottom: 6 }}>
-          <span style={{ color: "#9ca3af", fontSize: 12 }}>Oro ganado</span>
-          <input type="number" min="0" value={missionState.oro_ganado || 0} onChange={e => patchMission({ oro_ganado: Math.max(0, Number(e.target.value) || 0) })}
+          <span style={{ color: "#9ca3af", fontSize: 12 }}>Oro extra manual</span>
+          <input type="number" min="0" value={manualGoldGain} onChange={e => patchMission({ oro_ganado: Math.max(0, Number(e.target.value) || 0) })}
             style={{ width: 120, padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 14, textAlign: "right", boxSizing: "border-box" }} />
         </div>
       </div>
       )}
 
-      {activeStepIndex === 2 && (
+      {currentStep.id === "rest" && (
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Posada o Bosque
@@ -4716,7 +4840,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         <div style={{ background: phaseGoldDelta >= 0 ? "#132034" : "#3a1212", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Balance neto provisional del cierre</div>
           <div style={{ color: phaseGoldDelta >= 0 ? "#bbf7d0" : "#fca5a5", fontSize: 20, fontWeight: 800 }}>{phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G</div>
-          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro ganado + ventas - mantenimiento - descanso - reparaciones - crafteo - compras</div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro por objetivos y extras + ventas - mantenimiento - descanso - reparaciones - crafteo - compras</div>
         </div>
         <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro total del grupo tras este cierre</div>
@@ -4738,7 +4862,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       </div>
       )}
 
-      {activeStepIndex === 3 && (
+      {currentStep.id === "repair" && (
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Reparacion de objetos
@@ -4755,7 +4879,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             {brokenItems.map(entry => {
               const selected = !!entry.selected;
               const cost = selected ? Math.max(0, Number(entry.selected?.cost) || 0) : (entry.autoCost ?? 0);
-              const projectedTotalGold = currentGroupGold + Number(missionState.oro_ganado || 0) - maintenanceCost - lodgingCost - craftedSpend - (repairSpend + (selected ? 0 : cost)) - marketSpend;
+              const projectedTotalGold = currentGroupGold + totalGoldGain - maintenanceCost - lodgingCost - craftedSpend - (repairSpend + (selected ? 0 : cost)) - marketSpend;
               const canAffordRepair = selected || projectedTotalGold >= 0;
               return (
                 <div key={entry.key} style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #1f2937" }}>
@@ -4796,7 +4920,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       </div>
       )}
 
-      {activeStepIndex === 4 && (
+      {currentStep.id === "sell" && (
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
           Vender
@@ -4855,7 +4979,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       </div>
       )}
 
-      {activeStepIndex === 5 && (
+      {currentStep.id === "market" && (
       <>
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
@@ -5099,7 +5223,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       </>
       )}
 
-      {activeStepIndex === 6 && (
+      {currentStep.id === "summary" && (
       <>
       <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
         <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
@@ -5148,7 +5272,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           Aplicacion al grupo
         </div>
         <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
-          Se aplicaran {xpEach} PX a cada aventurero que participo en la mision, {missionState.renombre_ganado || 0} de Renombre, {phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G en esta fase y el grupo quedara con {totalGoldAfterPhase}G en total, ademas de +{missionState.demora_cambio || 0} de Demora en la campana.
+          Se aplicaran {xpEach} PX a cada aventurero que participo en la mision, {totalRenownGain} de Renombre, {phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G en esta fase y el grupo quedara con {totalGoldAfterPhase}G en total, ademas de +{missionState.demora_cambio || 0} de Demora en la campana.
         </div>
         {(missionState.repaired_items || []).length > 0 && (
           <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
@@ -5210,8 +5334,8 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       </>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: activeStepIndex === 6 ? "1fr" : "1fr 1fr", gap: 8, marginTop: 12 }}>
-        {activeStepIndex < 6 && (
+      <div style={{ display: "grid", gridTemplateColumns: currentStep.id === "summary" ? "1fr" : "1fr 1fr", gap: 8, marginTop: 12 }}>
+        {currentStep.id !== "summary" && (
           <button onClick={() => setActiveStepIndex(index => Math.min(6, index + 1))}
             style={{ padding: 14, borderRadius: 10, border: "2px solid #eab308", background: "#eab30815", color: "#fde68a", fontSize: 13, fontWeight: 800, cursor: "pointer", order: 2 }}>
             Continuar
@@ -5885,12 +6009,15 @@ function App() {
   const finishMission = async () => {
     if (!campaign || !missionState) return;
     const resolvedMission = normalizeMissionState(missionState);
+    const objectiveResolution = getMissionObjectiveResolution(resolvedMission);
     const participantIdSet = new Set(
       (Array.isArray(resolvedMission.participant_ids) && resolvedMission.participant_ids.length > 0
         ? resolvedMission.participant_ids
         : adventurers.filter(canAdventurerJoinMission).map(adv => adv.id))
     );
-    const xpEach = Math.max(1, Number(resolvedMission.xp_base || 1)) + Math.max(0, Number(resolvedMission.xp_extra || 0));
+    const totalRenownGain = objectiveResolution.renown + Math.max(0, Number(resolvedMission.renombre_ganado || 0) || 0);
+    const totalGoldGain = objectiveResolution.gold + Math.max(0, Number(resolvedMission.oro_ganado || 0) || 0);
+    const xpEach = Math.max(1, Number(resolvedMission.xp_base || 1)) + objectiveResolution.xpExtra + Math.max(0, Number(resolvedMission.xp_extra || 0) || 0);
     const livingAdventurers = adventurers.filter(adv => !isAdventurerDead(adv)).map(normalizeAdventurer);
     const maintenanceCost = livingAdventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
     const lodgingCost = resolvedMission.rest_mode === "posada" ? livingAdventurers.length * 2 : 0;
@@ -5909,7 +6036,7 @@ function App() {
       if (finalResult !== 5 || !entry.paidRansom) return sum;
       return sum + (5 * Math.max(1, Number(owner.rango || 1)));
     }, 0);
-    const phaseGoldDelta = Number(resolvedMission.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend - rescueSpend;
+    const phaseGoldDelta = totalGoldGain + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend - rescueSpend;
     const updatedAdventurers = adventurers.map(adv => {
       const normalized = normalizeAdventurer(adv);
       const craftedForAdventurer = (resolvedMission.crafted_items || [])
@@ -5958,7 +6085,7 @@ function App() {
       ...campaign,
       currentMission: resolvedMission.next_mission || campaign.currentMission,
       demora: Math.min(12, Math.max(0, Number(campaign.demora || 0) + Number(resolvedMission.demora_cambio || 0))),
-      renombre: Math.max(0, Number(campaign.renombre || 0) + Number(resolvedMission.renombre_ganado || 0)),
+      renombre: Math.max(0, Number(campaign.renombre || 0) + totalRenownGain),
       oro: Math.max(0, Number(campaign.oro || 0) + phaseGoldDelta),
       historial_misiones: [
         ...(campaign.historial_misiones || []),
@@ -5970,7 +6097,7 @@ function App() {
           primary: resolvedMission.primary_complete,
           secondary: resolvedMission.secondary_complete,
           xpEach,
-          renombre: Number(resolvedMission.renombre_ganado || 0),
+          renombre: totalRenownGain,
           oro: phaseGoldDelta,
           demora: Number(resolvedMission.demora_cambio || 0),
           notes: [
