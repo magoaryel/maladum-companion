@@ -874,6 +874,8 @@ function defaultAdventurer(campId, charData) {
     clase_habilidades: {},
     hechizos: [],
     vivo: true,
+    misiones_no_disponible: 0,
+    motivo_baja: "",
   };
 }
 
@@ -894,6 +896,7 @@ function defaultMissionState(campId, missionId) {
     primary_complete: false,
     secondary_complete: false,
     success: true,
+    participant_ids: [],
     xp_base: 1,
     xp_extra: 0,
     renombre_ganado: 0,
@@ -910,6 +913,9 @@ function defaultMissionState(campId, missionId) {
     purchased_items: [],
     repaired_items: [],
     sold_items: [],
+    escape_mode: "none",
+    defeated_adventurer_ids: [],
+    left_for_dead_rolls: [],
     notas: "",
     loot_notes: "",
   };
@@ -952,6 +958,7 @@ function normalizeMissionState(state) {
     primary_complete: !!state.primary_complete,
     secondary_complete: !!state.secondary_complete,
     success: state.success !== false,
+    participant_ids: Array.isArray(state.participant_ids) ? state.participant_ids.filter(Boolean) : [],
     xp_base: Math.max(1, Number(state.xp_base ?? 1) || 1),
     xp_extra: Math.max(0, Number(state.xp_extra ?? 0) || 0),
     renombre_ganado: Math.max(0, Number(state.renombre_ganado ?? 0) || 0),
@@ -968,6 +975,9 @@ function normalizeMissionState(state) {
     purchased_items: Array.isArray(state.purchased_items) ? state.purchased_items : [],
     repaired_items: Array.isArray(state.repaired_items) ? state.repaired_items : [],
     sold_items: Array.isArray(state.sold_items) ? state.sold_items : [],
+    escape_mode: ["none", "rescue", "left_for_dead"].includes(state.escape_mode) ? state.escape_mode : "none",
+    defeated_adventurer_ids: Array.isArray(state.defeated_adventurer_ids) ? state.defeated_adventurer_ids.filter(Boolean) : [],
+    left_for_dead_rolls: Array.isArray(state.left_for_dead_rolls) ? state.left_for_dead_rolls : [],
     fases_completadas: state.fases_completadas || {},
     steps_completados: state.steps_completados || {},
     notas: String(state.notas || ""),
@@ -998,6 +1008,35 @@ const MAGIC_DIE_OUTCOMES = {
   4: "Otros personajes en 2 casillas se alejan 1 casilla y quedan Derribados. Pueden gastar 1 clavija de Habilidad para evitarlo.",
   5: "Este y otros personajes en 2 casillas ganan 1 clavija de Magia. Pueden superar su valor inicial.",
   6: "Resuelve el hechizo como si hubieras gastado 1 clavija extra. No se puede resistir.",
+};
+
+const LEFT_FOR_DEAD_STATUS_IDS = ["wounded", "poisoned", "burning"];
+
+const LEFT_FOR_DEAD_OUTCOMES = {
+  1: {
+    title: "Muerte permanente",
+    summary: "El personaje sucumbe a sus heridas. Ya no puede usarse durante el resto de la campana y todo su equipo se pierde.",
+  },
+  2: {
+    title: "Fuera dos misiones",
+    summary: "Consigue ponerse a salvo, pero no puede participar en tus proximas dos misiones.",
+  },
+  3: {
+    title: "Sobrevive, pero pierde todo el equipo",
+    summary: "Llega a casa, pero bandidos errantes saquean su cuerpo. Todo el equipo del personaje se pierde.",
+  },
+  4: {
+    title: "Fuera la proxima mision",
+    summary: "Escapa, pero sus heridas no se han curado del todo. No puede participar en tu proxima mision.",
+  },
+  5: {
+    title: "Rescate con pago",
+    summary: "Debes pagar 5 veces su rango en oro para que vuelva ileso. Si no puedes o no quieres pagar, tratalo como un 1.",
+  },
+  6: {
+    title: "Recuperacion completa",
+    summary: "Ha escapado y se ha recuperado por completo. No hay mas efectos.",
+  },
 };
 
 function createCraftedInventoryItem(recipe, payload) {
@@ -1112,7 +1151,30 @@ function normalizeAdventurer(adv) {
     clase_habilidades: hasSkillMap ? { ...fallbackSkills, ...adv.clase_habilidades } : fallbackSkills,
     hechizos: (adv?.hechizos || []).map(normalizeSpell),
     inventario: (adv?.inventario || []).map(normalizeInventoryItem),
+    vivo: adv?.vivo !== false,
+    misiones_no_disponible: Math.max(0, Number(adv?.misiones_no_disponible) || 0),
+    motivo_baja: String(adv?.motivo_baja || ""),
   };
+}
+
+function isAdventurerDead(adv) {
+  return normalizeAdventurer(adv).vivo === false;
+}
+
+function canAdventurerJoinMission(adv) {
+  const normalized = normalizeAdventurer(adv);
+  return normalized.vivo !== false && Number(normalized.misiones_no_disponible || 0) <= 0;
+}
+
+function getAdventurerAvailabilityLabel(adv) {
+  const normalized = normalizeAdventurer(adv);
+  if (!normalized.vivo) return "Muerto";
+  if (normalized.misiones_no_disponible > 0) {
+    return normalized.misiones_no_disponible === 1
+      ? "Fuera 1 mision"
+      : `Fuera ${normalized.misiones_no_disponible} misiones`;
+  }
+  return "";
 }
 
 function updateAdventurerClass(adv, cls) {
@@ -1475,6 +1537,76 @@ function removeFirstStatusEffect(effects, effectId) {
   const next = [...source];
   next.splice(index, 1);
   return next;
+}
+
+function removeStatusEffectsById(effects, effectIds) {
+  const blocked = new Set(effectIds || []);
+  return (Array.isArray(effects) ? effects : []).filter(effectId => !blocked.has(effectId));
+}
+
+function getLeftForDeadPenaltyCount(adv) {
+  return (normalizeAdventurer(adv).status_effects || []).filter(effectId => LEFT_FOR_DEAD_STATUS_IDS.includes(effectId)).length;
+}
+
+function getLeftForDeadFinalResult(rawResult, adv) {
+  const baseResult = Math.max(1, Math.min(6, Number(rawResult) || 1));
+  return Math.max(1, baseResult - getLeftForDeadPenaltyCount(adv));
+}
+
+function getLeftForDeadOutcomeSummary(result, paidRansom) {
+  if (Number(result) === 5 && !paidRansom) {
+    return "Si no se paga el rescate, este resultado se trata como un 1: muerte permanente.";
+  }
+  return LEFT_FOR_DEAD_OUTCOMES[Number(result)]?.summary || "Resultado pendiente.";
+}
+
+function applyLeftForDeadOutcomeToAdventurer(adv, resolution) {
+  const normalized = normalizeAdventurer(adv);
+  const rawResult = Math.max(1, Math.min(6, Number(resolution?.rawResult) || 1));
+  const finalResult = Math.max(1, Math.min(6, Number(resolution?.finalResult) || getLeftForDeadFinalResult(rawResult, normalized)));
+  const paidRansom = !!resolution?.paidRansom;
+  const statusEffects = removeStatusEffectsById(normalized.status_effects, LEFT_FOR_DEAD_STATUS_IDS);
+  const outcomeResult = finalResult === 5 && !paidRansom ? 1 : finalResult;
+  const base = {
+    ...normalized,
+    status_effects: statusEffects,
+    motivo_baja: normalized.motivo_baja || "",
+  };
+
+  if (outcomeResult === 1) {
+    return normalizeAdventurer({
+      ...base,
+      vivo: false,
+      inventario: [],
+      magia_actual: 0,
+      habilidad_actual: 0,
+      salud_actual: 0,
+      misiones_no_disponible: 0,
+      motivo_baja: "Dado por muerto",
+    });
+  }
+  if (outcomeResult === 2) {
+    return normalizeAdventurer({
+      ...base,
+      misiones_no_disponible: Math.max(base.misiones_no_disponible || 0, 2),
+    });
+  }
+  if (outcomeResult === 3) {
+    return normalizeAdventurer({
+      ...base,
+      inventario: [],
+    });
+  }
+  if (outcomeResult === 4) {
+    return normalizeAdventurer({
+      ...base,
+      misiones_no_disponible: Math.max(base.misiones_no_disponible || 0, 1),
+    });
+  }
+  if (outcomeResult === 5) {
+    return normalizeAdventurer(base);
+  }
+  return normalizeAdventurer(base);
 }
 
 function applyMissionRestToAdventurer(adv, options = {}) {
@@ -4038,13 +4170,22 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const [marketSource, setMarketSource] = useState("all");
   const [selectedMarketKey, setSelectedMarketKey] = useState("");
   const [activeStepIndex, setActiveStepIndex] = useState(0);
+  const participantIds = Array.isArray(missionState.participant_ids) && missionState.participant_ids.length > 0
+    ? missionState.participant_ids
+    : adventurers.filter(canAdventurerJoinMission).map(adv => adv.id);
+  const missionParty = adventurers
+    .filter(adv => participantIds.includes(adv.id))
+    .map(normalizeAdventurer);
+  const livingAdventurers = adventurers
+    .filter(adv => !isAdventurerDead(adv))
+    .map(normalizeAdventurer);
   const adjustNumber = (field, delta, min = 0) => {
     patchMission({ [field]: Math.max(min, Number(missionState[field] || 0) + delta) });
   };
-  const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
-  const lodgingCost = missionState.rest_mode === "posada" ? adventurers.length * 2 : 0;
+  const maintenanceCost = livingAdventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
+  const lodgingCost = missionState.rest_mode === "posada" ? livingAdventurers.length * 2 : 0;
   const currentGroupGold = Math.max(0, Number(campaign.oro || 0) || 0);
-  const brokenItems = adventurers.flatMap(adv => {
+  const brokenItems = livingAdventurers.flatMap(adv => {
     const normalized = normalizeAdventurer(adv);
     return (normalized.inventario || [])
       .filter(item => item.broken)
@@ -4098,7 +4239,60 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
     }
   }, [selectedMarketKey, officialItems, marketSource, marketQuery]);
 
-  const uniqueCraftedNames = getUniqueCraftedNames(adventurers, missionState);
+  const defeatedIds = Array.isArray(missionState.defeated_adventurer_ids) ? missionState.defeated_adventurer_ids : [];
+  const leftForDeadRolls = Array.isArray(missionState.left_for_dead_rolls) ? missionState.left_for_dead_rolls : [];
+  const rescuePending = !missionState.success && missionState.escape_mode === "rescue" && defeatedIds.length > 0;
+  const leftForDeadPending = !missionState.success
+    && missionState.escape_mode === "left_for_dead"
+    && defeatedIds.some(id => {
+      const entry = leftForDeadRolls.find(item => item.adventurerId === id);
+      return !(Number(entry?.rawResult) >= 1 && Number(entry?.rawResult) <= 6);
+    });
+  const canApplyMissionClosure = !rescuePending && !leftForDeadPending;
+
+  const setMissionSuccessState = (success) => {
+    if (success) {
+      patchMission({
+        success: true,
+        escape_mode: "none",
+        defeated_adventurer_ids: [],
+        left_for_dead_rolls: [],
+      });
+      return;
+    }
+    patchMission({ success: false });
+  };
+
+  const toggleDefeatedAdventurer = (adventurerId) => {
+    const nextIds = defeatedIds.includes(adventurerId)
+      ? defeatedIds.filter(id => id !== adventurerId)
+      : [...defeatedIds, adventurerId];
+    patchMission({
+      defeated_adventurer_ids: nextIds,
+      left_for_dead_rolls: leftForDeadRolls.filter(entry => nextIds.includes(entry.adventurerId)),
+    });
+  };
+
+  const setEscapeMode = (mode) => {
+    patchMission({
+      escape_mode: mode,
+      left_for_dead_rolls: mode === "left_for_dead"
+        ? leftForDeadRolls.filter(entry => defeatedIds.includes(entry.adventurerId))
+        : [],
+    });
+  };
+
+  const updateLeftForDeadRoll = (adventurerId, updates) => {
+    const existing = leftForDeadRolls.find(entry => entry.adventurerId === adventurerId) || { adventurerId };
+    patchMission({
+      left_for_dead_rolls: [
+        ...leftForDeadRolls.filter(entry => entry.adventurerId !== adventurerId),
+        { ...existing, ...updates, adventurerId },
+      ],
+    });
+  };
+
+  const uniqueCraftedNames = getUniqueCraftedNames(livingAdventurers, missionState);
   const craftableItems = craftingCatalog.filter(item => {
     const hasMaterials = Object.entries(item.requirements || {}).every(([letter, need]) => (missionState.materials_gained?.[letter] || 0) >= need);
     const alreadyOwnedOrCrafted = uniqueCraftedNames.has(String(item.name || "").toLowerCase());
@@ -4134,7 +4328,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
     });
   };
 
-  const sellableItems = adventurers.flatMap(adv => {
+  const sellableItems = livingAdventurers.flatMap(adv => {
     const normalized = normalizeAdventurer(adv);
     return (normalized.inventario || [])
       .filter(item => Number.isFinite(Number(item.sell)) && Number(item.sell) >= 0)
@@ -4283,11 +4477,11 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       {activeStepIndex === 0 && (
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
-            <button onClick={() => patchMission({ success: true })}
+            <button onClick={() => setMissionSuccessState(true)}
               style={{ padding: 12, borderRadius: 10, border: missionState.success ? "2px solid #166534" : "1px solid #374151", background: missionState.success ? "#16653422" : "#1a1a2e", color: missionState.success ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
               Mision superada
             </button>
-            <button onClick={() => patchMission({ success: false })}
+            <button onClick={() => setMissionSuccessState(false)}
               style={{ padding: 12, borderRadius: 10, border: !missionState.success ? "2px solid #7f1d1d" : "1px solid #374151", background: !missionState.success ? "#7f1d1d22" : "#1a1a2e", color: !missionState.success ? "#fca5a5" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
               Retirada / derrota
             </button>
@@ -4314,6 +4508,134 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
               </div>
             </button>
           </div>
+
+          {!missionState.success && (
+            <>
+              <div style={{ background: "#3a1212", borderRadius: 10, padding: 12, border: "1px solid #7f1d1d", marginBottom: 12 }}>
+                <div style={{ color: "#fca5a5", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>Fase de Escape</div>
+                <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
+                  En esta fase debes centrarte en los miembros del grupo que no lograron salir de la zona de juego al final de la mision.
+                  Si hubo aventureros derrotados o atrapados, elige si intentaras una Mision de Rescate o si los das por Muertos.
+                </div>
+              </div>
+
+              <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+                <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+                  Aventureros derrotados o que no escaparon
+                </div>
+                {missionParty.length > 0 ? (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                    {missionParty.map(adv => {
+                      const selected = defeatedIds.includes(adv.id);
+                      return (
+                        <button key={adv.id} onClick={() => toggleDefeatedAdventurer(adv.id)}
+                          style={{ padding: "9px 12px", borderRadius: 999, border: selected ? "1px solid #ef4444" : "1px solid #374151", background: selected ? "#7f1d1d22" : "#0f172a", color: selected ? "#fecaca" : "#d4b896", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                          {adv.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ color: "#6b7280", fontSize: 12 }}>No hay aventureros registrados en esta partida.</div>
+                )}
+                <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+                  Marca solo los que terminaron derrotados o quedaron atras al cerrar la mision.
+                </div>
+              </div>
+
+              {defeatedIds.length > 0 && (
+                <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
+                  <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>
+                    Resolver la fase
+                  </div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+                    <button onClick={() => setEscapeMode("rescue")}
+                      style={{ padding: 12, borderRadius: 10, border: missionState.escape_mode === "rescue" ? "2px solid #2563eb" : "1px solid #374151", background: missionState.escape_mode === "rescue" ? "#1d4ed822" : "#0f172a", color: missionState.escape_mode === "rescue" ? "#dbeafe" : "#d4b896", fontWeight: 700, cursor: "pointer" }}>
+                      Mision de Rescate
+                    </button>
+                    <button onClick={() => setEscapeMode("left_for_dead")}
+                      style={{ padding: 12, borderRadius: 10, border: missionState.escape_mode === "left_for_dead" ? "2px solid #7f1d1d" : "1px solid #374151", background: missionState.escape_mode === "left_for_dead" ? "#7f1d1d22" : "#0f172a", color: missionState.escape_mode === "left_for_dead" ? "#fecaca" : "#d4b896", fontWeight: 700, cursor: "pointer" }}>
+                      Dado por Muerto
+                    </button>
+                  </div>
+
+                  {missionState.escape_mode === "rescue" && (
+                    <div style={{ background: "#132034", borderRadius: 8, padding: 12, border: "1px solid #1d4ed8" }}>
+                      <div style={{ color: "#93c5fd", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Mision de Rescate</div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6, color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
+                        <div>Puedes intentar una Mision de Rescate solo una vez por partida si todavia tienes al menos un aventurero no derrotado.</div>
+                        <div>La zona, los componentes no aventureros y el registro de Amenaza permanecen donde quedaron al final de la partida original.</div>
+                        <div>Formas un nuevo grupo con los aventureros disponibles, puedes intercambiar equipo entre ellos y todos pueden hacer una accion gratuita de Descanso.</div>
+                        <div>Buscando otra entrada, lanzas el Dado Magico y, si lo deseas, intercambias la posicion del Punto de Reagrupamiento con el Punto de Entrada que coincida con el resultado.</div>
+                        <div>No se gana experiencia en la mision de rescate. Si un aventurero vuelve a quedar atras durante ella, se considera Dado por Muerto.</div>
+                      </div>
+                      <div style={{ color: "#fca5a5", fontSize: 11, lineHeight: 1.5, marginTop: 10 }}>
+                        La app aun no automatiza esa rama completa. Usa este bloque como guia oficial y no apliques el cierre final hasta resolver la Mision de Rescate en mesa.
+                      </div>
+                    </div>
+                  )}
+
+                  {missionState.escape_mode === "left_for_dead" && (
+                    <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                      <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                        Por cada aventurero marcado, tira el Dado Magico. La app reduce automaticamente la tirada en 1 por cada Herido, Envenenado o Quemado y luego esos contadores se descartan.
+                        Si el personaje tiene Bendito, puedes repetir la tirada manualmente antes de fijarla aqui.
+                      </div>
+                      {missionParty.filter(adv => defeatedIds.includes(adv.id)).map(adv => {
+                        const penalty = getLeftForDeadPenaltyCount(adv);
+                        const rollEntry = leftForDeadRolls.find(entry => entry.adventurerId === adv.id) || null;
+                        const rawResult = Number(rollEntry?.rawResult) || 0;
+                        const finalResult = rawResult ? getLeftForDeadFinalResult(rawResult, adv) : 0;
+                        const rescueCost = Math.max(0, 5 * Math.max(1, Number(adv.rango || 1)));
+                        const paidRansom = !!rollEntry?.paidRansom;
+                        return (
+                          <div key={adv.id} style={{ background: "#0f172a", borderRadius: 8, padding: 12, border: "1px solid #2d2d44" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 8 }}>
+                              <div>
+                                <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{adv.nombre}</div>
+                                <div style={{ color: "#6b7280", fontSize: 11 }}>
+                                  Penalizador automatico: -{penalty} por Herido / Envenenado / Quemado
+                                </div>
+                              </div>
+                              {rawResult > 0 && (
+                                <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700 }}>
+                                  {rawResult}{penalty > 0 ? ` -> ${finalResult}` : ""}
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 6, marginBottom: 8 }}>
+                              {[1,2,3,4,5,6].map(value => (
+                                <button key={value} onClick={() => updateLeftForDeadRoll(adv.id, { rawResult: value, finalResult: getLeftForDeadFinalResult(value, adv), paidRansom: false })}
+                                  style={{ padding: 10, borderRadius: 8, border: rawResult === value ? "1px solid #ef4444" : "1px solid #374151", background: rawResult === value ? "#7f1d1d22" : "#111827", color: rawResult === value ? "#fecaca" : "#d4b896", fontWeight: 700, cursor: "pointer" }}>
+                                  {value}
+                                </button>
+                              ))}
+                            </div>
+                            {rawResult > 0 && (
+                              <div style={{ background: "#111827", borderRadius: 8, padding: 10, border: "1px solid #1f2937" }}>
+                                <div style={{ color: "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 4 }}>
+                                  Resultado final {finalResult} | {LEFT_FOR_DEAD_OUTCOMES[finalResult]?.title || "Pendiente"}
+                                </div>
+                                <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
+                                  {getLeftForDeadOutcomeSummary(finalResult, paidRansom)}
+                                </div>
+                                {finalResult === 5 && (
+                                  <button onClick={() => updateLeftForDeadRoll(adv.id, { paidRansom: !paidRansom, finalResult })}
+                                    style={{ marginTop: 8, width: "100%", padding: 10, borderRadius: 8, border: paidRansom ? "1px solid #166534" : "1px solid #eab308", background: paidRansom ? "#16653422" : "#eab30815", color: paidRansom ? "#bbf7d0" : "#fde68a", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                                    {paidRansom ? `Rescate pagado (${rescueCost}G)` : `Marcar rescate pagado (${rescueCost}G)`}
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )}
         </>
       )}
 
@@ -4629,7 +4951,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
               Elige que aventurero se lo lleva. Se anadira a su ficha al aplicar el cierre.
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {adventurers.map(adv => (
+              {livingAdventurers.map(adv => (
                 <button key={adv.id} onClick={() => assignCraftedItem(selectedRecipe, adv.id)}
                   disabled={!canAffordRecipeWithGold(availableGoldBeforeCraft, craftedSpend, selectedRecipe)}
                   style={{ padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#132034", color: "#d4b896", cursor: canAffordRecipeWithGold(availableGoldBeforeCraft, craftedSpend, selectedRecipe) ? "pointer" : "default", opacity: canAffordRecipeWithGold(availableGoldBeforeCraft, craftedSpend, selectedRecipe) ? 1 : 0.5 }}>
@@ -4739,7 +5061,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
               Elige que aventurero lo compra. Se descontaran {selectedMarketItem.buy}G del oro del grupo al aplicar el cierre.
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-              {adventurers.map(adv => (
+              {livingAdventurers.map(adv => (
                 <button key={adv.id} onClick={() => assignPurchasedItem(selectedMarketItem, adv.id)}
                   disabled={!canAffordMarketItem(selectedMarketItem)}
                   style={{ padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#132034", color: "#d4b896", cursor: canAffordMarketItem(selectedMarketItem) ? "pointer" : "default", opacity: canAffordMarketItem(selectedMarketItem) ? 1 : 0.5 }}>
@@ -4826,7 +5148,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           Aplicacion al grupo
         </div>
         <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6 }}>
-          Se aplicaran {xpEach} PX a cada aventurero del grupo, {missionState.renombre_ganado || 0} de Renombre, {phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G en esta fase y el grupo quedara con {totalGoldAfterPhase}G en total, ademas de +{missionState.demora_cambio || 0} de Demora en la campana.
+          Se aplicaran {xpEach} PX a cada aventurero que participo en la mision, {missionState.renombre_ganado || 0} de Renombre, {phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G en esta fase y el grupo quedara con {totalGoldAfterPhase}G en total, ademas de +{missionState.demora_cambio || 0} de Demora en la campana.
         </div>
         {(missionState.repaired_items || []).length > 0 && (
           <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
@@ -4854,8 +5176,26 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             }).join(" | ")}
           </div>
         )}
+        {missionState.escape_mode === "left_for_dead" && leftForDeadRolls.length > 0 && (
+          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+            Dado por Muerto: {leftForDeadRolls
+              .filter(entry => Number(entry.rawResult) >= 1 && Number(entry.rawResult) <= 6)
+              .map(entry => {
+                const owner = missionParty.find(adv => adv.id === entry.adventurerId) || adventurers.find(adv => adv.id === entry.adventurerId);
+                const finalResult = Number(entry.finalResult) || getLeftForDeadFinalResult(entry.rawResult, owner);
+                const label = finalResult === 5 && !entry.paidRansom ? "Se trata como 1 si no pagas" : LEFT_FOR_DEAD_OUTCOMES[finalResult]?.title;
+                return `${owner?.nombre || "Aventurero"} -> ${label}`;
+              })
+              .join(" | ")}
+          </div>
+        )}
+        {rescuePending && (
+          <div style={{ color: "#fca5a5", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+            Hay una Mision de Rescate pendiente. No apliques este cierre hasta resolverla en mesa.
+          </div>
+        )}
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
-          {adventurers.map(adv => (
+          {missionParty.map(adv => (
             <span key={adv.id} style={{ fontSize: 11, color: "#d4b896", padding: "4px 8px", borderRadius: 999, border: "1px solid #374151" }}>
               {adv.nombre} +{xpEach} PX
             </span>
@@ -4863,9 +5203,9 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         </div>
       </div>
 
-      <button onClick={onConfirm}
-        style={{ width: "100%", padding: 16, borderRadius: 10, border: "2px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-        Aplicar cierre de mision
+      <button onClick={onConfirm} disabled={!canApplyMissionClosure}
+        style={{ width: "100%", padding: 16, borderRadius: 10, border: `2px solid ${canApplyMissionClosure ? "#166534" : "#7f1d1d"}`, background: canApplyMissionClosure ? "#16653422" : "#7f1d1d22", color: canApplyMissionClosure ? "#bbf7d0" : "#fca5a5", fontSize: 15, fontWeight: 800, cursor: canApplyMissionClosure ? "pointer" : "default" }}>
+        {rescuePending ? "Resuelve antes la Mision de Rescate" : leftForDeadPending ? "Completa Dado por Muerto" : "Aplicar cierre de mision"}
       </button>
       </>
       )}
@@ -4950,6 +5290,8 @@ function HomeScreen({ onCreateCampaign, onLoadCampaign, campaigns }) {
 
 function CampaignHub({ campaign, adventurers, onNavigate }) {
   const demoraEffect = DEMORA_EFFECTS.find(d => campaign.demora >= d.min && campaign.demora <= d.max);
+  const livingAdventurers = adventurers.filter(adv => !isAdventurerDead(adv));
+  const fallenAdventurers = adventurers.filter(isAdventurerDead);
 
   return (
     <div style={{ padding: 16 }}>
@@ -4986,14 +5328,30 @@ function CampaignHub({ campaign, adventurers, onNavigate }) {
 
       {adventurers.length > 0 && (
         <div style={{ marginBottom: 16 }}>
-          <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Grupo ({adventurers.length})</div>
+          <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>
+            Grupo activo ({livingAdventurers.length})
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-            {adventurers.map(a => (
+            {livingAdventurers.map(a => (
               <div key={a.id} style={{ background: "#1a1a2e", borderRadius: 8, padding: "6px 12px", border: "1px solid #2d2d44", fontSize: 13, color: "#d4b896" }}>
-                {a.nombre} {a.clase && `(${a.clase})`}
+                {a.nombre} {a.clase && `(${a.clase})`} {getAdventurerAvailabilityLabel(a) && `· ${getAdventurerAvailabilityLabel(a)}`}
               </div>
             ))}
           </div>
+          {fallenAdventurers.length > 0 && (
+            <>
+            <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginTop: 10, marginBottom: 8 }}>
+              Caidos ({fallenAdventurers.length})
+            </div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {fallenAdventurers.map(a => (
+                <div key={a.id} style={{ background: "#3a1212", borderRadius: 8, padding: "6px 12px", border: "1px solid #7f1d1d", fontSize: 13, color: "#fecaca" }}>
+                  {a.nombre} {a.clase && `(${a.clase})`} · Muerto
+                </div>
+              ))}
+            </div>
+            </>
+          )}
         </div>
       )}
 
@@ -5022,6 +5380,8 @@ function NavButton({ icon, label, sub, onClick, accent }) {
 function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
   const [selected, setSelected] = useState(null);
   const [showAdd, setShowAdd] = useState(adventurers.length === 0);
+  const livingAdventurers = adventurers.filter(adv => !isAdventurerDead(adv));
+  const fallenAdventurers = adventurers.filter(isAdventurerDead);
 
   useEffect(() => {
     if (adventurers.length === 0) setShowAdd(true);
@@ -5048,7 +5408,9 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
 
   return (
     <div style={{ padding: 16 }}>
-      <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>Aventureros del Grupo</div>
+      <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
+        Aventureros del Grupo ({livingAdventurers.length} activos{fallenAdventurers.length > 0 ? ` · ${fallenAdventurers.length} caidos` : ""})
+      </div>
       {adventurers.length === 0 && (
         <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 12, border: "1px solid #2d2d44", marginBottom: 12 }}>
           <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 4 }}>Arma tu grupo inicial</div>
@@ -5057,10 +5419,15 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
       )}
 
       {adventurers.map(a => (
-        <button key={a.id} onClick={() => setSelected(a.id)}
-          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 10, border: "1px solid #2d2d44", background: "#1a1a2e", marginBottom: 8, cursor: "pointer", textAlign: "left" }}>
+        <button key={a.id} onClick={() => {
+          if (isAdventurerDead(a)) return;
+          setSelected(a.id);
+        }}
+          style={{ width: "100%", display: "flex", alignItems: "center", gap: 12, padding: 12, borderRadius: 10, border: isAdventurerDead(a) ? "1px solid #7f1d1d" : "1px solid #2d2d44", background: isAdventurerDead(a) ? "#3a1212" : "#1a1a2e", marginBottom: 8, cursor: isAdventurerDead(a) ? "default" : "pointer", textAlign: "left", opacity: isAdventurerDead(a) ? 0.85 : 1 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ color: "#d4b896", fontSize: 15, fontWeight: 700 }}>{a.nombre}</div>
+            <div style={{ color: isAdventurerDead(a) ? "#fecaca" : "#d4b896", fontSize: 15, fontWeight: 700 }}>
+              {a.nombre} {getAdventurerAvailabilityLabel(a) && `· ${getAdventurerAvailabilityLabel(a)}`}
+            </div>
             <div style={{ color: "#6b7280", fontSize: 12 }}>{a.especie} · {a.clase || "Sin clase"} · Rango {a.rango}</div>
           </div>
           <div style={{ display: "flex", gap: 8, fontSize: 12 }}>
@@ -5110,8 +5477,11 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
   );
 }
 
-function MissionSetupScreen({ campaign, onStartMission, onBack }) {
+function MissionSetupScreen({ campaign, adventurers, onStartMission, onBack }) {
   const mission = MISSIONS[campaign.currentMission];
+  const availableAdventurers = adventurers.filter(canAdventurerJoinMission);
+  const recoveringAdventurers = adventurers.filter(adv => !isAdventurerDead(adv) && !canAdventurerJoinMission(adv));
+  const fallenAdventurers = adventurers.filter(isAdventurerDead);
 
   if (!mission) {
     return (
@@ -5164,9 +5534,35 @@ function MissionSetupScreen({ campaign, onStartMission, onBack }) {
         {mission.asignacion_busqueda && <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>{mission.asignacion_busqueda}</div>}
       </div>
 
-      <button onClick={onStartMission}
-        style={{ width: "100%", padding: 16, borderRadius: 10, border: "2px solid #b91c1c", background: "#b91c1c22", color: "#fca5a5", fontSize: 15, fontWeight: 800, cursor: "pointer" }}>
-        Comenzar Partida
+      <div style={{ background: "#1a1a2e", borderRadius: 10, padding: 14, border: "1px solid #2d2d44", marginBottom: 12 }}>
+        <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Grupo para esta mision</div>
+        <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6, marginBottom: 8 }}>
+          Disponibles: {availableAdventurers.length}
+        </div>
+        {availableAdventurers.length > 0 && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+            {availableAdventurers.map(adv => (
+              <span key={adv.id} style={{ fontSize: 12, color: "#d4b896", padding: "4px 8px", borderRadius: 999, border: "1px solid #374151" }}>
+                {adv.nombre}
+              </span>
+            ))}
+          </div>
+        )}
+        {recoveringAdventurers.length > 0 && (
+          <div style={{ color: "#fbbf24", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
+            Fuera temporalmente: {recoveringAdventurers.map(adv => `${adv.nombre} (${getAdventurerAvailabilityLabel(adv)})`).join(" | ")}
+          </div>
+        )}
+        {fallenAdventurers.length > 0 && (
+          <div style={{ color: "#fca5a5", fontSize: 11, lineHeight: 1.5 }}>
+            Caidos: {fallenAdventurers.map(adv => adv.nombre).join(" | ")}
+          </div>
+        )}
+      </div>
+
+      <button onClick={onStartMission} disabled={availableAdventurers.length === 0}
+        style={{ width: "100%", padding: 16, borderRadius: 10, border: availableAdventurers.length === 0 ? "1px solid #374151" : "2px solid #b91c1c", background: availableAdventurers.length === 0 ? "#111827" : "#b91c1c22", color: availableAdventurers.length === 0 ? "#4b5563" : "#fca5a5", fontSize: 15, fontWeight: 800, cursor: availableAdventurers.length === 0 ? "default" : "pointer" }}>
+        {availableAdventurers.length === 0 ? "No hay aventureros disponibles" : "Comenzar Partida"}
       </button>
     </div>
   );
@@ -5464,8 +5860,24 @@ function App() {
     setAdventurers(prev => prev.filter(a => a.id !== id));
   };
 
+  const availableMissionAdventurers = adventurers
+    .filter(canAdventurerJoinMission)
+    .map(normalizeAdventurer);
+  const missionParty = missionState
+    ? adventurers
+      .filter(adv => (Array.isArray(missionState.participant_ids) && missionState.participant_ids.length > 0
+        ? missionState.participant_ids
+        : availableMissionAdventurers.map(item => item.id)
+      ).includes(adv.id))
+      .map(normalizeAdventurer)
+    : availableMissionAdventurers;
+
   const startMission = () => {
-    const ms = normalizeMissionState(defaultMissionState(campaign.id, campaign.currentMission));
+    if (availableMissionAdventurers.length === 0) return;
+    const ms = normalizeMissionState({
+      ...defaultMissionState(campaign.id, campaign.currentMission),
+      participant_ids: availableMissionAdventurers.map(adv => adv.id),
+    });
     setMissionState(ms);
     setSubScreen("board");
   };
@@ -5473,9 +5885,15 @@ function App() {
   const finishMission = async () => {
     if (!campaign || !missionState) return;
     const resolvedMission = normalizeMissionState(missionState);
+    const participantIdSet = new Set(
+      (Array.isArray(resolvedMission.participant_ids) && resolvedMission.participant_ids.length > 0
+        ? resolvedMission.participant_ids
+        : adventurers.filter(canAdventurerJoinMission).map(adv => adv.id))
+    );
     const xpEach = Math.max(1, Number(resolvedMission.xp_base || 1)) + Math.max(0, Number(resolvedMission.xp_extra || 0));
-    const maintenanceCost = adventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
-    const lodgingCost = resolvedMission.rest_mode === "posada" ? adventurers.length * 2 : 0;
+    const livingAdventurers = adventurers.filter(adv => !isAdventurerDead(adv)).map(normalizeAdventurer);
+    const maintenanceCost = livingAdventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
+    const lodgingCost = resolvedMission.rest_mode === "posada" ? livingAdventurers.length * 2 : 0;
     const craftedSpend = (resolvedMission.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
     const marketSpend = (resolvedMission.purchased_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
     const repairSpend = (resolvedMission.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
@@ -5484,7 +5902,14 @@ function App() {
     const soldKeys = new Set((resolvedMission.sold_items || []).map(item => makeOwnedItemKey(item.adventurerId, item.itemId)));
     const repairedLabels = (resolvedMission.repaired_items || []).map(item => `${item.itemName || "Objeto"} (${item.cost || 0}G)`);
     const soldLabels = (resolvedMission.sold_items || []).map(item => `${item.itemName || "Objeto"} (${item.price || 0}G)`);
-    const phaseGoldDelta = Number(resolvedMission.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
+    const rescueSpend = (resolvedMission.left_for_dead_rolls || []).reduce((sum, entry) => {
+      const owner = adventurers.find(adv => adv.id === entry.adventurerId);
+      if (!owner) return sum;
+      const finalResult = Number(entry.finalResult) || getLeftForDeadFinalResult(entry.rawResult, owner);
+      if (finalResult !== 5 || !entry.paidRansom) return sum;
+      return sum + (5 * Math.max(1, Number(owner.rango || 1)));
+    }, 0);
+    const phaseGoldDelta = Number(resolvedMission.oro_ganado || 0) + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend - rescueSpend;
     const updatedAdventurers = adventurers.map(adv => {
       const normalized = normalizeAdventurer(adv);
       const craftedForAdventurer = (resolvedMission.crafted_items || [])
@@ -5500,15 +5925,29 @@ function App() {
       const purchasedForAdventurer = (resolvedMission.purchased_items || [])
         .filter(item => item.adventurerId === normalized.id)
         .map(item => normalizeInventoryItem(item.payload || { name: item.name, buy: item.price }));
-      return normalizeAdventurer({
+      const baseUpdated = normalizeAdventurer({
         ...normalized,
-        experiencia: Math.max(0, Number(normalized.experiencia || 0) + xpEach),
+        experiencia: normalized.vivo !== false && participantIdSet.has(normalized.id)
+          ? Math.max(0, Number(normalized.experiencia || 0) + xpEach)
+          : Math.max(0, Number(normalized.experiencia || 0)),
+        misiones_no_disponible: normalized.vivo !== false
+          ? Math.max(0, Number(normalized.misiones_no_disponible || 0) - 1)
+          : 0,
         inventario: [
           ...(normalized.inventario || []).map(item => {
             if (soldKeys.has(makeOwnedItemKey(normalized.id, item.id))) return null;
             const repairKey = makeRepairKey(normalized.id, item.id);
             return repairedKeys.has(repairKey) ? normalizeInventoryItem({ ...item, broken: false }) : item;
           }).filter(Boolean),
+        ],
+      });
+      const leftForDeadEntry = (resolvedMission.left_for_dead_rolls || []).find(entry => entry.adventurerId === normalized.id);
+      const afterEscape = leftForDeadEntry ? applyLeftForDeadOutcomeToAdventurer(baseUpdated, leftForDeadEntry) : baseUpdated;
+      if (afterEscape.vivo === false) return afterEscape;
+      return normalizeAdventurer({
+        ...afterEscape,
+        inventario: [
+          ...(afterEscape.inventario || []),
           ...craftedForAdventurer,
           ...purchasedForAdventurer,
         ],
@@ -5542,6 +5981,16 @@ function App() {
               : "",
             soldLabels.length > 0
               ? "Ventas: " + soldLabels.join(", ")
+              : "",
+            rescueSpend > 0
+              ? "Rescates pagados: -" + rescueSpend + "G"
+              : "",
+            (resolvedMission.left_for_dead_rolls || []).length > 0
+              ? "Dado por Muerto: " + (resolvedMission.left_for_dead_rolls || []).map(entry => {
+                const owner = adventurers.find(adv => adv.id === entry.adventurerId);
+                const finalResult = Number(entry.finalResult) || getLeftForDeadFinalResult(entry.rawResult, owner);
+                return `${owner?.nombre || "Aventurero"} (${finalResult})`;
+              }).join(", ")
               : "",
             (resolvedMission.crafted_items || []).length > 0
               ? "Crafteo: " + resolvedMission.crafted_items.map(item => item.name).join(", ")
@@ -5620,13 +6069,13 @@ function App() {
       )}
 
       {screen === "campaign" && subScreen === "mission-setup" && (
-        <MissionSetupScreen campaign={campaign}
+        <MissionSetupScreen campaign={campaign} adventurers={adventurers}
           onStartMission={startMission}
           onBack={() => setSubScreen("hub")}/>
       )}
 
       {screen === "campaign" && subScreen === "board" && missionState && (
-        <MainBoardV2 missionState={missionState} adventurers={adventurers} campaign={campaign}
+        <MainBoardV2 missionState={missionState} adventurers={missionParty} campaign={campaign}
           onUpdateMission={ms => setMissionState(normalizeMissionState(ms))}
           onUpdateAdventurer={updateAdventurer}
           onEndMission={() => setSubScreen("mission-resolution")}
