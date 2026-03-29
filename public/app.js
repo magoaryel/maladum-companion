@@ -1759,7 +1759,7 @@ function canLearnSpell(adv, spellLevel) {
 function summarizeEquippedItems(adv) {
   return (normalizeAdventurer(adv).inventario || []).filter(item => {
     if (item.broken) return false;
-    if (isWeaponItem(item)) return true;
+    if (isWeaponItem(item)) return item.ready !== false;
     return item.equipped;
   });
 }
@@ -3213,9 +3213,9 @@ InventoryEditor = function InventoryEditorPatched({
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                 {autoEquippedWeapon ? (
                   <span style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #92400e",
-                    background: "#92400e22", color: item.broken ? "#9ca3af" : "#fde68a",
-                    fontSize: 12, fontWeight: 700, opacity: item.broken ? 0.6 : 1 }}>
-                    {item.broken ? "Arma rota: fuera de combate" : "Arma siempre equipada"}
+                    background: "#92400e22", color: (item.broken || !item.ready) ? "#9ca3af" : "#fde68a",
+                    fontSize: 12, fontWeight: 700, opacity: (item.broken || !item.ready) ? 0.6 : 1 }}>
+                    {item.broken ? "Arma rota: fuera de combate" : (!item.ready ? "Arma sin preparar: fuera de combate" : "Arma siempre equipada")}
                   </span>
                 ) : (
                   <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
