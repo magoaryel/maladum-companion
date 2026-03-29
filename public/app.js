@@ -1945,6 +1945,10 @@ function isBlessingSpell(spell) {
   return slugKey(spell?.name || "") === slugKey("Bendicion");
 }
 
+function isConcentrationSpell(spell) {
+  return slugKey(spell?.name || "") === slugKey("Concentracion");
+}
+
 function removeFirstStatusEffect(effects, effectId) {
   const source = Array.isArray(effects) ? effects : [];
   const index = source.indexOf(effectId);
@@ -3576,9 +3580,11 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false
 function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission, onCastMagic, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [filter, setFilter] = useState("all");
+  const [spellTargets, setSpellTargets] = useState({});
   const learnedSkills = getLearnedSkills(normalized);
   const spells = getKnownSpells(normalized);
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
+  const blessTargets = (adventurers || []).map(normalizeAdventurer);
   const filters = [
     { id: "all", label: "Todo" },
     { id: "magic", label: "Magia" },
@@ -3625,6 +3631,7 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
 
   const castSpellFromAbilities = (spell, pegs) => {
     if (!spell || typeof onCastMagic !== "function") return;
+    const blessingTargetId = isBlessingSpell(spell) ? (spellTargets[spell.id] || normalized.id) : null;
     onCastMagic({
       adventurerId: normalized.id,
       adventurerName: normalized.nombre,
@@ -3634,6 +3641,7 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
         summary: spell.summary || spell.notes || "",
       },
       pegs,
+      blessingTargetId,
     });
     onClose();
   };
@@ -3695,8 +3703,24 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
                     {normalized.magia_actual > 0 ? "Elige cuantas clavijas gastar para lanzarlo." : "Sin clavijas de Magia disponibles."}
                   </div>
                   {isBlessingSpell(entry.spell) && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {blessTargets.map(target => {
+                          const selected = (spellTargets[entry.spell.id] || normalized.id) === target.id;
+                          return (
+                            <button key={target.id} onClick={() => setSpellTargets(prev => ({ ...prev, [entry.spell.id]: target.id }))}
+                              style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                              {target.nombre}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {isConcentrationSpell(entry.spell) && (
                     <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
-                      Bendicion se aplica sobre {normalized.nombre}. Las clavijas X que gastes se anadiran como fichas de Bendicion a su ficha.
+                      Concentracion se aplica sobre {normalized.nombre}. Las clavijas X que gastes se anadiran como fichas de Bendicion a su ficha.
                     </div>
                   )}
                   {magicPegOptions.length > 0 && (
@@ -3736,6 +3760,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const blessingCount = getStatusEffectCount(normalized.status_effects, "blessed");
   const frenzyEntry = getLearnedSkills(normalized).find(skill => skill.name === "Frenzy") || null;
   const canUseFrenzy = !!frenzyEntry && normalized.habilidad_actual > 0;
+  const blessingTargets = (adventurers || []).map(normalizeAdventurer);
   const availableAttackModes = [
     { id: "melee", label: "Ataque C/C", enabled: true },
     { id: "ranged", label: "Ataque Dist", enabled: rangedWeapons.length > 0 || equipment.rangedDice > 0 },
@@ -3748,6 +3773,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const [selectedRangedId, setSelectedRangedId] = useState(rangedWeapons[0]?.id || null);
   const [selectedSpellId, setSelectedSpellId] = useState(spells[0]?.name || null);
   const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
+  const [selectedBlessingTargetId, setSelectedBlessingTargetId] = useState(normalized.id);
   const [useFrenzy, setUseFrenzy] = useState(false);
   const [useForceful, setUseForceful] = useState(false);
   const [useBlessing, setUseBlessing] = useState(false);
@@ -3818,6 +3844,13 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
       setUseForceful(false);
     }
   }, [selectedMelee]);
+
+  useEffect(() => {
+    const availableTargetIds = blessingTargets.map(target => target.id);
+    if (!availableTargetIds.includes(selectedBlessingTargetId)) {
+      setSelectedBlessingTargetId(normalized.id);
+    }
+  }, [blessingTargets, normalized.id, selectedBlessingTargetId]);
 
   useEffect(() => {
     if (attackResolution && !["melee", "ranged"].includes(mode)) {
@@ -3912,6 +3945,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
       adventurerName: normalized.nombre,
       spell: selectedSpell,
       pegs: selectedMagicPegs,
+      blessingTargetId: isBlessingSpell(selectedSpell) ? selectedBlessingTargetId : null,
     });
     onClose();
   };
@@ -4244,6 +4278,25 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
                 {missionState?.magia_usada_esta_ronda ? "La Amenaza azul de esta ronda ya esta marcada." : "Si es la primera magia de la ronda, al confirmar se marcara automaticamente +1 Amenaza azul."}
               </div>
               {isBlessingSpell(selectedSpell) && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                    {blessingTargets.map(target => {
+                      const selected = selectedBlessingTargetId === target.id;
+                      return (
+                        <button key={target.id} onClick={() => setSelectedBlessingTargetId(target.id)}
+                          style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          {target.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5 }}>
+                    Al confirmar, {blessingTargets.find(target => target.id === selectedBlessingTargetId)?.nombre || normalized.nombre} ganara {selectedMagicPegs} ficha{selectedMagicPegs === 1 ? "" : "s"} de Bendicion.
+                  </div>
+                </div>
+              )}
+              {isConcentrationSpell(selectedSpell) && (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5 }}>
                     Al confirmar, {normalized.nombre} ganara {selectedMagicPegs} ficha{selectedMagicPegs === 1 ? "" : "s"} de Bendicion.
@@ -4588,7 +4641,18 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
     const pegs = Math.max(1, Math.min(Number(payload.pegs) || 1, normalized.magia_actual));
     const updatedAdventurer = applyAdventurerResourceSpend(normalized, { magic: pegs });
     onUpdateAdventurer(updatedAdventurer);
-    if (isBlessingSpell(payload.spell)) {
+    if (isBlessingSpell(payload.spell) && payload.blessingTargetId) {
+      const target = payload.blessingTargetId === normalized.id
+        ? updatedAdventurer
+        : adventurers.find(entry => entry.id === payload.blessingTargetId);
+      if (target) {
+        const normalizedTarget = normalizeAdventurer(target);
+        onUpdateAdventurer(normalizeAdventurer({
+          ...normalizedTarget,
+          status_effects: addStatusEffectCopies(normalizedTarget.status_effects || [], "blessed", pegs),
+        }));
+      }
+    } else if (isConcentrationSpell(payload.spell)) {
       onUpdateAdventurer(normalizeAdventurer({
         ...updatedAdventurer,
         status_effects: addStatusEffectCopies(updatedAdventurer.status_effects || [], "blessed", pegs),
