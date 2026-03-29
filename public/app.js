@@ -4276,6 +4276,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const availableGoldBeforeCraft = currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost - repairSpend - marketSpend;
   const availableGoldBeforeMarket = currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
   const phaseGoldDelta = totalGoldGain + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
+  const currentGoldAfterSales = Math.max(0, currentGroupGold + totalGoldGain + soldIncome);
   const totalGoldAfterPhase = Math.max(0, currentGroupGold + phaseGoldDelta);
   const totalGoldAfterRest = Math.max(0, currentGroupGold + totalGoldGain - maintenanceCost - lodgingCost);
   const currentStep = postMissionSteps[activeStepIndex] || postMissionSteps[0];
@@ -4750,9 +4751,10 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
             <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Renombre total preparado</div>
             <div style={{ color: "#fbbf24", fontSize: 22, fontWeight: 800 }}>{totalRenownGain}</div>
           </div>
-          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10 }}>
-            <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro por objetivos y extras</div>
-            <div style={{ color: "#d4b896", fontSize: 22, fontWeight: 800 }}>{totalGoldGain}G</div>
+          <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+            <div style={{ color: "#93c5fd", fontSize: 10, marginBottom: 4 }}>Oro actual tras ventas</div>
+            <div style={{ color: "#fde68a", fontSize: 32, fontWeight: 800, lineHeight: 1 }}>{currentGoldAfterSales}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>Incluye el oro previo del grupo, objetivos, extras y ventas</div>
           </div>
         </div>
 
@@ -4842,10 +4844,12 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro del grupo tras mision, mantenimiento y descanso</div>
           <div style={{ color: "#d4b896", fontSize: 20, fontWeight: 800 }}>{totalGoldAfterRest}G</div>
         </div>
-        <div style={{ background: phaseGoldDelta >= 0 ? "#132034" : "#3a1212", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
-          <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Balance neto provisional del cierre</div>
-          <div style={{ color: phaseGoldDelta >= 0 ? "#bbf7d0" : "#fca5a5", fontSize: 20, fontWeight: 800 }}>{phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G</div>
-          <div style={{ color: "#6b7280", fontSize: 11 }}>Oro por objetivos y extras + ventas - mantenimiento - descanso - reparaciones - crafteo - compras</div>
+        <div style={{ background: "#0f172a", borderRadius: 8, padding: "10px 12px", border: "1px solid #2d2d44", marginBottom: 8 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginBottom: 4 }}>
+            <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", letterSpacing: 1.2 }}>Balance del cierre</div>
+            <div style={{ color: "#d4b896", fontSize: 18, fontWeight: 800 }}>{phaseGoldDelta >= 0 ? "+" : ""}{phaseGoldDelta}G</div>
+          </div>
+          <div style={{ color: "#6b7280", fontSize: 11 }}>Objetivos + extras + ventas - mantenimiento - descanso - reparaciones - crafteo - compras</div>
         </div>
         <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
           <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Oro total del grupo tras este cierre</div>
