@@ -1894,6 +1894,21 @@ function getStatusMeta(effectId) {
   return STATUS_EFFECTS.find(effect => effect.id === effectId) || null;
 }
 
+function getStatusEffectCount(effects, effectId) {
+  return (Array.isArray(effects) ? effects : []).filter(entry => entry === effectId).length;
+}
+
+function addStatusEffectCopies(effects, effectId, count = 1) {
+  const source = Array.isArray(effects) ? [...effects] : [];
+  const amount = Math.max(0, Number(count) || 0);
+  if (!effectId || amount <= 0) return source;
+  return [...source, ...Array.from({ length: amount }, () => effectId)];
+}
+
+function isBlessingSpell(spell) {
+  return slugKey(spell?.name || "") === slugKey("Bendicion");
+}
+
 function removeFirstStatusEffect(effects, effectId) {
   const source = Array.isArray(effects) ? effects : [];
   const index = source.indexOf(effectId);
@@ -3469,12 +3484,14 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false
   );
 }
 
-function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onCastMagic, onClose }) {
+function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission, onCastMagic, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [filter, setFilter] = useState("all");
+  const [spellTargets, setSpellTargets] = useState({});
   const learnedSkills = getLearnedSkills(normalized);
   const spells = getKnownSpells(normalized);
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
+  const blessTargets = (adventurers || []).map(normalizeAdventurer);
   const filters = [
     { id: "all", label: "Todo" },
     { id: "magic", label: "Magia" },
@@ -3521,6 +3538,7 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onCastMagic,
 
   const castSpellFromAbilities = (spell, pegs) => {
     if (!spell || typeof onCastMagic !== "function") return;
+    const blessingTargetId = isBlessingSpell(spell) ? (spellTargets[spell.id] || normalized.id) : null;
     onCastMagic({
       adventurerId: normalized.id,
       adventurerName: normalized.nombre,
@@ -3530,6 +3548,7 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onCastMagic,
         summary: spell.summary || spell.notes || "",
       },
       pegs,
+      blessingTargetId,
     });
     onClose();
   };
@@ -3590,6 +3609,22 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onCastMagic,
                   <div style={{ color: "#93c5fd", fontSize: 11, marginBottom: 8 }}>
                     {normalized.magia_actual > 0 ? "Elige cuantas clavijas gastar para lanzarlo." : "Sin clavijas de Magia disponibles."}
                   </div>
+                  {isBlessingSpell(entry.spell) && (
+                    <div style={{ marginBottom: 8 }}>
+                      <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                        {blessTargets.map(target => {
+                          const selected = (spellTargets[entry.spell.id] || normalized.id) === target.id;
+                          return (
+                            <button key={target.id} onClick={() => setSpellTargets(prev => ({ ...prev, [entry.spell.id]: target.id }))}
+                              style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                              {target.nombre}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
                   {magicPegOptions.length > 0 && (
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {magicPegOptions.map(value => (
@@ -3612,7 +3647,7 @@ function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onCastMagic,
   );
 }
 
-function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdventurerUpdate, startMode, onClose }) {
+function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic, onApplyAdventurerUpdate, startMode, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const equippedItems = summarizeEquippedItems(normalized);
   const equipment = getEquipmentStats(normalized);
@@ -3624,8 +3659,10 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
   const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
   const defenseAttributeEntries = getCombatAttributeEntries(equippedItems, "defense");
   const activeStatuses = [...new Set(normalized.status_effects || [])].map(getStatusMeta).filter(Boolean);
+  const blessingCount = getStatusEffectCount(normalized.status_effects, "blessed");
   const frenzyEntry = getLearnedSkills(normalized).find(skill => skill.name === "Frenzy") || null;
   const canUseFrenzy = !!frenzyEntry && normalized.habilidad_actual > 0;
+  const blessingTargets = (adventurers || []).map(normalizeAdventurer);
   const availableAttackModes = [
     { id: "melee", label: "Ataque C/C", enabled: true },
     { id: "ranged", label: "Ataque Dist", enabled: rangedWeapons.length > 0 || equipment.rangedDice > 0 },
@@ -3638,8 +3675,10 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
   const [selectedRangedId, setSelectedRangedId] = useState(rangedWeapons[0]?.id || null);
   const [selectedSpellId, setSelectedSpellId] = useState(spells[0]?.name || null);
   const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
+  const [selectedBlessingTargetId, setSelectedBlessingTargetId] = useState(normalized.id);
   const [useFrenzy, setUseFrenzy] = useState(false);
   const [useForceful, setUseForceful] = useState(false);
+  const [useBlessing, setUseBlessing] = useState(false);
   const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
   const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 };
   const selectedMelee = meleeWeapons.find(item => item.id === selectedMeleeId) || meleeWeapons[0] || null;
@@ -3696,14 +3735,45 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
   }, [canUseFrenzy]);
 
   useEffect(() => {
+    if (blessingCount <= 0) setUseBlessing(false);
+  }, [blessingCount]);
+
+  useEffect(() => {
     if (!selectedMelee?.rawAttributes?.includes("forceful_melee")) {
       setUseForceful(false);
     }
   }, [selectedMelee]);
 
+  useEffect(() => {
+    const availableTargetIds = blessingTargets.map(target => target.id);
+    if (!availableTargetIds.includes(selectedBlessingTargetId)) {
+      setSelectedBlessingTargetId(normalized.id);
+    }
+  }, [blessingTargets, normalized.id, selectedBlessingTargetId]);
+
   const applyPhysicalAttack = () => {
-    if (useFrenzy && typeof onApplyAdventurerUpdate === "function") {
-      onApplyAdventurerUpdate(applyAdventurerResourceSpend(normalized, { skill: 1 }));
+    if (typeof onApplyAdventurerUpdate === "function") {
+      let updated = normalizeAdventurer(normalized);
+      if (useFrenzy) {
+        updated = applyAdventurerResourceSpend(updated, { skill: 1 });
+      }
+      if (useBlessing) {
+        updated = normalizeAdventurer({
+          ...updated,
+          status_effects: removeFirstStatusEffect(updated.status_effects || [], "blessed"),
+        });
+      }
+      onApplyAdventurerUpdate(updated);
+    }
+    onClose();
+  };
+
+  const applyDefense = () => {
+    if (typeof onApplyAdventurerUpdate === "function" && useBlessing) {
+      onApplyAdventurerUpdate(normalizeAdventurer({
+        ...normalized,
+        status_effects: removeFirstStatusEffect(normalized.status_effects || [], "blessed"),
+      }));
     }
     onClose();
   };
@@ -3715,6 +3785,7 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
       adventurerName: normalized.nombre,
       spell: selectedSpell,
       pegs: selectedMagicPegs,
+      blessingTargetId: isBlessingSpell(selectedSpell) ? selectedBlessingTargetId : null,
     });
     onClose();
   };
@@ -3762,7 +3833,7 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
             <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
               {activeStatuses.map(status => (
                 <span key={status.id} style={{ fontSize: 11, color: status.color, padding: "4px 8px", borderRadius: 999, border: `1px solid ${status.color}55`, background: "#111827" }}>
-                  {status.name}
+                  {status.name}{status.id === "blessed" && blessingCount > 1 ? ` x${blessingCount}` : ""}
                 </span>
               ))}
             </div>
@@ -3845,6 +3916,21 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
             </div>
           )}
 
+          {blessingCount > 0 && (
+            <div style={{ ...cardStyle, marginBottom: 12, border: useBlessing ? "1px solid #fbbf24" : "1px solid #2d2d44" }}>
+              <div style={{ color: useBlessing ? "#fde68a" : "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                Bendicion disponible x{blessingCount}
+              </div>
+              <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                Si la usas en este ataque, repites 1 dado y al confirmar se quitara 1 Bendicion de la ficha.
+              </div>
+              <button onClick={() => setUseBlessing(prev => !prev)}
+                style={{ padding: "8px 10px", borderRadius: 999, border: useBlessing ? "1px solid #fbbf24" : "1px solid #374151", background: useBlessing ? "#f59e0b22" : "#111827", color: useBlessing ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                {useBlessing ? "Bendicion marcada para gastar" : "Usar 1 Bendicion"}
+              </button>
+            </div>
+          )}
+
           <div style={{ ...cardStyle, marginBottom: 12 }}>
             <div style={{ color: "#6b7280", fontSize: 10, marginBottom: 4 }}>Resumen</div>
             <div style={{ color: "#d4b896", fontSize: 13, lineHeight: 1.6 }}>
@@ -3852,6 +3938,7 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
             </div>
             {useFrenzy && <div style={{ color: "#d946ef", fontSize: 11, marginTop: 6 }}>Al confirmar se descontara 1 SP.</div>}
             {useForceful && <div style={{ color: "#fde68a", fontSize: 11, marginTop: 6 }}>Potenciar queda marcado como recordatorio.</div>}
+            {useBlessing && <div style={{ color: "#fde68a", fontSize: 11, marginTop: 6 }}>Al confirmar se quitara 1 Bendicion.</div>}
           </div>
 
           <button onClick={applyPhysicalAttack}
@@ -3895,6 +3982,21 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
             </div>
           )}
 
+          {blessingCount > 0 && (
+            <div style={{ ...cardStyle, marginBottom: 12, border: useBlessing ? "1px solid #fbbf24" : "1px solid #2d2d44" }}>
+              <div style={{ color: useBlessing ? "#fde68a" : "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                Bendicion disponible x{blessingCount}
+              </div>
+              <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                Si la usas en este ataque, repites 1 dado y al confirmar se quitara 1 Bendicion de la ficha.
+              </div>
+              <button onClick={() => setUseBlessing(prev => !prev)}
+                style={{ padding: "8px 10px", borderRadius: 999, border: useBlessing ? "1px solid #fbbf24" : "1px solid #374151", background: useBlessing ? "#f59e0b22" : "#111827", color: useBlessing ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                {useBlessing ? "Bendicion marcada para gastar" : "Usar 1 Bendicion"}
+              </button>
+            </div>
+          )}
+
           <button onClick={applyPhysicalAttack}
             style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
             Atacar
@@ -3935,6 +4037,25 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
               <div style={{ color: missionState?.magia_usada_esta_ronda ? "#93c5fd" : "#60a5fa", fontSize: 11, lineHeight: 1.5 }}>
                 {missionState?.magia_usada_esta_ronda ? "La Amenaza azul de esta ronda ya esta marcada." : "Si es la primera magia de la ronda, al confirmar se marcara automaticamente +1 Amenaza azul."}
               </div>
+              {isBlessingSpell(selectedSpell) && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                    {blessingTargets.map(target => {
+                      const selected = selectedBlessingTargetId === target.id;
+                      return (
+                        <button key={target.id} onClick={() => setSelectedBlessingTargetId(target.id)}
+                          style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                          {target.nombre}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5 }}>
+                    Al confirmar, {blessingTargets.find(target => target.id === selectedBlessingTargetId)?.nombre || normalized.nombre} ganara {selectedMagicPegs} ficha{selectedMagicPegs === 1 ? "" : "s"} de Bendicion.
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -3972,6 +4093,26 @@ function CombatQuickReferenceModal({ adv, missionState, onCastMagic, onApplyAdve
               </div>
             </div>
           )}
+
+          {blessingCount > 0 && (
+            <div style={{ ...cardStyle, marginBottom: 12, border: useBlessing ? "1px solid #fbbf24" : "1px solid #2d2d44" }}>
+              <div style={{ color: useBlessing ? "#fde68a" : "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                Bendicion disponible x{blessingCount}
+              </div>
+              <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                Si la usas en esta defensa, repites 1 dado y al confirmar se quitara 1 Bendicion de la ficha.
+              </div>
+              <button onClick={() => setUseBlessing(prev => !prev)}
+                style={{ padding: "8px 10px", borderRadius: 999, border: useBlessing ? "1px solid #fbbf24" : "1px solid #374151", background: useBlessing ? "#f59e0b22" : "#111827", color: useBlessing ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                {useBlessing ? "Bendicion marcada para gastar" : "Usar 1 Bendicion"}
+              </button>
+            </div>
+          )}
+
+          <button onClick={applyDefense}
+            style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #1d4ed8", background: "#1d4ed822", color: "#bfdbfe", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            Confirmar defensa
+          </button>
         </>
       )}
     </ModalSheet>
@@ -4253,6 +4394,18 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
     const pegs = Math.max(1, Math.min(Number(payload.pegs) || 1, normalized.magia_actual));
     const updatedAdventurer = applyAdventurerResourceSpend(normalized, { magic: pegs });
     onUpdateAdventurer(updatedAdventurer);
+    if (isBlessingSpell(payload.spell) && payload.blessingTargetId) {
+      const target = payload.blessingTargetId === normalized.id
+        ? updatedAdventurer
+        : adventurers.find(entry => entry.id === payload.blessingTargetId);
+      if (target) {
+        const normalizedTarget = normalizeAdventurer(target);
+        onUpdateAdventurer(normalizeAdventurer({
+          ...normalizedTarget,
+          status_effects: addStatusEffectCopies(normalizedTarget.status_effects || [], "blessed", pegs),
+        }));
+      }
+    }
     if (!missionState.magia_usada_esta_ronda) {
       onUpdateMission(addMagicThreatToMission(missionState));
     }
@@ -4419,7 +4572,8 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
                 <div style={{ display: "flex", gap: 2 }}>
                   {[...new Set(normalized.status_effects)].map(se => {
                     const status = STATUS_EFFECTS.find(x => x.id === se);
-                    return status ? <span key={se} title={status.name} style={{ fontSize: 14 }}>{status.icon}</span> : null;
+                    const count = getStatusEffectCount(normalized.status_effects, se);
+                    return status ? <span key={se} title={status.name} style={{ fontSize: 14 }}>{status.icon}{count > 1 ? `x${count}` : ""}</span> : null;
                   })}
                 </div>
               )}
@@ -4509,6 +4663,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
       {selectedCombatAdv && (
         <CombatQuickReferenceModal
           adv={selectedCombatAdv}
+          adventurers={adventurers}
           missionState={missionState}
           onCastMagic={handleCastMagic}
           onApplyAdventurerUpdate={onUpdateAdventurer}
@@ -4529,6 +4684,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
       {selectedAbilityAdv && (
         <CombatAbilitiesModal
           adv={selectedAbilityAdv}
+          adventurers={adventurers}
           missionState={missionState}
           onUpdateMission={onUpdateMission}
           onCastMagic={handleCastMagic}
