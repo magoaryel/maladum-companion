@@ -1756,9 +1756,15 @@ function canLearnSpell(adv, spellLevel) {
   return !!CLASS_DATA[adv?.clase]?.spell && Number(spellLevel) <= Math.max(1, Number(adv?.rango) || 1) && getRemainingXP(adv) > 0;
 }
 
+function isAmmoItem(item) {
+  const attrs = new Set(item?.attributes || []);
+  return attrs.has("ammo_arrow") || attrs.has("ammo_bullet");
+}
+
 function summarizeEquippedItems(adv) {
   return (normalizeAdventurer(adv).inventario || []).filter(item => {
     if (item.broken) return false;
+    if (isAmmoItem(item)) return true;
     if (isWeaponItem(item)) return item.ready !== false;
     return item.equipped;
   });
@@ -3129,6 +3135,7 @@ InventoryEditor = function InventoryEditorPatched({
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
           {inventoryItems.map(item => {
             const autoEquippedWeapon = isWeaponItem(item);
+            const autoAvailableAmmo = isAmmoItem(item);
             const markBroken = () => {
               if (item.broken) return;
               patchItem(item.id, {
@@ -3154,6 +3161,7 @@ InventoryEditor = function InventoryEditorPatched({
                 {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
                 {!item.ready && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>Sin preparar</span>}
                 {isWeaponItem(item) && !item.broken && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Arma equipada</span>}
+                {isAmmoItem(item) && !item.broken && <span style={{ fontSize: 11, color: "#93c5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Municion disponible</span>}
                 {!isWeaponItem(item) && item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>}
               </div>
 
@@ -3217,6 +3225,12 @@ InventoryEditor = function InventoryEditorPatched({
                     fontSize: 12, fontWeight: 700, opacity: (item.broken || !item.ready) ? 0.6 : 1 }}>
                     {item.broken ? "Arma rota: fuera de combate" : (!item.ready ? "Arma sin preparar: fuera de combate" : "Arma siempre equipada")}
                   </span>
+                ) : autoAvailableAmmo ? (
+                  <span style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #1d4ed8",
+                    background: "#1d4ed822", color: item.broken ? "#9ca3af" : "#bfdbfe",
+                    fontSize: 12, fontWeight: 700, opacity: item.broken ? 0.6 : 1 }}>
+                    {item.broken ? "Municion fuera de uso" : "Municion siempre disponible"}
+                  </span>
                 ) : (
                   <button onClick={() => updateItem(item.id, "equipped", !item.equipped)}
                     disabled={item.broken}
@@ -3232,12 +3246,14 @@ InventoryEditor = function InventoryEditorPatched({
                     fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                   {item.magic ? "Magico" : "No magico"}
                 </button>
-                <button onClick={() => patchItem(item.id, { ready: !item.ready })}
-                  style={{ padding: "8px 10px", borderRadius: 999, border: item.ready ? "1px solid #4338ca" : "1px solid #374151",
-                    background: item.ready ? "#4338ca22" : "transparent", color: item.ready ? "#ddd6fe" : "#9ca3af",
-                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                  {item.ready ? "Preparada" : "Sin preparar"}
-                </button>
+                {!autoAvailableAmmo && (
+                  <button onClick={() => patchItem(item.id, { ready: !item.ready })}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: item.ready ? "1px solid #4338ca" : "1px solid #374151",
+                      background: item.ready ? "#4338ca22" : "transparent", color: item.ready ? "#ddd6fe" : "#9ca3af",
+                      fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                    {item.ready ? "Preparada" : "Sin preparar"}
+                  </button>
+                )}
                 <button onClick={markBroken} disabled={item.broken}
                   style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #7f1d1d" : "1px solid #374151",
                     background: item.broken ? "#7f1d1d22" : "transparent", color: item.broken ? "#fca5a5" : "#9ca3af",
