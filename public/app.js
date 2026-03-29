@@ -2985,19 +2985,6 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
   const [catalogError, setCatalogError] = useState("");
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogSource, setCatalogSource] = useState("all");
-  const [draft, setDraft] = useState({
-    name: "",
-    summary: "",
-    type: "",
-    meleeDice: 0,
-    rangedDice: 0,
-    shield: 0,
-    armor: 0,
-    magic: false,
-    equipped: false,
-    stowed: false,
-    broken: false,
-  });
 
   useEffect(() => {
     let cancelled = false;
@@ -3040,27 +3027,6 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
     });
   };
 
-  const addItem = () => {
-    if (!draft.name.trim()) return;
-    onUpdate({
-      ...adv,
-      inventario: [...normalizeAdventurer(adv).inventario, normalizeInventoryItem(draft)],
-    });
-    setDraft({
-      name: "",
-      summary: "",
-      type: "",
-      meleeDice: 0,
-      rangedDice: 0,
-      shield: 0,
-      armor: 0,
-      magic: false,
-      equipped: false,
-      stowed: false,
-      broken: false,
-    });
-  };
-
   const addCatalogItem = (entry) => {
     onUpdate({
       ...adv,
@@ -3087,7 +3053,7 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
   return (
     <Collapsible title="Inventario y Equipo" icon="INV">
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
-        Registra aqui lo que lleva el aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
+        Gestiona aqui el inventario oficial del aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
       </div>
 
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
@@ -3288,48 +3254,6 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
         <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 12 }}>Todavia no hay objetos registrados.</div>
       )}
 
-      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10 }}>
-        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar item manualmente</div>
-        <input value={draft.name} onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
-          placeholder="Nombre del item"
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8, boxSizing: "border-box" }}/>
-        <input value={draft.summary} onChange={e => setDraft(prev => ({ ...prev, summary: e.target.value }))}
-          placeholder="Resumen corto"
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box" }}/>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 6, marginBottom: 8 }}>
-          {[
-            ["meleeDice", "Melee"],
-            ["rangedDice", "Dist"],
-            ["shield", "Escudo"],
-            ["armor", "Prot"],
-          ].map(([field, label]) => (
-            <div key={field}>
-              <div title={EQUIPMENT_FIELD_HELP[field]} style={{ color: "#6b7280", fontSize: 10, marginBottom: 4, cursor: "help" }}>{label}</div>
-              <input type="number" min="0" value={draft[field]} onChange={e => setDraft(prev => ({ ...prev, [field]: Number(e.target.value) || 0 }))}
-                style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
-            </div>
-          ))}
-        </div>
-        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
-          Si es un arma, normalmente basta con tenerla en inventario. Usa Equipado sobre todo para armaduras, cascos, capas o equipo defensivo.
-        </div>
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          <button onClick={() => setDraft(prev => ({ ...prev, equipped: !prev.equipped }))}
-            style={{ flex: 1, padding: 10, borderRadius: 8, border: draft.equipped ? "1px solid #22c55e" : "1px solid #374151",
-              background: draft.equipped ? "#16653422" : "transparent", color: draft.equipped ? "#bbf7d0" : "#9ca3af", cursor: "pointer", fontSize: 12 }}>
-            {draft.equipped ? "Se agrega equipado" : "Agregar sin equipar"}
-          </button>
-          <button onClick={() => setDraft(prev => ({ ...prev, magic: !prev.magic }))}
-            style={{ flex: 1, padding: 10, borderRadius: 8, border: draft.magic ? "1px solid #3b82f6" : "1px solid #374151",
-              background: draft.magic ? "#1d4ed822" : "transparent", color: draft.magic ? "#bfdbfe" : "#9ca3af", cursor: "pointer", fontSize: 12 }}>
-            {draft.magic ? "Es magico" : "No es magico"}
-          </button>
-        </div>
-        <button onClick={addItem}
-          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none", background: "#7f1d1d", color: "#fff", fontWeight: 700, cursor: "pointer" }}>
-          Agregar item
-        </button>
-      </div>
     </Collapsible>
   );
 };
@@ -6446,7 +6370,7 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   );
 }
 
-function HomeScreen({ onCreateCampaign, onLoadCampaign, campaigns }) {
+function HomeScreen({ onCreateCampaign, onLoadCampaign, onDeleteCampaign, campaigns }) {
   const [newName, setNewName] = useState("");
   const [showCreate, setShowCreate] = useState(false);
 
@@ -6463,14 +6387,21 @@ function HomeScreen({ onCreateCampaign, onLoadCampaign, campaigns }) {
         <div style={{ marginBottom: 20 }}>
           <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 600, textTransform: "uppercase", letterSpacing: 2, marginBottom: 8 }}>Campanas guardadas</div>
           {campaigns.map(c => (
-            <button key={c.id} onClick={() => onLoadCampaign(c)}
-              style={{ width: "100%", padding: 14, borderRadius: 10, border: "1px solid #2d2d44", background: "#1a1a2e", marginBottom: 8, cursor: "pointer", textAlign: "left" }}>
-              <div style={{ color: "#d4b896", fontSize: 15, fontWeight: 700 }}>{c.name}</div>
-              <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 12, color: "#9ca3af" }}>
-                <span>Mision: {c.currentMission}</span>
-                <span>Demora: {c.demora}</span>
-              </div>
-            </button>
+            <div key={c.id} style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+              <button onClick={() => onLoadCampaign(c)}
+                style={{ flex: 1, padding: 14, borderRadius: 10, border: "1px solid #2d2d44", background: "#1a1a2e", cursor: "pointer", textAlign: "left" }}>
+                <div style={{ color: "#d4b896", fontSize: 15, fontWeight: 700 }}>{c.name}</div>
+                <div style={{ display: "flex", gap: 12, marginTop: 6, fontSize: 12, color: "#9ca3af" }}>
+                  <span>Mision: {c.currentMission}</span>
+                  <span>Demora: {c.demora}</span>
+                </div>
+              </button>
+              <button onClick={() => onDeleteCampaign(c)}
+                title="Eliminar campana"
+                style={{ width: 48, borderRadius: 10, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 18, fontWeight: 700, cursor: "pointer" }}>
+                x
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -6600,6 +6531,7 @@ function NavButton({ icon, label, sub, onClick, accent }) {
 function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
   const [selected, setSelected] = useState(null);
   const [showAdd, setShowAdd] = useState(adventurers.length === 0);
+  const [selectedBaseCharacter, setSelectedBaseCharacter] = useState("");
   const livingAdventurers = adventurers.filter(adv => !isAdventurerDead(adv));
   const fallenAdventurers = adventurers.filter(isAdventurerDead);
 
@@ -6668,12 +6600,8 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
           <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Selecciona personaje</div>
           <div style={{ maxHeight: 300, overflowY: "auto" }}>
             {BASE_CHARACTERS.map(ch => (
-              <button key={ch.nombre} onClick={() => {
-                const created = onAdd(ch);
-                setShowAdd(false);
-                if (created?.id) setSelected(created.id);
-              }}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", marginBottom: 4, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button key={ch.nombre} onClick={() => setSelectedBaseCharacter(ch.nombre)}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: selectedBaseCharacter === ch.nombre ? "1px solid #22c55e" : "1px solid #2d2d44", background: selectedBaseCharacter === ch.nombre ? "#16653422" : "#0f172a", marginBottom: 4, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 600 }}>{ch.nombre}</div>
                   <div style={{ color: "#6b7280", fontSize: 11 }}>{ch.especie} · HP {ch.salud_max} · MP {ch.magia_max} · SP {ch.habilidad_max}</div>
@@ -6682,6 +6610,17 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
               </button>
             ))}
           </div>
+          <button onClick={() => {
+            const selectedCharacter = BASE_CHARACTERS.find(ch => ch.nombre === selectedBaseCharacter);
+            if (!selectedCharacter) return;
+            const created = onAdd(selectedCharacter);
+            setSelectedBaseCharacter("");
+            setShowAdd(false);
+            if (created?.id) setSelected(created.id);
+          }} disabled={!selectedBaseCharacter}
+            style={{ width: "100%", marginTop: 10, padding: 12, borderRadius: 8, border: selectedBaseCharacter ? "1px solid #166534" : "1px solid #374151", background: selectedBaseCharacter ? "#16653422" : "#111827", color: selectedBaseCharacter ? "#bbf7d0" : "#4b5563", fontSize: 13, fontWeight: 700, cursor: selectedBaseCharacter ? "pointer" : "default" }}>
+            Agregar aventurero al grupo
+          </button>
           <button onClick={() => setShowAdd(false)}
             style={{ width: "100%", marginTop: 8, padding: 10, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: "#9ca3af", fontSize: 13, cursor: "pointer" }}>
             Cancelar
@@ -7081,6 +7020,27 @@ function App() {
     }
   };
 
+  const deleteCampaign = async (summary) => {
+    if (!summary?.id) return;
+    await DB.remove("campaign_" + summary.id);
+    await DB.remove("adventurers_" + summary.id);
+    await DB.remove("mission_state_" + summary.id);
+    const lastCampId = await DB.load("last_campaign_id");
+    if (lastCampId === summary.id) {
+      await DB.remove("last_campaign_id");
+    }
+    const nextCampaigns = campaigns.filter(item => item.id !== summary.id);
+    setCampaigns(nextCampaigns);
+    await DB.save("campaigns_list", nextCampaigns);
+    if (campaign?.id === summary.id) {
+      setCampaign(null);
+      setAdventurers([]);
+      setMissionState(null);
+      setSubScreen("hub");
+      setScreen("home");
+    }
+  };
+
   const addAdventurer = (charData) => {
     const adv = normalizeAdventurer(defaultAdventurer(campaign.id, charData));
     setAdventurers(prev => [...prev, adv]);
@@ -7338,7 +7298,7 @@ function App() {
       <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&display=swap" rel="stylesheet"/>
 
       {screen === "home" && (
-        <HomeScreen campaigns={campaigns} onCreateCampaign={createCampaign} onLoadCampaign={loadCampaign}/>
+        <HomeScreen campaigns={campaigns} onCreateCampaign={createCampaign} onLoadCampaign={loadCampaign} onDeleteCampaign={deleteCampaign}/>
       )}
 
       {screen === "campaign" && subScreen === "hub" && campaign && (
