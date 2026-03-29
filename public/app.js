@@ -2967,11 +2967,19 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate, showCurrentFi
                   <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 6 }}>
                     <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{item.name}</div>
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {!isWeaponItem(item) && item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>}
                       {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
                       {!item.ready && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>Sin preparar</span>}
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {!isWeaponItem(item) && (
+                      <button onClick={() => patchItem(item.id, { equipped: !item.equipped })}
+                        disabled={item.broken}
+                        style={{ padding: "8px 10px", borderRadius: 999, border: item.equipped ? "1px solid #22c55e" : "1px solid #374151", background: item.equipped ? "#16653422" : "transparent", color: item.equipped ? "#bbf7d0" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: item.broken ? "default" : "pointer", opacity: item.broken ? 0.5 : 1 }}>
+                        {item.equipped ? "Desequipar" : "Equipar"}
+                      </button>
+                    )}
                     <button onClick={() => patchItem(item.id, { ready: !item.ready })}
                       style={{ padding: "8px 10px", borderRadius: 999, border: item.ready ? "1px solid #4338ca" : "1px solid #374151", background: item.ready ? "#4338ca22" : "transparent", color: item.ready ? "#ddd6fe" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                       {item.ready ? "Preparada" : "Sin preparar"}
