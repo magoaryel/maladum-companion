@@ -2883,7 +2883,15 @@ function ModalSheet({ title, subtitle, onClose, children }) {
   );
 }
 
-InventoryEditor = function InventoryEditorPatched({ adv, onUpdate, showCurrentFirst = false, removeLabel = "x" }) {
+InventoryEditor = function InventoryEditorPatched({
+  adv,
+  onUpdate,
+  showCurrentFirst = false,
+  removeLabel = "x",
+  wrapped = true,
+  showInventorySection = true,
+  showSearchSection = true,
+}) {
   const [catalogItems, setCatalogItems] = useState([]);
   const [catalogStatus, setCatalogStatus] = useState("loading");
   const [catalogError, setCatalogError] = useState("");
@@ -2955,13 +2963,13 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate, showCurrentFi
     return haystack.includes(query);
   }).slice(0, 24);
 
-  return (
-    <Collapsible title="Inventario y Equipo">
+  const content = (
+    <>
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Gestiona aqui el inventario oficial del aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
       </div>
 
-      {showCurrentFirst && (
+      {showInventorySection && showCurrentFirst && (
         <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
           <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Items actuales</div>
           {inventoryItems.length > 0 ? (
@@ -3006,85 +3014,87 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate, showCurrentFi
         </div>
       )}
 
-      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
-        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar desde catalogo oficial</div>
-        <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 10 }}>
-          Busca por nombre, fuente o atributo. Al agregarlo podras ajustar despues los valores de combate si hace falta, marcarlo roto o guardarlo si no lo llevas activo.
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8, marginBottom: 8 }}>
-          <input value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)}
-            placeholder="Buscar item o atributo"
-            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
-          <select value={catalogSource} onChange={e => setCatalogSource(e.target.value)}
-            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13 }}>
-            <option value="all">Todo</option>
-            <option value="maladum">Caja base</option>
-            <option value="adventure">Adventure</option>
-            <option value="beasts">Beasts</option>
-          </select>
-        </div>
-
-        {catalogStatus === "loading" && (
-          <div style={{ color: "#9ca3af", fontSize: 12 }}>Cargando catalogo oficial...</div>
-        )}
-
-        {catalogStatus === "error" && (
-          <div style={{ color: "#fca5a5", fontSize: 12 }}>{catalogError || "No se pudo cargar el catalogo oficial."}</div>
-        )}
-
-        {catalogStatus === "ready" && (
-          <div>
-            <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>
-              {catalogResults.length} resultados visibles de {catalogItems.length} items oficiales.
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto" }}>
-              {catalogResults.map(item => (
-                <div key={item.source + "_" + item.slug} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</div>
-                      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
-                        {item.source && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #334155" }}>{titleCaseToken(item.source)}</span>}
-                        {item.rarity && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>{titleCaseToken(item.rarity)}</span>}
-                        {item.size && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{String(item.size).toUpperCase()}</span>}
-                      </div>
-                    </div>
-                    <button onClick={() => addCatalogItem(item)}
-                      style={{ minWidth: 84, padding: "10px 12px", borderRadius: 8, border: "1px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-                      Agregar
-                    </button>
-                  </div>
-                  <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 6 }}>{summarizeCatalogEntry(item)}</div>
-                  {!!item.attributes?.length && (
-                    <details style={{ marginTop: 6 }}>
-                      <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>
-                        Ver atributos y efectos
-                      </summary>
-                      <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
-                        {item.attributes.slice(0, 8).map(attr => {
-                          const meta = getAttributeEntry(attr);
-                          return (
-                            <div key={attr} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
-                              <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{meta?.label || titleCaseToken(attr)}</div>
-                              <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{meta?.summary || "Detalle pendiente."}</div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </details>
-                  )}
-                </div>
-              ))}
-              {catalogResults.length === 0 && (
-                <div style={{ color: "#6b7280", fontSize: 12 }}>No se encontraron items con ese filtro.</div>
-              )}
-            </div>
+      {showSearchSection && (
+        <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar desde catalogo oficial</div>
+          <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 10 }}>
+            Busca por nombre, fuente o atributo. Al agregarlo podras ajustar despues los valores de combate si hace falta, marcarlo roto o guardarlo si no lo llevas activo.
           </div>
-        )}
-      </div>
 
-      {inventoryItems.length > 0 ? (
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8, marginBottom: 8 }}>
+            <input value={catalogQuery} onChange={e => setCatalogQuery(e.target.value)}
+              placeholder="Buscar item o atributo"
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
+            <select value={catalogSource} onChange={e => setCatalogSource(e.target.value)}
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13 }}>
+              <option value="all">Todo</option>
+              <option value="maladum">Caja base</option>
+              <option value="adventure">Adventure</option>
+              <option value="beasts">Beasts</option>
+            </select>
+          </div>
+
+          {catalogStatus === "loading" && (
+            <div style={{ color: "#9ca3af", fontSize: 12 }}>Cargando catalogo oficial...</div>
+          )}
+
+          {catalogStatus === "error" && (
+            <div style={{ color: "#fca5a5", fontSize: 12 }}>{catalogError || "No se pudo cargar el catalogo oficial."}</div>
+          )}
+
+          {catalogStatus === "ready" && (
+            <div>
+              <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>
+                {catalogResults.length} resultados visibles de {catalogItems.length} items oficiales.
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8, maxHeight: 320, overflowY: "auto" }}>
+                {catalogResults.map(item => (
+                  <div key={item.source + "_" + item.slug} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700 }}>{item.name}</div>
+                        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 4 }}>
+                          {item.source && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "2px 8px", borderRadius: 999, border: "1px solid #334155" }}>{titleCaseToken(item.source)}</span>}
+                          {item.rarity && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>{titleCaseToken(item.rarity)}</span>}
+                          {item.size && <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{String(item.size).toUpperCase()}</span>}
+                        </div>
+                      </div>
+                      <button onClick={() => addCatalogItem(item)}
+                        style={{ minWidth: 84, padding: "10px 12px", borderRadius: 8, border: "1px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                        Agregar
+                      </button>
+                    </div>
+                    <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 6 }}>{summarizeCatalogEntry(item)}</div>
+                    {!!item.attributes?.length && (
+                      <details style={{ marginTop: 6 }}>
+                        <summary style={{ color: "#6b7280", fontSize: 11, cursor: "pointer" }}>
+                          Ver atributos y efectos
+                        </summary>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginTop: 8 }}>
+                          {item.attributes.slice(0, 8).map(attr => {
+                            const meta = getAttributeEntry(attr);
+                            return (
+                              <div key={attr} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 8 }}>
+                                <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700 }}>{meta?.label || titleCaseToken(attr)}</div>
+                                <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{meta?.summary || "Detalle pendiente."}</div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+                ))}
+                {catalogResults.length === 0 && (
+                  <div style={{ color: "#6b7280", fontSize: 12 }}>No se encontraron items con ese filtro.</div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {showInventorySection && (inventoryItems.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
           {inventoryItems.map(item => {
             const autoEquippedWeapon = isWeaponItem(item);
@@ -3209,10 +3219,13 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate, showCurrentFi
         </div>
       ) : (
         <div style={{ color: "#6b7280", fontSize: 12, marginBottom: 12 }}>Todavia no hay objetos registrados.</div>
-      )}
-
-    </Collapsible>
+      ))}
+    </>
   );
+
+  return wrapped
+    ? <Collapsible title="Inventario y Equipo">{content}</Collapsible>
+    : content;
 };
 
 SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
@@ -4471,6 +4484,7 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
 
 function InventoryModal({ adv, onUpdateAdventurer, onClose }) {
   const normalized = normalizeAdventurer(adv);
+  const [view, setView] = useState("inventory");
   return (
     <ModalSheet
       title="Items encontrados"
@@ -4478,9 +4492,27 @@ function InventoryModal({ adv, onUpdateAdventurer, onClose }) {
       onClose={onClose}
     >
       <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 12 }}>
-        Aqui puedes revisar primero lo que llevas encima, soltarlo, marcarlo roto o dejarlo sin preparar, y luego anadir o ajustar objetos durante la mision.
+        Separa lo que ya llevas de la busqueda de botin para que sea mas claro durante la mision.
       </div>
-      <InventoryEditor adv={normalized} onUpdate={onUpdateAdventurer} showCurrentFirst removeLabel="Soltar" />
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <button onClick={() => setView("inventory")}
+          style={{ flex: 1, padding: 12, borderRadius: 10, border: view === "inventory" ? "1px solid #22c55e" : "1px solid #374151", background: view === "inventory" ? "#16653422" : "#111827", color: view === "inventory" ? "#bbf7d0" : "#9ca3af", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+          Inventario
+        </button>
+        <button onClick={() => setView("search")}
+          style={{ flex: 1, padding: 12, borderRadius: 10, border: view === "search" ? "1px solid #3b82f6" : "1px solid #374151", background: view === "search" ? "#1d4ed822" : "#111827", color: view === "search" ? "#dbeafe" : "#9ca3af", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
+          Busqueda
+        </button>
+      </div>
+      <InventoryEditor
+        adv={normalized}
+        onUpdate={onUpdateAdventurer}
+        showCurrentFirst={view === "inventory"}
+        removeLabel="Soltar"
+        wrapped={false}
+        showInventorySection={view === "inventory"}
+        showSearchSection={view === "search"}
+      />
     </ModalSheet>
   );
 }
