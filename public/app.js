@@ -1985,6 +1985,12 @@ function removeFirstStatusEffect(effects, effectId) {
   return next;
 }
 
+function addUniqueStatusEffect(effects, effectId) {
+  const source = Array.isArray(effects) ? [...effects] : [];
+  if (!effectId || source.includes(effectId)) return source;
+  return [...source, effectId];
+}
+
 function removeStatusEffectsById(effects, effectIds) {
   const blocked = new Set(effectIds || []);
   return (Array.isArray(effects) ? effects : []).filter(effectId => !blocked.has(effectId));
@@ -4471,32 +4477,16 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
 
 function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
   const [result, setResult] = useState(null);
-  const [appliedRecovery, setAppliedRecovery] = useState(false);
   const [selectedNearbyIds, setSelectedNearbyIds] = useState([]);
-  const [appliedNearbyMagic, setAppliedNearbyMagic] = useState(false);
-  const [appliedExtraPeg, setAppliedExtraPeg] = useState(false);
+  const [protectedNearbyIds, setProtectedNearbyIds] = useState([]);
   if (!state) return null;
   const nearbyCandidates = (adventurers || []).filter(adv => adv.id !== state.adventurerId).map(normalizeAdventurer);
 
   useEffect(() => {
     setResult(null);
-    setAppliedRecovery(false);
     setSelectedNearbyIds([]);
-    setAppliedNearbyMagic(false);
-    setAppliedExtraPeg(false);
+    setProtectedNearbyIds([]);
   }, [state?.adventurerId, state?.spell?.name, state?.pegs]);
-
-  useEffect(() => {
-    if (!state || result !== 3 || appliedRecovery || typeof onApplyResult !== "function") return;
-    onApplyResult(3, state);
-    setAppliedRecovery(true);
-  }, [appliedRecovery, onApplyResult, result, state]);
-
-  useEffect(() => {
-    if (!state || result !== 6 || appliedExtraPeg || typeof onApplyResult !== "function" || !spellCanAutoResolveMagicSix(state.spell)) return;
-    onApplyResult(6, state);
-    setAppliedExtraPeg(true);
-  }, [appliedExtraPeg, onApplyResult, result, state]);
 
   const toggleNearbyAdventurer = (adventurerId) => {
     setSelectedNearbyIds(prev => prev.includes(adventurerId)
@@ -4504,10 +4494,20 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
       : [...prev, adventurerId]);
   };
 
-  const applyNearbyMagicResult = () => {
-    if (typeof onApplyResult !== "function" || appliedNearbyMagic) return;
-    onApplyResult(5, { ...state, nearbyAdventurerIds: selectedNearbyIds });
-    setAppliedNearbyMagic(true);
+  const toggleProtectedNearbyAdventurer = (adventurerId) => {
+    setProtectedNearbyIds(prev => prev.includes(adventurerId)
+      ? prev.filter(id => id !== adventurerId)
+      : [...prev, adventurerId]);
+  };
+
+  const applySelectedMagicResult = () => {
+    if (!result || typeof onApplyResult !== "function") return;
+    onApplyResult(result, {
+      ...state,
+      nearbyAdventurerIds: selectedNearbyIds,
+      protectedNearbyAdventurerIds: protectedNearbyIds,
+    });
+    onClose();
   };
 
   return (
@@ -4537,9 +4537,55 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
         <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 12 }}>
           <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>{`Resultado ${result}`}</div>
           <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.6 }}>{MAGIC_DIE_OUTCOMES[result]}</div>
+          {result === 1 && (
+            <div style={{ color: "#fca5a5", fontSize: 11, marginTop: 8 }}>
+              Al aplicar, el hechizo no se resolvera y {state.adventurerName} quedara Fatigado automaticamente.
+            </div>
+          )}
+          {result === 2 && (
+            <div style={{ color: "#93c5fd", fontSize: 11, marginTop: 8 }}>
+              Al aplicar, solo se resolvera el hechizo con las clavijas gastadas, sin efecto adicional del dado.
+            </div>
+          )}
           {result === 3 && (
             <div style={{ color: "#93c5fd", fontSize: 11, marginTop: 8 }}>
-              {appliedRecovery ? "Se ha aplicado +1 MP a la ficha del aventurero, hasta su maximo." : "Se aplicara +1 MP al aventurero."}
+              Al aplicar, se resolvera el hechizo y {state.adventurerName} recuperara +1 MP, hasta su maximo.
+            </div>
+          )}
+          {result === 4 && (
+            <div style={{ marginTop: 10 }}>
+              <div style={{ color: "#93c5fd", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                Marca aqui que otros aventureros estan a 2 casillas. La app les pondra Derribado automaticamente, salvo que les marques gastar 1 SP para evitarlo. El movimiento de alejarse 1 casilla sigue siendo manual en mesa.
+              </div>
+              {nearbyCandidates.length > 0 ? (
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {nearbyCandidates.map(adv => {
+                    const selected = selectedNearbyIds.includes(adv.id);
+                    const canAvoid = adv.habilidad_actual > 0;
+                    const protectedTarget = protectedNearbyIds.includes(adv.id);
+                    return (
+                      <div key={adv.id} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+                        <button onClick={() => toggleNearbyAdventurer(adv.id)}
+                          style={{ width: "100%", padding: "8px 10px", borderRadius: 999, border: selected ? "1px solid #3b82f6" : "1px solid #374151", background: selected ? "#1d4ed822" : "#0f172a", color: selected ? "#dbeafe" : "#d4b896", fontSize: 11, fontWeight: 700, cursor: "pointer", marginBottom: selected ? 8 : 0 }}>
+                          {selected ? `Afecta a ${adv.nombre}` : adv.nombre}
+                        </button>
+                        {selected && (
+                          <button onClick={() => canAvoid && toggleProtectedNearbyAdventurer(adv.id)} disabled={!canAvoid}
+                            style={{ width: "100%", padding: "8px 10px", borderRadius: 999, border: protectedTarget ? "1px solid #d946ef" : "1px solid #374151", background: protectedTarget ? "#86198f22" : "#0f172a", color: canAvoid ? (protectedTarget ? "#f5d0fe" : "#d4b896") : "#4b5563", fontSize: 11, fontWeight: 700, cursor: canAvoid ? "pointer" : "default" }}>
+                            {canAvoid
+                              ? (protectedTarget ? `Gastara 1 SP para evitarlo (${adv.habilidad_actual} SP)` : `Marcar gastar 1 SP para evitarlo (${adv.habilidad_actual} SP)`)
+                              : "No tiene SP para evitarlo"}
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div style={{ color: "#6b7280", fontSize: 11, marginBottom: 8 }}>
+                  No hay otros aventureros cargados para elegir.
+                </div>
+              )}
             </div>
           )}
           {result === 5 && (
@@ -4564,10 +4610,6 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
                   No hay otros aventureros cargados para elegir.
                 </div>
               )}
-              <button onClick={applyNearbyMagicResult} disabled={appliedNearbyMagic}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: appliedNearbyMagic ? "1px solid #166534" : "1px solid #3b82f6", background: appliedNearbyMagic ? "#16653422" : "#1d4ed822", color: appliedNearbyMagic ? "#bbf7d0" : "#dbeafe", fontSize: 12, fontWeight: 700, cursor: appliedNearbyMagic ? "default" : "pointer" }}>
-                {appliedNearbyMagic ? "Resultado 5 aplicado" : "Aplicar +1 MP al lanzador y cercanos"}
-              </button>
             </div>
           )}
           {result === 6 && (
@@ -4580,16 +4622,12 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
               </div>
               {isBlessingSpell(state.spell) && (
                 <div style={{ marginBottom: 8 }}>
-                  {appliedExtraPeg
-                    ? `Se ha aplicado +1 ficha de Bendicion extra a ${state.blessingTargetName || "el objetivo"}.`
-                    : `Se aplicara +1 ficha de Bendicion extra a ${state.blessingTargetName || "el objetivo"}.`}
+                  {`Al aplicar, ${state.blessingTargetName || "el objetivo"} ganara 1 ficha de Bendicion extra sobre las clavijas gastadas.`}
                 </div>
               )}
               {isConcentrationSpell(state.spell) && (
                 <div style={{ marginBottom: 8 }}>
-                  {appliedExtraPeg
-                    ? `Se ha aplicado +1 ficha de Bendicion extra a ${state.adventurerName}.`
-                    : `Se aplicara +1 ficha de Bendicion extra a ${state.adventurerName}.`}
+                  {`Al aplicar, ${state.adventurerName} ganara 1 ficha de Bendicion extra sobre las clavijas gastadas.`}
                 </div>
               )}
               {!spellCanAutoResolveMagicSix(state.spell) && (
@@ -4601,6 +4639,10 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
           )}
         </div>
       )}
+      <button onClick={applySelectedMagicResult} disabled={!result}
+        style={{ width: "100%", padding: 12, borderRadius: 8, border: result ? "1px solid #166534" : "1px solid #374151", background: result ? "#16653422" : "#111827", color: result ? "#bbf7d0" : "#6b7280", fontSize: 12, fontWeight: 700, cursor: result ? "pointer" : "default", marginBottom: 8 }}>
+        {result ? `Aplicar resultado ${result}` : "Selecciona un resultado"}
+      </button>
       <button onClick={onClose}
         style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#d4b896", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
         Cerrar
@@ -4794,6 +4836,29 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
   const selectedInventoryAdv = adventurers.find(a => a.id === activeInventoryAdv) || null;
   const selectedSearchAdv = adventurers.find(a => a.id === activeSearchAdv) || null;
   const selectedRestAdv = adventurers.find(a => a.id === activeRestAdv) || null;
+  const applyAutomatedSpellEffectFromMagicResult = (updatesById, touchedIds, result, payload) => {
+    if (!payload?.adventurerId || result === 1) return;
+    const effectivePegs = Math.max(1, Number(payload.pegs) || 1) + (result === 6 ? 1 : 0);
+    if (isBlessingSpell(payload.spell) && payload.blessingTargetId) {
+      const currentTarget = updatesById.get(payload.blessingTargetId);
+      if (!currentTarget) return;
+      updatesById.set(payload.blessingTargetId, normalizeAdventurer({
+        ...currentTarget,
+        status_effects: addStatusEffectCopies(currentTarget.status_effects || [], "blessed", effectivePegs),
+      }));
+      touchedIds.add(payload.blessingTargetId);
+      return;
+    }
+    if (isConcentrationSpell(payload.spell)) {
+      const currentAdventurer = updatesById.get(payload.adventurerId);
+      if (!currentAdventurer) return;
+      updatesById.set(payload.adventurerId, normalizeAdventurer({
+        ...currentAdventurer,
+        status_effects: addStatusEffectCopies(currentAdventurer.status_effects || [], "blessed", effectivePegs),
+      }));
+      touchedIds.add(payload.adventurerId);
+    }
+  };
   const handleCastMagic = (payload) => {
     if (!payload?.adventurerId) return;
     const adventurer = adventurers.find(entry => entry.id === payload.adventurerId);
@@ -4802,23 +4867,6 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
     const pegs = Math.max(1, Math.min(Number(payload.pegs) || 1, normalized.magia_actual));
     const updatedAdventurer = applyAdventurerResourceSpend(normalized, { magic: pegs });
     onUpdateAdventurer(updatedAdventurer);
-    if (isBlessingSpell(payload.spell) && payload.blessingTargetId) {
-      const target = payload.blessingTargetId === normalized.id
-        ? updatedAdventurer
-        : adventurers.find(entry => entry.id === payload.blessingTargetId);
-      if (target) {
-        const normalizedTarget = normalizeAdventurer(target);
-        onUpdateAdventurer(normalizeAdventurer({
-          ...normalizedTarget,
-          status_effects: addStatusEffectCopies(normalizedTarget.status_effects || [], "blessed", pegs),
-        }));
-      }
-    } else if (isConcentrationSpell(payload.spell)) {
-      onUpdateAdventurer(normalizeAdventurer({
-        ...updatedAdventurer,
-        status_effects: addStatusEffectCopies(updatedAdventurer.status_effects || [], "blessed", pegs),
-      }));
-    }
     if (!missionState.magia_usada_esta_ronda) {
       onUpdateMission(addMagicThreatToMission(missionState));
     }
@@ -4837,57 +4885,59 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
   };
   const handleMagicResultApply = (result, payload) => {
     if (!payload?.adventurerId) return;
-    if (result === 3) {
-      const adventurer = adventurers.find(entry => entry.id === payload.adventurerId);
-      if (!adventurer) return;
-      const normalized = normalizeAdventurer(adventurer);
-      const baseMagic = typeof payload.magia_despues === "number"
-        ? Math.max(0, Math.min(normalized.magia_max, Number(payload.magia_despues) || 0))
-        : normalized.magia_actual;
-      if (baseMagic >= normalized.magia_max) return;
-      onUpdateAdventurer({
-        ...normalized,
-        magia_actual: Math.min(normalized.magia_max, baseMagic + 1),
+    const updatesById = new Map((adventurers || []).map(entry => {
+      const normalizedEntry = normalizeAdventurer(entry);
+      return [normalizedEntry.id, normalizedEntry];
+    }));
+    const touchedIds = new Set();
+    const patchAdventurer = (adventurerId, recipe) => {
+      const current = updatesById.get(adventurerId);
+      if (!current) return;
+      const nextValue = typeof recipe === "function" ? recipe(current) : recipe;
+      updatesById.set(adventurerId, normalizeAdventurer(nextValue));
+      touchedIds.add(adventurerId);
+    };
+    applyAutomatedSpellEffectFromMagicResult(updatesById, touchedIds, result, payload);
+    if (result === 1) {
+      patchAdventurer(payload.adventurerId, current => ({
+        ...current,
+        status_effects: addUniqueStatusEffect(current.status_effects || [], "fatigued"),
+      }));
+    } else if (result === 3) {
+      patchAdventurer(payload.adventurerId, current => ({
+        ...current,
+        magia_actual: Math.min(current.magia_max, Math.max(0, Number(current.magia_actual) || 0) + 1),
+      }));
+    } else if (result === 4) {
+      const affectedIds = Array.from(new Set(payload.nearbyAdventurerIds || []));
+      const protectedIds = new Set(payload.protectedNearbyAdventurerIds || []);
+      affectedIds.forEach(targetId => {
+        patchAdventurer(targetId, current => {
+          if (protectedIds.has(targetId) && current.habilidad_actual > 0) {
+            return {
+              ...current,
+              habilidad_actual: Math.max(0, current.habilidad_actual - 1),
+            };
+          }
+          return {
+            ...current,
+            status_effects: addUniqueStatusEffect(current.status_effects || [], "prone"),
+          };
+        });
       });
-      return;
-    }
-    if (result === 5) {
+    } else if (result === 5) {
       const targetIds = Array.from(new Set([payload.adventurerId, ...(payload.nearbyAdventurerIds || [])]));
       targetIds.forEach(targetId => {
-        const adventurer = adventurers.find(entry => entry.id === targetId);
-        if (!adventurer) return;
-        const normalized = normalizeAdventurer(adventurer);
-        const nextMagic = targetId === payload.adventurerId && typeof payload.magia_despues === "number"
-          ? Math.max(0, Number(payload.magia_despues) || 0) + 1
-          : Math.max(0, Number(normalized.magia_actual) || 0) + 1;
-        onUpdateAdventurer({
-          ...normalized,
-          magia_actual: nextMagic,
-        });
+        patchAdventurer(targetId, current => ({
+          ...current,
+          magia_actual: Math.max(0, Number(current.magia_actual) || 0) + 1,
+        }));
       });
-      return;
     }
-    if (result === 6) {
-      if (isBlessingSpell(payload.spell) && payload.blessingTargetId) {
-        const target = adventurers.find(entry => entry.id === payload.blessingTargetId);
-        if (!target) return;
-        const normalized = normalizeAdventurer(target);
-        onUpdateAdventurer({
-          ...normalized,
-          status_effects: addStatusEffectCopies(normalized.status_effects || [], "blessed", 1),
-        });
-        return;
-      }
-      if (isConcentrationSpell(payload.spell)) {
-        const adventurer = adventurers.find(entry => entry.id === payload.adventurerId);
-        if (!adventurer) return;
-        const normalized = normalizeAdventurer(adventurer);
-        onUpdateAdventurer({
-          ...normalized,
-          status_effects: addStatusEffectCopies(normalized.status_effects || [], "blessed", 1),
-        });
-      }
-    }
+    touchedIds.forEach(adventurerId => {
+      const updatedAdventurer = updatesById.get(adventurerId);
+      if (updatedAdventurer) onUpdateAdventurer(updatedAdventurer);
+    });
   };
   const handleMissionRest = (updatedAdventurer) => {
     onUpdateAdventurer(updatedAdventurer);
