@@ -1482,6 +1482,7 @@ function normalizeInventoryItem(item) {
     equipped: !!item?.equipped,
     stowed: !!item?.stowed,
     broken: !!item?.broken,
+    ready: item?.ready !== false,
   };
 }
 
@@ -1888,6 +1889,41 @@ function getSpellCastingPreview(spell, pegs) {
 
 function getMagicPegOptions(currentMagic) {
   return Array.from({ length: Math.max(0, Number(currentMagic) || 0) }, (_, index) => index + 1);
+}
+
+const ATTACK_DIE_OPTIONS = {
+  blue: [
+    { id: "blank", label: "—", hits: 0, blunders: 0 },
+    { id: "skull", label: "☠", hits: 0, blunders: 1 },
+    { id: "star1", label: "★", hits: 1, blunders: 0 },
+    { id: "star2", label: "★★", hits: 2, blunders: 0 },
+  ],
+  red: [
+    { id: "blank", label: "—", hits: 0, blunders: 0 },
+    { id: "skull", label: "☠", hits: 0, blunders: 1 },
+    { id: "star1", label: "★", hits: 1, blunders: 0 },
+  ],
+};
+
+function createAttackRollDice(count) {
+  const total = Math.max(1, Number(count) || 1);
+  return Array.from({ length: total }, (_, index) => ({
+    color: index === 0 ? "blue" : "red",
+    resultId: "blank",
+  }));
+}
+
+function summarizeAttackRollDice(dice) {
+  const source = Array.isArray(dice) ? dice : [];
+  return source.reduce((summary, die) => {
+    const options = ATTACK_DIE_OPTIONS[die.color] || ATTACK_DIE_OPTIONS.red;
+    const selected = options.find(option => option.id === die.resultId) || options[0];
+    return {
+      hits: summary.hits + selected.hits,
+      blunders: summary.blunders + selected.blunders,
+      blueSkull: summary.blueSkull || (die.color === "blue" && selected.id === "skull"),
+    };
+  }, { hits: 0, blunders: 0, blueSkull: false });
 }
 
 function getStatusMeta(effectId) {
@@ -2843,12 +2879,13 @@ function ModalSheet({ title, subtitle, onClose, children }) {
   );
 }
 
-InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
+InventoryEditor = function InventoryEditorPatched({ adv, onUpdate, showCurrentFirst = false, removeLabel = "x" }) {
   const [catalogItems, setCatalogItems] = useState([]);
   const [catalogStatus, setCatalogStatus] = useState("loading");
   const [catalogError, setCatalogError] = useState("");
   const [catalogQuery, setCatalogQuery] = useState("");
   const [catalogSource, setCatalogSource] = useState("all");
+  const inventoryItems = normalizeAdventurer(adv).inventario || [];
 
   useEffect(() => {
     let cancelled = false;
@@ -2919,6 +2956,43 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Gestiona aqui el inventario oficial del aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
       </div>
+
+      {showCurrentFirst && (
+        <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
+          <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Items actuales</div>
+          {inventoryItems.length > 0 ? (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {inventoryItems.map(item => (
+                <div key={"quick_" + item.id} style={{ background: "#0f172a", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700 }}>{item.name}</div>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
+                      {!item.ready && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>Sin preparar</span>}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button onClick={() => patchItem(item.id, { ready: !item.ready })}
+                      style={{ padding: "8px 10px", borderRadius: 999, border: item.ready ? "1px solid #4338ca" : "1px solid #374151", background: item.ready ? "#4338ca22" : "transparent", color: item.ready ? "#ddd6fe" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      {item.ready ? "Preparada" : "Sin preparar"}
+                    </button>
+                    <button onClick={() => patchItem(item.id, { broken: !item.broken, equipped: item.broken ? item.equipped : false })}
+                      style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #7f1d1d" : "1px solid #374151", background: item.broken ? "#7f1d1d22" : "transparent", color: item.broken ? "#fca5a5" : "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      {item.broken ? "Roto" : "Marcar roto"}
+                    </button>
+                    <button onClick={() => removeItem(item.id)}
+                      style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                      Soltar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ color: "#6b7280", fontSize: 12 }}>Este aventurero aun no lleva ningun item.</div>
+          )}
+        </div>
+      )}
 
       <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 12 }}>
         <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Agregar desde catalogo oficial</div>
@@ -2998,9 +3072,9 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
         )}
       </div>
 
-      {(normalizeAdventurer(adv).inventario || []).length > 0 ? (
+      {inventoryItems.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 12 }}>
-          {normalizeAdventurer(adv).inventario.map(item => {
+          {inventoryItems.map(item => {
             const autoEquippedWeapon = isWeaponItem(item);
             const markBroken = () => {
               if (item.broken) return;
@@ -3020,11 +3094,12 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                     style={{ width: "100%", padding: 8, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#9ca3af", fontSize: 12, boxSizing: "border-box" }}/>
                 </div>
                 <button onClick={() => removeItem(item.id)}
-                  style={{ width: 32, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer" }}>x</button>
+                  style={{ minWidth: removeLabel === "x" ? 32 : 72, height: 32, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", cursor: "pointer", fontWeight: 700 }}>{removeLabel}</button>
               </div>
 
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 8 }}>
                 {item.broken && <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Roto</span>}
+                {!item.ready && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "2px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>Sin preparar</span>}
                 {isWeaponItem(item) && !item.broken && <span style={{ fontSize: 11, color: "#fde68a", padding: "2px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Arma equipada</span>}
                 {!isWeaponItem(item) && item.equipped && <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>Equipado</span>}
               </div>
@@ -3103,6 +3178,12 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
                     background: item.magic ? "#1d4ed822" : "transparent", color: item.magic ? "#bfdbfe" : "#9ca3af",
                     fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
                   {item.magic ? "Magico" : "No magico"}
+                </button>
+                <button onClick={() => patchItem(item.id, { ready: !item.ready })}
+                  style={{ padding: "8px 10px", borderRadius: 999, border: item.ready ? "1px solid #4338ca" : "1px solid #374151",
+                    background: item.ready ? "#4338ca22" : "transparent", color: item.ready ? "#ddd6fe" : "#9ca3af",
+                    fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+                  {item.ready ? "Preparada" : "Sin preparar"}
                 </button>
                 <button onClick={markBroken} disabled={item.broken}
                   style={{ padding: "8px 10px", borderRadius: 999, border: item.broken ? "1px solid #7f1d1d" : "1px solid #374151",
@@ -3487,11 +3568,9 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false
 function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission, onCastMagic, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [filter, setFilter] = useState("all");
-  const [spellTargets, setSpellTargets] = useState({});
   const learnedSkills = getLearnedSkills(normalized);
   const spells = getKnownSpells(normalized);
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
-  const blessTargets = (adventurers || []).map(normalizeAdventurer);
   const filters = [
     { id: "all", label: "Todo" },
     { id: "magic", label: "Magia" },
@@ -3538,7 +3617,6 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
 
   const castSpellFromAbilities = (spell, pegs) => {
     if (!spell || typeof onCastMagic !== "function") return;
-    const blessingTargetId = isBlessingSpell(spell) ? (spellTargets[spell.id] || normalized.id) : null;
     onCastMagic({
       adventurerId: normalized.id,
       adventurerName: normalized.nombre,
@@ -3548,7 +3626,6 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
         summary: spell.summary || spell.notes || "",
       },
       pegs,
-      blessingTargetId,
     });
     onClose();
   };
@@ -3610,19 +3687,8 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
                     {normalized.magia_actual > 0 ? "Elige cuantas clavijas gastar para lanzarlo." : "Sin clavijas de Magia disponibles."}
                   </div>
                   {isBlessingSpell(entry.spell) && (
-                    <div style={{ marginBottom: 8 }}>
-                      <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {blessTargets.map(target => {
-                          const selected = (spellTargets[entry.spell.id] || normalized.id) === target.id;
-                          return (
-                            <button key={target.id} onClick={() => setSpellTargets(prev => ({ ...prev, [entry.spell.id]: target.id }))}
-                              style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                              {target.nombre}
-                            </button>
-                          );
-                        })}
-                      </div>
+                    <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
+                      Bendicion se aplica sobre {normalized.nombre}. Las clavijas X que gastes se anadiran como fichas de Bendicion a su ficha.
                     </div>
                   )}
                   {magicPegOptions.length > 0 && (
@@ -3662,7 +3728,6 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const blessingCount = getStatusEffectCount(normalized.status_effects, "blessed");
   const frenzyEntry = getLearnedSkills(normalized).find(skill => skill.name === "Frenzy") || null;
   const canUseFrenzy = !!frenzyEntry && normalized.habilidad_actual > 0;
-  const blessingTargets = (adventurers || []).map(normalizeAdventurer);
   const availableAttackModes = [
     { id: "melee", label: "Ataque C/C", enabled: true },
     { id: "ranged", label: "Ataque Dist", enabled: rangedWeapons.length > 0 || equipment.rangedDice > 0 },
@@ -3675,10 +3740,11 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const [selectedRangedId, setSelectedRangedId] = useState(rangedWeapons[0]?.id || null);
   const [selectedSpellId, setSelectedSpellId] = useState(spells[0]?.name || null);
   const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
-  const [selectedBlessingTargetId, setSelectedBlessingTargetId] = useState(normalized.id);
   const [useFrenzy, setUseFrenzy] = useState(false);
   const [useForceful, setUseForceful] = useState(false);
   const [useBlessing, setUseBlessing] = useState(false);
+  const [attackResolution, setAttackResolution] = useState(null);
+  const [attackDice, setAttackDice] = useState([]);
   const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
   const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 };
   const selectedMelee = meleeWeapons.find(item => item.id === selectedMeleeId) || meleeWeapons[0] || null;
@@ -3686,7 +3752,8 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const selectedSpell = spells.find(spell => spell.name === selectedSpellId) || spells[0] || null;
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
   const frenzyBonus = useFrenzy ? getFrenzyBonusDice(frenzyEntry?.level || 0) : 0;
-  const meleeDiceTotal = (selectedMelee?.dice || equipment.meleeDice || 0) + frenzyBonus;
+  const meleeDiceTotal = (selectedMelee?.dice || equipment.meleeDice || 0) + frenzyBonus + (useForceful ? 1 : 0);
+  const rangedDiceTotal = selectedRanged?.dice || equipment.rangedDice || 0;
 
   useEffect(() => {
     if (startMode === "defense") {
@@ -3745,26 +3812,78 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   }, [selectedMelee]);
 
   useEffect(() => {
-    const availableTargetIds = blessingTargets.map(target => target.id);
-    if (!availableTargetIds.includes(selectedBlessingTargetId)) {
-      setSelectedBlessingTargetId(normalized.id);
+    if (attackResolution && !["melee", "ranged"].includes(mode)) {
+      setAttackResolution(null);
+      setAttackDice([]);
     }
-  }, [blessingTargets, normalized.id, selectedBlessingTargetId]);
+  }, [attackResolution, mode]);
 
-  const applyPhysicalAttack = () => {
-    if (typeof onApplyAdventurerUpdate === "function") {
-      let updated = normalizeAdventurer(normalized);
-      if (useFrenzy) {
-        updated = applyAdventurerResourceSpend(updated, { skill: 1 });
-      }
-      if (useBlessing) {
-        updated = normalizeAdventurer({
-          ...updated,
-          status_effects: removeFirstStatusEffect(updated.status_effects || [], "blessed"),
-        });
-      }
-      onApplyAdventurerUpdate(updated);
+  const beginAttackResolution = (attackMode) => {
+    const weapon = attackMode === "melee" ? selectedMelee : selectedRanged;
+    const diceCount = attackMode === "melee" ? meleeDiceTotal : rangedDiceTotal;
+    if (!weapon || diceCount <= 0) return;
+    setAttackResolution({
+      mode: attackMode,
+      weaponId: weapon.id,
+      weaponName: weapon.name,
+      weaponSummary: weapon.summary || "",
+      rawAttributes: weapon.rawAttributes || [],
+      diceCount,
+      useForceful: attackMode === "melee" ? useForceful : false,
+      useFrenzy: attackMode === "melee" ? useFrenzy : false,
+      useBlessing,
+    });
+    setAttackDice(createAttackRollDice(diceCount));
+  };
+
+  const setAttackDieResult = (dieIndex, resultId) => {
+    setAttackDice(prev => prev.map((die, index) => index === dieIndex ? { ...die, resultId } : die));
+  };
+
+  const applyAttackResolution = () => {
+    if (!attackResolution || typeof onApplyAdventurerUpdate !== "function") return;
+    const summary = summarizeAttackRollDice(attackDice);
+    let updated = normalizeAdventurer(normalized);
+
+    if (attackResolution.useFrenzy) {
+      updated = applyAdventurerResourceSpend(updated, { skill: 1 });
     }
+    if (attackResolution.useBlessing) {
+      updated = normalizeAdventurer({
+        ...updated,
+        status_effects: removeFirstStatusEffect(updated.status_effects || [], "blessed"),
+      });
+    }
+    if (attackResolution.mode === "melee" && attackResolution.useForceful && summary.blunders >= 2) {
+      updated = normalizeAdventurer({
+        ...updated,
+        inventario: updated.inventario.map(item => item.id === attackResolution.weaponId
+          ? normalizeInventoryItem({ ...item, broken: true, equipped: false })
+          : item),
+      });
+    }
+    if (attackResolution.mode === "ranged" && summary.blueSkull) {
+      if (attackResolution.rawAttributes.includes("ammo_arrow")) {
+        const ammoIndex = updated.inventario.findIndex(item => item.id !== attackResolution.weaponId && (item.attributes || []).includes("ammo_arrow"));
+        if (ammoIndex >= 0) {
+          updated = normalizeAdventurer({
+            ...updated,
+            inventario: updated.inventario.filter((_, index) => index !== ammoIndex),
+          });
+        }
+      }
+      if (attackResolution.rawAttributes.includes("ammo_bullet")) {
+        const ammoIndex = updated.inventario.findIndex(item => item.id !== attackResolution.weaponId && (item.attributes || []).includes("ammo_bullet"));
+        if (ammoIndex >= 0) {
+          updated = normalizeAdventurer({
+            ...updated,
+            inventario: updated.inventario.filter((_, index) => index !== ammoIndex),
+          });
+        }
+      }
+    }
+
+    onApplyAdventurerUpdate(updated);
     onClose();
   };
 
@@ -3785,7 +3904,6 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
       adventurerName: normalized.nombre,
       spell: selectedSpell,
       pegs: selectedMagicPegs,
-      blessingTargetId: isBlessingSpell(selectedSpell) ? selectedBlessingTargetId : null,
     });
     onClose();
   };
@@ -3807,6 +3925,82 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             {entry.label || entry.name}
           </span>
         ))}
+      </div>
+    );
+  };
+
+  const renderAttackResolutionPanel = () => {
+    if (!attackResolution) return null;
+    const summary = summarizeAttackRollDice(attackDice);
+    const usesArrowAmmo = attackResolution.rawAttributes.includes("ammo_arrow");
+    const usesBulletAmmo = attackResolution.rawAttributes.includes("ammo_bullet");
+    const hasUnreliable = attackResolution.rawAttributes.includes("unreliable");
+    return (
+      <div style={{ ...cardStyle, marginBottom: 12, border: "1px solid #eab308" }}>
+        <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
+          Resultado de la tirada
+        </div>
+        <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginBottom: 10 }}>
+          Elige que salio en cada dado. La app contara impactos y pifias para las reglas generales verificadas del manual.
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 10 }}>
+          {attackDice.map((die, index) => {
+            const options = ATTACK_DIE_OPTIONS[die.color] || ATTACK_DIE_OPTIONS.red;
+            return (
+              <div key={die.color + "_" + index} style={{ background: "#111827", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+                <div style={{ color: die.color === "blue" ? "#93c5fd" : "#fca5a5", fontSize: 12, fontWeight: 700, marginBottom: 8 }}>
+                  {die.color === "blue" ? "Dado azul" : `Dado rojo ${index}`}
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {options.map(option => (
+                    <button key={option.id} onClick={() => setAttackDieResult(index, option.id)}
+                      style={{ padding: "7px 10px", borderRadius: 999, border: die.resultId === option.id ? "1px solid #eab308" : "1px solid #374151", background: die.resultId === option.id ? "#eab30822" : "#0f172a", color: die.resultId === option.id ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6, marginBottom: 8 }}>
+          Impactos: {summary.hits} | Pifias: {summary.blunders}
+        </div>
+        {attackResolution.useForceful && (
+          <div style={{ color: summary.blunders >= 2 ? "#fca5a5" : "#fde68a", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
+            Forceful: si hubo 2 o mas pifias, el arma quedara rota tras resolver este ataque.
+          </div>
+        )}
+        {(usesArrowAmmo || usesBulletAmmo) && (
+          <div style={{ color: summary.blueSkull ? "#fca5a5" : "#93c5fd", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
+            Municion: si el dado azul muestra calavera, se pierde 1 ficha de {usesArrowAmmo ? "flechas" : "balas"} usada en este disparo.
+          </div>
+        )}
+        {hasUnreliable && (
+          <div style={{ color: "#c4b5fd", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
+            Unreliable: revisa la carta del arma. La app no automatiza ese efecto todavia y, si hace falta, puedes marcar el arma como rota o sin preparar desde Items.
+          </div>
+        )}
+        {attackResolution.useBlessing && (
+          <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
+            Se gastara 1 Bendicion al aplicar esta tirada.
+          </div>
+        )}
+        {attackResolution.useFrenzy && (
+          <div style={{ color: "#f5d0fe", fontSize: 11, lineHeight: 1.5, marginBottom: 10 }}>
+            Se descontara 1 SP por Frenzy al aplicar esta tirada.
+          </div>
+        )}
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+          <button onClick={() => { setAttackResolution(null); setAttackDice([]); }}
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#111827", color: "#9ca3af", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            Volver
+          </button>
+          <button onClick={applyAttackResolution}
+            style={{ padding: 10, borderRadius: 8, border: "1px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+            Aplicar tirada
+          </button>
+        </div>
       </div>
     );
   };
@@ -3937,11 +4131,13 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
               {selectedMelee ? (selectedMelee.dice > 0 ? `Dados a tirar: ${meleeDiceTotal}` : "Dados: usa la carta del arma.") : "Sin arma melee seleccionada."}
             </div>
             {useFrenzy && <div style={{ color: "#d946ef", fontSize: 11, marginTop: 6 }}>Al confirmar se descontara 1 SP.</div>}
-            {useForceful && <div style={{ color: "#fde68a", fontSize: 11, marginTop: 6 }}>Potenciar queda marcado como recordatorio.</div>}
+            {useForceful && <div style={{ color: "#fde68a", fontSize: 11, marginTop: 6 }}>Potenciar anade 1 dado. Si salen 2 o mas pifias, el arma se rompe despues del ataque.</div>}
             {useBlessing && <div style={{ color: "#fde68a", fontSize: 11, marginTop: 6 }}>Al confirmar se quitara 1 Bendicion.</div>}
           </div>
 
-          <button onClick={applyPhysicalAttack}
+          {attackResolution?.mode === "melee" && renderAttackResolutionPanel()}
+
+          <button onClick={() => beginAttackResolution("melee")} disabled={!selectedMelee || meleeDiceTotal <= 0}
             style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #92400e", background: "#92400e22", color: "#fde68a", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
             Atacar
           </button>
@@ -3997,7 +4193,9 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             </div>
           )}
 
-          <button onClick={applyPhysicalAttack}
+          {attackResolution?.mode === "ranged" && renderAttackResolutionPanel()}
+
+          <button onClick={() => beginAttackResolution("ranged")} disabled={!selectedRanged || rangedDiceTotal <= 0}
             style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
             Atacar
           </button>
@@ -4039,20 +4237,8 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
               </div>
               {isBlessingSpell(selectedSpell) && (
                 <div style={{ marginTop: 10 }}>
-                  <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                    {blessingTargets.map(target => {
-                      const selected = selectedBlessingTargetId === target.id;
-                      return (
-                        <button key={target.id} onClick={() => setSelectedBlessingTargetId(target.id)}
-                          style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                          {target.nombre}
-                        </button>
-                      );
-                    })}
-                  </div>
                   <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5 }}>
-                    Al confirmar, {blessingTargets.find(target => target.id === selectedBlessingTargetId)?.nombre || normalized.nombre} ganara {selectedMagicPegs} ficha{selectedMagicPegs === 1 ? "" : "s"} de Bendicion.
+                    Al confirmar, {normalized.nombre} ganara {selectedMagicPegs} ficha{selectedMagicPegs === 1 ? "" : "s"} de Bendicion.
                   </div>
                 </div>
               )}
@@ -4231,9 +4417,9 @@ function InventoryModal({ adv, onUpdateAdventurer, onClose }) {
       onClose={onClose}
     >
       <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5, marginBottom: 12 }}>
-        Aqui puedes anadir, equipar o ajustar los objetos del aventurero durante la mision sin salir del tablero.
+        Aqui puedes revisar primero lo que llevas encima, soltarlo, marcarlo roto o dejarlo sin preparar, y luego anadir o ajustar objetos durante la mision.
       </div>
-      <InventoryEditor adv={normalized} onUpdate={onUpdateAdventurer} />
+      <InventoryEditor adv={normalized} onUpdate={onUpdateAdventurer} showCurrentFirst removeLabel="Soltar" />
     </ModalSheet>
   );
 }
@@ -4394,17 +4580,11 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
     const pegs = Math.max(1, Math.min(Number(payload.pegs) || 1, normalized.magia_actual));
     const updatedAdventurer = applyAdventurerResourceSpend(normalized, { magic: pegs });
     onUpdateAdventurer(updatedAdventurer);
-    if (isBlessingSpell(payload.spell) && payload.blessingTargetId) {
-      const target = payload.blessingTargetId === normalized.id
-        ? updatedAdventurer
-        : adventurers.find(entry => entry.id === payload.blessingTargetId);
-      if (target) {
-        const normalizedTarget = normalizeAdventurer(target);
-        onUpdateAdventurer(normalizeAdventurer({
-          ...normalizedTarget,
-          status_effects: addStatusEffectCopies(normalizedTarget.status_effects || [], "blessed", pegs),
-        }));
-      }
+    if (isBlessingSpell(payload.spell)) {
+      onUpdateAdventurer(normalizeAdventurer({
+        ...updatedAdventurer,
+        status_effects: addStatusEffectCopies(updatedAdventurer.status_effects || [], "blessed", pegs),
+      }));
     }
     if (!missionState.magia_usada_esta_ronda) {
       onUpdateMission(addMagicThreatToMission(missionState));
