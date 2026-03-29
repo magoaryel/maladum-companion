@@ -1951,8 +1951,9 @@ function summarizeAttackRollDice(dice) {
       hits: summary.hits + selected.hits,
       blunders: summary.blunders + selected.blunders,
       blueSkull: summary.blueSkull || (die.color === "blue" && selected.id === "skull"),
+      critical: summary.critical || (die.color === "blue" && selected.id === "star2"),
     };
-  }, { hits: 0, blunders: 0, blueSkull: false });
+  }, { hits: 0, blunders: 0, blueSkull: false, critical: false });
 }
 
 function getStatusMeta(effectId) {
@@ -4074,6 +4075,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
     onApplyAdventurerUpdate(updated);
     setAttackOutcomeSummary({
       damage: summary.hits,
+      critical: summary.critical,
       lines: outcomeLines.length > 0 ? outcomeLines : ["Sin efectos extra en el arma ni el equipo"],
     });
   };
@@ -4157,7 +4159,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
           })}
         </div>
         <div style={{ color: "#d4b896", fontSize: 12, lineHeight: 1.6, marginBottom: 8 }}>
-          Impactos: {summary.hits} | Pifias: {summary.blunders}
+          Impactos: {summary.hits} | Pifias: {summary.blunders}{summary.critical ? " | Critico" : ""}
         </div>
         {attackResolution.useForceful && (
           <div style={{ color: summary.blunders >= 2 ? "#fca5a5" : "#fde68a", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
@@ -4206,7 +4208,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
           Resultado aplicado
         </div>
         <div style={{ color: "#d4b896", fontSize: 18, fontWeight: 800, marginBottom: 10 }}>
-          {`DANO ${attackOutcomeSummary.damage}`}
+          {`DANO ${attackOutcomeSummary.damage}${attackOutcomeSummary.critical ? " CRITICO" : ""}`}
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
           {attackOutcomeSummary.lines.map((line, index) => (
