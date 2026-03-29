@@ -704,6 +704,219 @@ const MISSIONS = {
     mazo_eventos: "7x Lamentor, 2x Malagaunt, 6x Mapa, 2x Hellfront, 3x Malagaunt, 1x Omega + dificultad",
     consecuencias: "Siguiente mision: Mision F.",
   },
+  E: {
+    id: "E", nombre: "Eclipse de los Eruditos", pagina: 14,
+    condicion: "Elegiste viajar por carretera desde C, o no lograste encontrar el pasaje secreto en C.",
+    objetivo_primario: "Sellar 4 compuertas de alcantarilla (puntos 3-6). Cada una tiene una palanca -> Interactuar para cerrarla. Una vez cerrada, girar el punto de entrada -> inactivo. Si se lanza dado de llegada ahora: +1 Amenaza en lugar de colocar personaje. Si Amenaza llega a nueva banda con personajes pendientes: usar llegadas de banda anterior. Una vez las 4 cerradas: escapar. Ganar 4 Renombre.",
+    objetivo_secundario: "Carta de Habitante Viajero Perdido en juego desde inicio. 3 Habitantes reciben un objeto de bolsa de fichas. Ganar 1 Renombre por cada Habitante persuadido a salir por tu Punto de Reagrupamiento.",
+    reglas_especiales: [
+      { nombre: "La Unica Salida Es Arriba", desc: "Si Punto de Reagrupamiento se intercambia con Punto de Entrada aleatorio, solo Entradas 1 y 2 son elegibles." },
+      { nombre: "Anegado", desc: "Cada casilla es fuente de agua. Interactuar en cualquier casilla para eliminar un contador de Quemado." },
+    ],
+    amenaza: { cara: "B", clavijas: 0 },
+    mazo_eventos: "8x Lamentor, 9x Mapa, 3x Hellfront + dificultad",
+    consecuencias: "Si sellaste las 4 compuertas -> antes de Mision G resolver el Interludio de Conocimiento Necrotico. Si no -> perder 2 espacios de Demora por cada puerta abierta y luego jugar Mision H.",
+  },
+  F: {
+    id: "F", nombre: "La Oscuridad Debajo", pagina: 16,
+    condicion: "Viajaste por tuneles desde C o D.",
+    objetivo_primario: "Bloquear 6 puntos de entrada de Revenants. Puntos 1, 3, 4 y 6 tienen palancas -> Interactuar para cerrar. Puntos 2 y 5 se bloquean moviendo o creando barricada u objeto de tamano similar en contacto. Los adversarios consideran piezas de terreno en contacto con punto de entrada como enemigos e intentaran destruirlas. Una vez cerrada o bloqueada -> girar como inactivo. 1 Renombre por cada Punto de Entrada desactivado.",
+    objetivo_secundario: "Las fichas de trampa no vuelven a la bolsa cuando se resuelven -> dejarlas a un lado. Al final: contar fichas de Trampa reservadas + cartas de Mazmorra en pila de descartes = total para la recompensa Sabiduria de la Mazmorra en Registro.",
+    reglas_especiales: [
+      { nombre: "Entradas Alternativas", desc: "Si se mapearon puntos de entrada en D -> usarlos como ruta alternativa. El grupo puede entrar por hasta 2 puntos de entrada coincidentes con numeros en Registro. Por cada espacio mapeado no usado: reducir Amenaza inicial en 1." },
+      { nombre: "Invasion de la Ciudad", desc: "Todo Revenant no dentro de LdV de un enemigo cuando se active -> no sigue IA normal. Mueve hacia Punto de Reagrupamiento y abandona el area. Al final anotar suma de rangos de personajes que abandonaron = Invasores Escapados en Registro." },
+    ],
+    amenaza: { cara: "A", clavijas: 3 },
+    consecuencias: "Siguiente mision: Mision G. Antes: resolver el Interludio de Conocimiento Necrotico.",
+  },
+  G: {
+    id: "G", nombre: "Cavernas de los Abandonados", pagina: "18-19",
+    condicion: "Cerraste con exito las 4 compuertas en E, o desviaste la horda en F.",
+    objetivo_primario: "Los 4 Aventureros son elegidos al azar. El primero en Zona de Reagrupamiento normal. Los otros 3 en casillas marcadas, boca abajo, Aturdidos y con Salud reducida en 1. Encontrar a tus companeros y escapar.",
+    objetivo_secundario: "Los 3 PNJs empiezan inconscientes en posiciones del mapa. Por cada uno arrastrado fuera por tu Punto de Reagrupamiento: 1 Renombre + 1 objeto aleatorio de bolsa de fichas.",
+    reglas_especiales: [
+      { nombre: "Centinelas", desc: "Sigue las reglas de Centinelas del reglamento." },
+    ],
+    amenaza: { cara: "A", clavijas: 5 },
+    mazo_eventos: "5x Lamentor, 2x Malagaunt, 6x Mapa, 4x Hellfront, 3x Hellfront + dificultad",
+    consecuencias: "Siguiente mision: Mision I.",
+  },
+  H: {
+    id: "H", nombre: "El Exilio", pagina: 20,
+    condicion: "No lograste cerrar las 4 compuertas en E.",
+    objetivo_primario: "Recuperar el objeto del Escritorio del Arcanista marcado en azul en el mapa. Salir de la zona con este raro objeto. Recompensa: informacion vital sobre los Regresados. Resolver el Interludio de Conocimiento Necrotico al completar.",
+    objetivo_secundario: "Si al final todas las puertas marcadas en azul estan bloqueadas y no hay personajes dentro del area azul (si se destruye alguna: bloquear con barricada): marcar la recompensa Investigacion en Curso, que se aplica a todas las misiones futuras.",
+    reglas_especiales: [
+      { nombre: "Mecanismo de Cierre", desc: "Cada Palanca y Pilar esta marcado con un simbolo. Al interactuar: todas las puertas con ese simbolo se cierran y bloquean. Todas las puertas con simbolo que tenga un lado mas que el simbolo interactuado se desbloquean. El Pilar central desbloquea puertas marcadas con circulo. Las Llaves solo bloquean o desbloquean puertas marcadas con circulo fuera de zona azul." },
+      { nombre: "No Robes", desc: "Para recibir recompensas debes entregar todos los objetos raros encontrados durante la partida. Si los conservas: no recibes recompensas de ningun objetivo." },
+      { nombre: "Muertos en el Agua", desc: "Hay un Punto de Entrada dentro del Pozo. Si el Pozo es atacado y danado (armadura 3), girar -> inactivo. Si dado de llegada se lanza: +1 Amenaza en lugar de colocar personaje." },
+      { nombre: "Tierra de los Vivos", desc: "Revenants no pueden desbloquear puertas, aunque si destruirlas. Espacios de Sepultura sin ruta abierta a Punto de Entrada -> inactivos." },
+      { nombre: "Puertas de Hierro", desc: "Todas las puertas tienen armadura fisica 3." },
+    ],
+    amenaza: { cara: "B", clavijas: 0 },
+    consecuencias: "+1 Demora. Siguiente mision: Mision I.",
+  },
+  I: {
+    id: "I", nombre: "Los Secretos del Cabo Feere", pagina: 22,
+    condicion: "Despues de reunirse con los eruditos en G o H.",
+    objetivo_primario: "Encontrar la reliquia en la cripta. Agrupar fichas de Objetivo por grupos: 1-3 en Tumbas, 4-6 en Tumbas, 7-8 en Escritorio del Arcanista. Tomar uno de cada grupo al azar. Tabla de pistas: Obj 1 = Objeto Comun; Obj 2 = Objeto Poco Comun; Obj 3 = Objeto Raro o Exclusivo; Obj 4 = Arma; Obj 5 = Equipo; Obj 6 = Objeto No de Combate; Obj 7 = Articulo Pequeno; Obj 8 = Articulo Normal (requiere 2 criterios). Al final elegir un objeto del inventario que crea que es la reliquia y lanzar Dado Magico. Si Parafernalia Oculta esta marcada: -1 a la tirada. Si Rastro Esqueletico esta marcado: -1 a la tirada. Si la tirada final es menor o igual que el numero de criterios coincidentes -> encontraste la reliquia, marcas Escudo de Almas y la siguiente mision es J. Si es mayor -> fallaste y la siguiente mision es L. Solo Fase de Avance; todos los aventureros se consideran sobrevividos.",
+    objetivo_secundario: "No hay secundario independiente: todo gira en torno a identificar la reliquia correcta y escapar con esa conclusion.",
+    reglas_especiales: [
+      { nombre: "No Hay Salida", desc: "El grupo no puede volver a su Punto de Reagrupamiento. La partida termina cuando todos los Aventureros son derrotados, la Amenaza alcanza Desperation, o Malagaunt tiene LdV de un Aventurero." },
+    ],
+    amenaza: { cara: "A", clavijas: 4 },
+    consecuencias: "Si identificaste la reliquia -> Mision J y marca Escudo de Almas. Si fallaste -> Mision L y solo Fase de Avance, sin Huida, Mercado ni Descanso.",
+  },
+  J: {
+    id: "J", nombre: "Bajo la Mansion", pagina: 24,
+    condicion: "Escapaste con exito de la cripta en I o L.",
+    objetivo_primario: "Buscar todos los secretos de la mansion en las catacumbas por pistas. Siempre que un Lamentor sea derrotado, coloca contador Recordatorio donde cayo. Interactuar con el para examinar el cadaver -> dejar ficha a un lado. En cada Fase de Evaluacion los contadores no examinados se retiran. Al final anotar numero de Cadaveres Examinados en Registro. Por cada 5 Cadaveres Examinados: marcar la primera recompensa de Conocimiento Necrotico no marcada.",
+    objetivo_secundario: "Asegurarse de que Objetivo 7 este incluido al rellenar piezas de terreno. Si escapas con esa ficha: descartarla y marcar Logro Aprendiz Involuntario.",
+    reglas_especiales: [
+      { nombre: "Fuente de Almas", desc: "Los Lamentors derrotados dejan un marcador temporal que puedes examinar antes de que desaparezca en la Fase de Evaluacion." },
+      { nombre: "Deber Sagrado", desc: "Colocar clavija morada en Registro de Amenaza al inicio de la banda de Dismay. Cuando se reemplaza: llega el sacerdote con +2 Salud y 2 objetos aleatorios. IA: moverse hacia habitacion no santificada sin enemigos mas cercana y realizar 2 acciones consecutivas en la misma ronda para colocar contador de Luz adyacente. Si abandona por tu Punto de Reagrupamiento, podras ayudarlo en la siguiente mision." },
+      { nombre: "El Troll Solitario", desc: "Si Rot Troll es derrotado -> marcar Logro Troll Derrotado en Registro." },
+    ],
+    amenaza: { cara: "A", clavijas: 6 },
+    consecuencias: "Si Cadaveres Examinados >= 9 -> Mision M. Si Aprendiz Involuntario esta marcado -> Mision N. Si no -> Mision O. Si el sacerdote escapo -> tambien puedes jugar Mision K opcionalmente.",
+  },
+  K: {
+    id: "K", nombre: "Maldiciones Deshechas", pagina: 26,
+    condicion: "Opcional, despues de J si el sacerdote escapo.",
+    objetivo_primario: "El sacerdote empieza en Area de Reagrupamiento con 2 clavijas de Salud y su armamento. IA: se mueve al centro de la habitacion no santificada mas cercana sin enemigos. Necesita 2 acciones consecutivas en la misma ronda para colocar contador de Luz adyacente. Sin enemigos -> se mueve hacia el Aventurero mas cercano. Al final anotar numero de Salas Santificadas en Registro.",
+    objetivo_secundario: "Si Troll Derrotado esta marcado, el Rot Troll podria no aparecer. Si aparece y es derrotado: marcar Logro Troll Derrotado.",
+    reglas_especiales: [
+      { nombre: "Purgar a los Impios", desc: "Los contadores de Luz representan hechizos que resisten magias de Malagaunt. Cada sala con uno es una Sala Santificada. El area ya esta iluminada, asi que la Oscuridad no afecta. Los contadores de Luz impiden poderes de Malagaunt. Puntos de sepultura y puntos de entrada en sala santificada no pueden usarse para llegada de Revenants. Hay 2 salas ya marcadas con Oscuridad donde no se pueden colocar contadores de Luz." },
+      { nombre: "Detener la Purga", desc: "Cuando un Revenant se activa y no tiene LdV a un enemigo, su objetivo es el sacerdote en ese turno. Si Malagaunt entra en una Sala Santificada: descarta inmediatamente una clavija magica si es posible para eliminar el contador de Luz." },
+    ],
+    amenaza: { cara: "A", clavijas: 2 },
+    consecuencias: "+1 Demora. La siguiente mision depende de los resultados que ya traigas de J.",
+  },
+  L: {
+    id: "L", nombre: "Huida de la Necropolis", pagina: 28,
+    condicion: "Fallaste en localizar la reliquia en Mision I.",
+    objetivo_primario: "Escapar. El grupo comienza entre los escombros de la cripta en ruinas y debe abandonar por Punto de Reagrupamiento.",
+    objetivo_secundario: "No tiene secundario separado; la decision importante llega al terminar, cuando eliges investigar los rumores de la mansion o dejar la investigacion y entrenar.",
+    reglas_especiales: [
+      { nombre: "Continuacion", desc: "Usar los mismos personajes que en I en el mismo estado. Antes de comenzar: resolver una accion de Descanso por cada Aventurero. El grupo comienza en posiciones mostradas en el mapa." },
+      { nombre: "Centinelas", desc: "Sigue las reglas de Centinelas del reglamento." },
+      { nombre: "Oscuridad", desc: "Toda el area sigue reglas de Oscuridad a menos que un area se derrumbe." },
+      { nombre: "Derrumbes", desc: "La carta Colapso puede robarse varias veces. Despues de resolverla: colocar contador de Luz en el punto determinado por sus reglas y volver a barajarla en el mazo." },
+    ],
+    amenaza: { cara: "A", clavijas: 4 },
+    consecuencias: "+1 Demora. Puedes investigar rumores de una mansion cercana (+1 Demora adicional) para ir a Mision J, o dejar la investigacion y entrenar para ir a Mision O.",
+  },
+  M: {
+    id: "M", nombre: "Salvad Nuestras Almas", pagina: 30,
+    condicion: "Examinaste 10 o mas cadaveres en Mision J.",
+    objetivo_primario: "El crisol del Malagaunt esta absorbiendo fuerza vital. Apartar Objetivos 1-6. Nueva opcion de Interaccion con el Crisol de la Resurreccion: gastar 1 clavija Magica -> si tiene exito, coger 1 objetivo aleatorio. Cada objetivo es un alma que debe ser devuelta a su tumba. El Aventurero que lleve el objetivo debe Interactuar con el Punto de Entrada que coincida con su numero -> colocar ficha sobre el marcador. 2 Renombre por cada Punto de Entrada marcado.",
+    objetivo_secundario: "Cada vez que un Revenant es derrotado: reemplazar la clavija negra mas baja del Registro de Amenaza por una clavija morada, si es posible. Al final: determinar el numero de la banda que contenga la clavija morada mas alta y anotarlo como Disminuir la Horda en Registro.",
+    reglas_especiales: [
+      { nombre: "Espectaculo Espeluznante", desc: "Cada Punto de Entrada tiene regla Terrorifico: si un personaje no Revenant termina su turno dentro de corta distancia de un Punto de Entrada, lanzar Dado Magico. Con 1 ese personaje se vuelve Aterrorizado y considera el Punto de Entrada un enemigo a efectos de huida." },
+      { nombre: "El Troll Solitario", desc: "Si Troll Derrotado esta marcado -> no aparece. Si se derrota al Rot Troll -> marcar Logro Troll Derrotado." },
+    ],
+    amenaza: { cara: "B", clavijas: 4 },
+    consecuencias: "Si Demora >= 6 -> ve al Interludio de Antorchas y Horcas. Si Aprendiz Involuntario esta marcado -> puedes elegir Mision N con +2 Demora. Si no -> Interludio de Antorchas y Horcas.",
+  },
+  N: {
+    id: "N", nombre: "El Aprendiz Indispuesto", pagina: 32,
+    condicion: "Descubriste detalles de un Maladaar corruptible en J.",
+    objetivo_primario: "Uno de los Lamentors es el Aprendiz disfrazado. Reservar Objetivos 1-3 boca abajo. Escrutinio: cuando no estes enfrentado, elige un Lamentor en corto alcance dentro de LdV y lanza Dado de Magia. Con 6: roba al azar uno de los objetivos apartados. Objetivo 3 = ese Lamentor es el Aprendiz. Objetivos 1-2 = ese Lamentor es un Habitante. Si se derrota un Lamentor sin marcar, lanzar Dado Magico como Escrutinio. Si aparece el Objetivo 3 despues de derrotarlo: el Aprendiz fue superado por el poder oscuro -> reemplazar con Habitante aleatorio mejorado e introducir al Aprendiz Maladaar como Adversario. Si el Aprendiz es derrotado: marcar Logro Aprendiz Derrotado. Si se arrastra fuera: marcar Logro Aprendiz Liberado y cada Aventurero gana 1 EXP.",
+    objetivo_secundario: "Objetivos 1 y 2 son funcionarios bajo hechizo. Si se descubren y arrastran a lugar seguro: marcar recompensas Oferta de Ayuda y/o Contactos en el Gremio.",
+    reglas_especiales: [
+      { nombre: "Pilares de Poder", desc: "Los 2 pilares canalizan poder de Malagaunt a la camara central. Aventureros en casillas marcadas en amarillo pueden lanzar un dado de combate -> obtienen tantas clavijas Magicas como impactos. Si pifian: se Fatigan." },
+      { nombre: "El Troll Solitario", desc: "Usa la misma regla de las misiones anteriores para la posible llegada del Rot Troll." },
+    ],
+    amenaza: { cara: "B", clavijas: 0 },
+    consecuencias: "Si Demora >= 6 -> ve al Interludio de Antorchas y Horcas. Si Cadaveres Examinados >= 9 -> puedes elegir Mision M con +2 Demora. Si no -> Interludio de Antorchas y Horcas.",
+  },
+  O: {
+    id: "O", nombre: "Un Nuevo Despertar", pagina: 34,
+    condicion: "No encontraste nada de interes en J o elegiste no continuar con tus descubrimientos.",
+    objetivo_primario: "Derrotar a todos los Revenants posibles. Cada vez que un Revenant es derrotado: reemplazar la clavija negra mas baja por una clavija morada. Al final: determinar numero de banda con la clavija morada mas alta -> anotar como Disminuir la Horda. Ademas, cada Aventurero gana EXP adicional = numero de banda menos su rango.",
+    objetivo_secundario: "Crisol: tomar Objetivos 1-6, robar 3 al azar, dejarlos a un lado boca abajo y devolver el resto. Nueva opcion de Interaccion con el Crisol de la Resurreccion: gastar 1 clavija Magica -> si tiene exito, elegir 1 objetivo apartado al azar. Cada objetivo es un alma que debe ser devuelta a su tumba, igual que en Mision M.",
+    reglas_especiales: [
+      { nombre: "El Troll Solitario", desc: "Se aplica la misma regla que en las misiones anteriores para la posible llegada del Rot Troll." },
+    ],
+    amenaza: { cara: "A", clavijas: 0 },
+    consecuencias: "Continua con el Interludio de Antorchas y Horcas.",
+  },
+  P: {
+    id: "P", nombre: "La Carcel del Crepusculo", pagina: 37,
+    condicion: "No lograste convencer a la turba en el Interludio de Antorchas y Horcas.",
+    objetivo_primario: "El grupo comienza sin Punto de Reagrupamiento. Cuando la Amenaza llegue a Disaster se abrira la ruta de escape. Objetivos 7 y 8 son llaves runicas que deben insertarse en los Pilares. Interactuar con Pilar para colocar el objetivo. Una vez ambas llaves: se desbloquea la ruta de escape. Para determinar su ubicacion y abrirla: interactuar con palancas 3 y 4 en la misma Fase de Aventureros. Cuando eso suceda: lanzar Dado Magico -> el Punto de Reagrupamiento coincide con ese numero. Mover Punto de Entrada al Pozo del centro.",
+    objetivo_secundario: "No tiene secundario independiente; toda la mision gira en abrir y alcanzar la ruta de escape antes de quedar atrapados.",
+    reglas_especiales: [
+      { nombre: "Mecanismos Misteriosos", desc: "Palancas 1 y 2 hacen girar la sala con el numero correspondiente. Palancas 3 y 4 no tienen efecto individual, pero una vez las llaves runicas estan colocadas pueden abrir la Ruta de Escape." },
+      { nombre: "Salas Giratorias", desc: "Las 2 salas marcadas en azul se construyen como piezas independientes. Cuando se baja Palanca 1 o 2: colocar contador Recordatorio en la sala. En la siguiente Fase de Evaluacion: rotar esa sala 90 grados en sentido horario y volver a colocarla. Cada sala solo rota una vez por ronda. Ambas salas tambien rotan en la Fase de Evaluacion de cualquier ronda en que la Amenaza haya entrado en una nueva banda." },
+    ],
+    amenaza: { cara: "A", clavijas: 4 },
+    consecuencias: "Si ningun Aventurero escapo -> Mision Q y solo Fase de Avance entre partidas. Si algun Aventurero escapo -> Mision R; los derrotados quedan dados por Muertos.",
+  },
+  Q: {
+    id: "Q", nombre: "La Penumbra que Nos Une", pagina: 39,
+    condicion: "No lograste escapar de las hondonadas en Mision P.",
+    objetivo_primario: "Uno de los Puntos de Entrada es la salida. Barajar marcadores de Puntos de Patrulla y colocar 4 en posiciones marcadas. Barajar Objetivos 1-6 y colocar 3 boca abajo en inventarios de 3 Habitantes. La salida es el Punto de Entrada que coincide con el numero tanto de un Punto de Patrulla como de un Objetivo. Interactuar con Puntos de Patrulla para girarlos y revelar el numero. Los Habitantes pueden ser persuadidos para revelar la informacion que llevan. Si quedan varias salidas posibles, investiga una gastando Habilidad y lanzando Dado Magico.",
+    objetivo_secundario: "Los 3 Habitantes ya deben llevar un objeto de la bolsa de fichas y deben marcharse por la salida correcta, porque no hay Punto de Reagrupamiento disponible.",
+    reglas_especiales: [
+      { nombre: "Los que Deambulan", desc: "Usa la carta de Habitante Viajero Perdido y trata la informacion que llevan como algo no fisico, que se pierde si el Habitante es derrotado." },
+      { nombre: "Oscuridad", desc: "Toda el area sigue reglas de Oscuridad." },
+    ],
+    amenaza: { cara: "A", clavijas: 0 },
+    consecuencias: "+1 Demora. Siguiente mision: Mision R.",
+  },
+  R: {
+    id: "R", nombre: "La Puerta de los No Muertos", pagina: 41,
+    condicion: "Superaste el Interludio de Antorchas y Horcas, o llegaste desde P o Q.",
+    objetivo_primario: "Entrar en el santuario de Malagaunt a traves de la Puerta. La Puerta esta protegida por 6 Ejes Magicos. Cada Tumba es un Eje de Magia: interactuar y gastar X clavijas Magicas para colocarlas dentro o sobre la Tumba; en Sobrecarga Mental se anade 1 clavija negra. Cada Pilar es un Eje de Fuerza: atacarlo, armadura fisica 2, los ataques contundentes obtienen 1 dado adicional y por cada dano colocas 1 clavija de Salud; si hay alguna pifia, anade 1 clavija negra. Cada Palanca es un Eje de Habilidad: interactuar, elegir serie de clavijas de Habilidad a gastar, lanzar esa cantidad de dados y anadir 1 dado por cada Habilidad de Astucia marron con al menos 1 EXP; por cada impacto, colocar 1 clavija de Habilidad; con pifia, anadir 1 clavija negra. Si un personaje lleva Escudo de Almas, anade una clavija adicional al Eje que sobrecargue. La Puerta se desbloquea cuando cada Eje tiene al menos tantas clavijas no negras como la banda actual de Amenaza. Si la Puerta se abre, resuelve la explosion de poder indicada en el manual; si la Amenaza sube de banda y ya no hay suficientes clavijas, la Puerta vuelve a cerrarse.",
+    objetivo_secundario: "No hay secundario separado: la mision se centra en abrir la Puerta y atravesarla antes de Doom.",
+    reglas_especiales: [
+      { nombre: "Se Acabo el Tiempo", desc: "Si Amenaza llega a Doom antes de que los Aventureros hayan atravesado la Puerta, la partida termina inmediatamente. Si al menos 1 Aventurero ya salio, continua hasta que todos abandonen o sean derrotados." },
+      { nombre: "El Aprendiz", desc: "Si Aprendiz Derrotado o Aprendiz Liberado no estan marcados -> el Aprendiz de Malagaunt entra en batalla desde la Puerta en la primera ronda. Si Nombre del Aprendiz esta marcado, usa ese personaje; si no, usa un Habitante aleatorio mejorado. Objetivo 7 se incluye en su ficha." },
+      { nombre: "Campana de Reclutamiento", desc: "Robar 2 tableros de Habitante al azar. Puedes gastar Renombre igual o superior a su valor de Persuasion para contratarlos. Cada PNJ contratado gana +1 Salud y 1 objeto aleatorio; se controlan como Aventureros pero usan sus lados PNJ." },
+      { nombre: "Niebla Antinatural", desc: "Si Demora >= 8 al inicio, toda el area sigue reglas de Oscuridad." },
+      { nombre: "La Horda Disminuida", desc: "Si hay valor de Disminuir la Horda en Registro, insertar clavijas moradas segun el procedimiento del manual al inicio de la primera ronda. Mientras una clavija morada sea reemplazada por un aumento de Amenaza, ningun personaje llegara en la Fase de Adversario." },
+      { nombre: "Avatar Mortal", desc: "Si llega durante esta mision, llevara el Objetivo 8." },
+      { nombre: "Perseguidores", desc: "Anade 1 carta de Veterano al mazo de Eventos por cada 2 rangos del total de Invasores Escapados en Registro, redondeando hacia abajo. Si Troll Derrotado no esta marcado, lanza para ver si llega un Rot Troll al inicio." },
+      { nombre: "Refuerzos desde Abajo", desc: "La primera vez que el Registro de Amenaza llegue a Distress, Desperation o Disaster, lanzar Dado Magico y mover el Punto de Entrada con ese numero a la Puerta. Los puntos que ya se hayan movido deben volver a lanzarse." },
+      { nombre: "Retiro Reacio", desc: "El objetivo es salir por la Puerta, pero tambien se puede salir por el Punto de Reagrupamiento. Si un Aventurero sale por el Punto de Reagrupamiento, el objetivo ya no podra completarse. Si algun Aventurero ya salio por la Puerta, sera abandonado y dado por Muerto." },
+    ],
+    amenaza: { cara: "A", clavijas: 0 },
+    consecuencias: "Si algun Aventurero escapo -> Mision T y borra 1 espacio de Demora por cada Aventurero que salio. Si ninguno escapo -> repetir con continuidad inmediata usando la cara B del registro, representada en la app como Mision S.",
+  },
+  S: {
+    id: "S", nombre: "Puerta de los No Muertos Parte II", pagina: 44,
+    condicion: "Continuacion inmediata de R si ningun Aventurero escapo.",
+    objetivo_primario: "Igual que Mision R. Todos los personajes comienzan en las mismas posiciones y en el mismo estado que despues de las consecuencias de R.",
+    objetivo_secundario: "No hay secundario separado; sigue aplicandose la regla de Retiro Reacio.",
+    reglas_especiales: [
+      { nombre: "Continuacion", desc: "La partida sigue inmediatamente desde R sin Fases de Huida ni Mercado." },
+      { nombre: "Ejes Desactivados", desc: "Al inicio: resolver el poder de explosion como se detalla en Apertura de la Puerta en R. Descartar todas las clavijas. Cerrar y bloquear la Puerta." },
+      { nombre: "Lugarteniente - El Aprendiz", desc: "Si Aprendiz Derrotado o Aprendiz Liberado no estan marcados -> el Aprendiz de Malagaunt entra en batalla. Si el Aprendiz es derrotado: marcar Logro Aprendiz Derrotado." },
+      { nombre: "Lugarteniente - Avatar Mortal", desc: "Si el Deathly Avatar no llego en R, llega desde la Puerta en la primera ronda con el Objetivo 8." },
+      { nombre: "Lugarteniente - Troll Podrido", desc: "Incluso si un Rot Troll entro en R, puede llegar otro durante esta partida." },
+    ],
+    amenaza: { cara: "B", clavijas: 0 },
+    consecuencias: "Si algun Aventurero escapo por la Puerta -> Mision T y borra 1 espacio de Demora por cada uno. Si ninguno escapo -> la campana continua a la mision final usando la cara B del registro y el estado actual del grupo.",
+  },
+  T: {
+    id: "T", nombre: "El Corazon de las Tinieblas", pagina: 46,
+    condicion: "Algun Aventurero escapo por la Puerta en R o S.",
+    objetivo_primario: "Derrotar al Malagaunt. Una vez derrotado, todos los Revenants se retiran y la partida termina. No es necesario escapar. Por completar: el grupo gana 8 Renombre y puede coger cualquier objeto que tuviera el Malagaunt cuando fue derrotado. Todos los Aventureros de la mision reciben +3 EXP, incluso si fueron derrotados.",
+    objetivo_secundario: "Al inicio, coger uno de los objetos de Malagaunt al azar y anadirlo a su inventario. Durante la preparacion: asegurarse de que todos los objetos restantes de Malagaunt se incluyen al rellenar las piezas de terreno. La Arcane Crutch va al Escritorio del Arcanista si esta disponible. Cada objeto de Malagaunt en posesion al final puede llevarse a Kelthion para su escrutinio -> 10G por cada uno, y puedes quedartelos.",
+    reglas_especiales: [
+      { nombre: "El Santuario Interior", desc: "Malagaunt comienza la partida en juego junto con un sequito de otros Revenants. Despues de resolver una carta de Lamentor o Mapa: volver a barajarla dentro del mazo." },
+      { nombre: "Cuando es Atacado", desc: "Malagaunt roba la fuerza vital de sus secuaces. Si recibe dano y le quedan clavijas Magicas, el dano se aplica al Revenant mas cercano a distancia media. Debe descartar 1 clavija de Magia por cada dano redirigido." },
+      { nombre: "Distraccion", desc: "Al inicio: contar un numero de espacios vacios en el Registro de Amenaza igual a las Salas Santificadas del registro de campana, y colocar 1 clavija morada. Hasta que esa clavija sea reemplazada, la regla de Regeneracion del Malagaunt no se aplica." },
+      { nombre: "Llaves Maestras", desc: "Si los Aventureros llevan los Objetivos 7 y/o 8, la regla de la Llave se aplica en esta mision. Un personaje que lleve uno puede cerrar o abrir cualquier puerta o pieza de terreno como accion sin esfuerzo." },
+      { nombre: "El Aprendiz", desc: "Si Aprendiz Derrotado o Aprendiz Liberado no estan marcados -> el Aprendiz de Malagaunt entra en batalla desde Punto de Entrada aleatorio en la primera ronda." },
+      { nombre: "El Final del Camino", desc: "Si fallas en derrotar al Malagaunt, no podras volver a jugar esta mision y la campana termina sin otra repeticion." },
+      { nombre: "Continuacion", desc: "Usar el mismo grupo que en la partida anterior. Cualquier PNJ contratado que haya sobrevivido permanecera." },
+    ],
+    amenaza: { cara: "*", clavijas: 0 },
+    mazo_eventos: "8x Lamentor, 2x Malagaunt, 2x Mapa, 7x Hellfront, 1x Hellfront, 1x Hellfront + dificultad",
+    consecuencias: "Mision final de la campana. Si derrotas a Malagaunt, cierras la historia; si fallas, no puedes repetir esta mision.",
+  },
 };
 
 const MISSION_IDS = ["Intro","A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T"];
@@ -714,6 +927,21 @@ const MISSION_SUGGESTIONS = {
   B: ["C","D"],
   C: ["E","F"],
   D: ["F"],
+  E: ["G","H"],
+  F: ["G"],
+  G: ["I"],
+  H: ["I"],
+  I: ["J","L"],
+  J: ["K","M","N","O"],
+  K: ["M","N","O"],
+  L: ["J","O"],
+  M: ["N","P","R"],
+  N: ["M","P","R"],
+  O: ["P","R"],
+  P: ["Q","R"],
+  Q: ["R"],
+  R: ["S","T"],
+  S: ["T"],
 };
 
 function getSuggestedNextMissionIds(missionId) {
@@ -1045,6 +1273,12 @@ const MISSION_OBJECTIVE_REWARD_RULES = {
   B: {
     primary: { gold: 10, renown: 2, note: "Aplicado si el rescate se resolvio por Punto de Reagrupamiento." },
   },
+  E: {
+    primary: { renown: 4, note: "Aplicado si sellaste las 4 compuertas y escapaste." },
+  },
+  T: {
+    primary: { renown: 8, xpExtra: 3, note: "Derrotar a Malagaunt otorga +8 Renombre y +3 PX a cada Aventurero de la mision." },
+  },
 };
 
 const MISSION_OBJECTIVE_MANUAL_HINTS = {
@@ -1062,6 +1296,59 @@ const MISSION_OBJECTIVE_MANUAL_HINTS = {
   D: {
     primary: "Otorga 1 Renombre por cada 20G de aumento en Mercado. Ajusta Renombre manualmente segun el valor real.",
     secondary: "Anota manualmente en Registro el mapeo de tuneles y el robo de tumbas.",
+  },
+  E: {
+    secondary: "Gana 1 Renombre por cada Habitante persuadido a salir por tu Punto de Reagrupamiento. Ajustalo manualmente segun el numero real.",
+  },
+  F: {
+    primary: "Otorga 1 Renombre por cada Punto de Entrada desactivado. Ajusta Renombre manualmente segun cuantos bloqueaste de verdad.",
+    secondary: "Anota en Registro el valor real de Sabiduria de la Mazmorra segun trampas reservadas + cartas de Mazmorra descartadas.",
+  },
+  G: {
+    secondary: "Cada PNJ rescatado da 1 Renombre y 1 objeto aleatorio de bolsa. Ajusta Renombre manualmente y anota el botin real.",
+  },
+  H: {
+    primary: "Si completas la mision, recuerda resolver el Interludio de Conocimiento Necrotico.",
+    secondary: "Si se cumple, marca manualmente la recompensa Investigacion en Curso en Registro.",
+  },
+  I: {
+    primary: "Si acertaste la reliquia, marca manualmente la recompensa Escudo de Almas. Si fallaste, la siguiente mision es L y solo haces Fase de Avance.",
+  },
+  J: {
+    primary: "Anota manualmente Cadaveres Examinados en Registro y aplica las recompensas de Conocimiento Necrotico correspondientes.",
+    secondary: "Si escapaste con Objetivo 7, marca manualmente el logro Aprendiz Involuntario.",
+  },
+  K: {
+    primary: "Anota manualmente en Registro cuantas Salas Santificadas quedaron al final de la mision.",
+  },
+  L: {
+    primary: "La recompensa real es la decision de ruta: si investigas rumores, suma +1 Demora adicional y ve a J; si no, ve a O.",
+  },
+  M: {
+    primary: "Otorga 2 Renombre por cada Punto de Entrada marcado con un alma devuelta. Ajusta Renombre manualmente segun el total real.",
+    secondary: "Anota manualmente en Registro el valor final de Disminuir la Horda.",
+  },
+  N: {
+    primary: "Si el Aprendiz fue liberado, cada Aventurero gana +1 PX. Si fue derrotado o liberado, marca el logro correspondiente en Registro.",
+    secondary: "Marca manualmente las recompensas Oferta de Ayuda y/o Contactos en el Gremio segun los funcionarios rescatados.",
+  },
+  O: {
+    primary: "Cada Aventurero gana PX adicional igual al numero de banda menos su rango. Ajustalo manualmente si procede y anota Disminuir la Horda en Registro.",
+  },
+  P: {
+    primary: "Si algun Aventurero escapa, los derrotados se tratan como Dados por Muertos. Si no escapa nadie, solo haces Fase de Avance antes de Q.",
+  },
+  Q: {
+    primary: "Si usaste Rastro Esqueletico, Sabiduria de la Mazmorra o Rastreo para reducir opciones, anotalo manualmente en las notas de cierre.",
+  },
+  R: {
+    primary: "Si algun Aventurero salio por la Puerta, borra 1 espacio de Demora por cada uno antes de T. Si nadie escapa, la continuidad real es S.",
+  },
+  S: {
+    primary: "Si algun Aventurero salio por la Puerta, borra 1 espacio de Demora por cada uno antes de T.",
+  },
+  T: {
+    secondary: "Cada objeto de Malagaunt conservado al final puede venderse o escrutarse por 10G. Ajusta ese oro manualmente segun cuantos tengas.",
   },
 };
 
