@@ -3896,6 +3896,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const [useBlessing, setUseBlessing] = useState(false);
   const [attackResolution, setAttackResolution] = useState(null);
   const [attackDice, setAttackDice] = useState([]);
+  const [attackOutcomeSummary, setAttackOutcomeSummary] = useState(null);
   const sectionTitleStyle = { color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 };
   const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 };
   const selectedMelee = meleeWeapons.find(item => item.id === selectedMeleeId) || meleeWeapons[0] || null;
@@ -3990,6 +3991,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
     if (attackResolution && !["melee", "ranged"].includes(mode)) {
       setAttackResolution(null);
       setAttackDice([]);
+      setAttackOutcomeSummary(null);
     }
   }, [attackResolution, mode]);
 
@@ -3998,6 +4000,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
     const diceCount = attackMode === "melee" ? meleeDiceTotal : rangedDiceTotal;
     if (attackMode === "ranged" && !canUseWeaponWithCurrentAmmo(normalized, weapon)) return;
     if (!weapon || diceCount <= 0) return;
+    setAttackOutcomeSummary(null);
     setAttackResolution({
       mode: attackMode,
       weaponId: weapon.id,
@@ -4020,15 +4023,18 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
     if (!attackResolution || typeof onApplyAdventurerUpdate !== "function") return;
     const summary = summarizeAttackRollDice(attackDice);
     let updated = normalizeAdventurer(normalized);
+    const outcomeLines = [];
 
     if (attackResolution.useFrenzy) {
       updated = applyAdventurerResourceSpend(updated, { skill: 1 });
+      outcomeLines.push("Gasta 1 SP por Frenzy");
     }
     if (attackResolution.useBlessing) {
       updated = normalizeAdventurer({
         ...updated,
         status_effects: removeFirstStatusEffect(updated.status_effects || [], "blessed"),
       });
+      outcomeLines.push("Gasta 1 Bendicion");
     }
     if (attackResolution.mode === "melee" && attackResolution.useForceful && summary.blunders >= 2) {
       updated = normalizeAdventurer({
@@ -4037,6 +4043,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
           ? normalizeInventoryItem({ ...item, broken: true, equipped: false })
           : item),
       });
+      outcomeLines.push("El arma se rompe");
     }
     if (attackResolution.mode === "ranged" && summary.blueSkull) {
       if (attackResolution.rawAttributes.includes("ammo_arrow")) {
@@ -4046,6 +4053,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             ...updated,
             inventario: updated.inventario.filter((_, index) => index !== ammoIndex),
           });
+          outcomeLines.push("Se queda sin 1 flecha");
         }
       }
       if (attackResolution.rawAttributes.includes("ammo_bullet")) {
@@ -4055,12 +4063,19 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             ...updated,
             inventario: updated.inventario.filter((_, index) => index !== ammoIndex),
           });
+          outcomeLines.push("Se queda sin 1 bala");
         }
       }
     }
+    if (attackResolution.rawAttributes.includes("unreliable")) {
+      outcomeLines.push("Si la carta la deja sin preparar o rota, marcalo en Inventario");
+    }
 
     onApplyAdventurerUpdate(updated);
-    onClose();
+    setAttackOutcomeSummary({
+      damage: summary.hits,
+      lines: outcomeLines.length > 0 ? outcomeLines : ["Sin efectos extra en el arma ni el equipo"],
+    });
   };
 
   const applyDefense = () => {
@@ -4183,6 +4198,31 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
     );
   };
 
+  const renderAttackOutcomeSummary = () => {
+    if (!attackOutcomeSummary) return null;
+    return (
+      <div style={{ ...cardStyle, marginBottom: 12, border: "1px solid #166534" }}>
+        <div style={{ color: "#bbf7d0", fontSize: 14, fontWeight: 700, marginBottom: 8 }}>
+          Resultado aplicado
+        </div>
+        <div style={{ color: "#d4b896", fontSize: 18, fontWeight: 800, marginBottom: 10 }}>
+          {`DANO ${attackOutcomeSummary.damage}`}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+          {attackOutcomeSummary.lines.map((line, index) => (
+            <div key={index} style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>
+              {line}
+            </div>
+          ))}
+        </div>
+        <button onClick={onClose}
+          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          Cerrar
+        </button>
+      </div>
+    );
+  };
+
   const modalTitle = mode === "defense"
     ? "Defensa"
     : mode === "ranged"
@@ -4229,6 +4269,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
 
       {mode === "melee" && (
         <>
+          {attackOutcomeSummary && renderAttackOutcomeSummary()}
           <div style={{ marginBottom: 12 }}>
             <div style={sectionTitleStyle}>Arma cuerpo a cuerpo</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -4324,6 +4365,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
 
       {mode === "ranged" && (
         <>
+          {attackOutcomeSummary && renderAttackOutcomeSummary()}
           <div style={{ marginBottom: 12 }}>
             <div style={sectionTitleStyle}>Arma a distancia</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
