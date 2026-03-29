@@ -4925,9 +4925,10 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         const equipment = getEquipmentStats(normalized);
         const equipped = summarizeEquippedItems(normalized);
         const knownSpells = getKnownSpells(normalized);
+        const rangedOptions = getCombatWeaponOptions(normalized, "ranged");
         const actionButtons = [
           { id: "melee", label: "Ataque C/C", enabled: true, tone: "attack" },
-          { id: "ranged", label: "Ataque Dist", enabled: equipment.rangedDice > 0 || equipped.some(item => (item.ranged || 0) > 0), tone: "ranged" },
+          { id: "ranged", label: "Ataque Dist", enabled: rangedOptions.length > 0 || equipment.rangedDice > 0, tone: "ranged" },
           { id: "magic", label: "Magia", enabled: knownSpells.length > 0, disabled: normalized.magia_actual <= 0, tone: "magic" },
           { id: "defense", label: "Defensa", enabled: true, tone: "defense" },
           { id: "rest", label: "Descansar", enabled: true, tone: "rest" },
