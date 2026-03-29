@@ -3799,6 +3799,8 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const [selectedSpellId, setSelectedSpellId] = useState(spells[0]?.name || null);
   const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
   const [selectedBlessingTargetId, setSelectedBlessingTargetId] = useState(null);
+  const [manualMeleeDice, setManualMeleeDice] = useState(0);
+  const [manualRangedDice, setManualRangedDice] = useState(0);
   const [useFrenzy, setUseFrenzy] = useState(false);
   const [useForceful, setUseForceful] = useState(false);
   const [useBlessing, setUseBlessing] = useState(false);
@@ -3811,8 +3813,10 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const selectedSpell = spells.find(spell => spell.name === selectedSpellId) || spells[0] || null;
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
   const frenzyBonus = useFrenzy ? getFrenzyBonusDice(frenzyEntry?.level || 0) : 0;
-  const meleeDiceTotal = (selectedMelee?.dice || equipment.meleeDice || 0) + frenzyBonus + (useForceful ? 1 : 0);
-  const rangedDiceTotal = selectedRanged?.dice || equipment.rangedDice || 0;
+  const baseMeleeDice = selectedMelee?.dice || equipment.meleeDice || 0;
+  const baseRangedDice = selectedRanged?.dice || equipment.rangedDice || 0;
+  const meleeDiceTotal = (baseMeleeDice > 0 ? baseMeleeDice : manualMeleeDice) + frenzyBonus + (useForceful ? 1 : 0);
+  const rangedDiceTotal = baseRangedDice > 0 ? baseRangedDice : manualRangedDice;
 
   useEffect(() => {
     if (startMode === "defense") {
@@ -3839,6 +3843,14 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
       setSelectedRangedId(rangedWeapons[0].id);
     }
   }, [rangedWeapons, selectedRangedId]);
+
+  useEffect(() => {
+    setManualMeleeDice(0);
+  }, [selectedMeleeId]);
+
+  useEffect(() => {
+    setManualRangedDice(0);
+  }, [selectedRangedId]);
 
   useEffect(() => {
     if (spells.length && !spells.some(spell => spell.name === selectedSpellId)) {
@@ -4242,11 +4254,26 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             <div style={{ ...cardStyle, marginBottom: 12 }}>
               <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{selectedRanged.name}</div>
               <div style={{ color: "#fca5a5", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                {selectedRanged.dice > 0 ? `Tira ${selectedRanged.dice} dado${selectedRanged.dice === 1 ? "" : "s"}.` : "Usa el perfil de la carta del arma."}
+                {baseRangedDice > 0 ? `Tira ${baseRangedDice} dado${baseRangedDice === 1 ? "" : "s"}.` : "Usa el perfil de la carta del arma."}
               </div>
               {selectedRanged.range.length > 0 && <div style={{ color: "#d4b896", fontSize: 12, marginBottom: 6 }}>Alcance: {selectedRanged.range.join("/")}</div>}
               {!!selectedRanged.summary && <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{selectedRanged.summary}</div>}
               {renderTagList(selectedRanged.attributes, "attack")}
+              {baseRangedDice <= 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>
+                    Este arma no trae dados cargados en la base oficial. Elige los dados que indica su carta para resolver este ataque.
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {[1,2,3,4,5,6].map(value => (
+                      <button key={value} onClick={() => setManualRangedDice(value)}
+                        style={{ padding: "6px 10px", borderRadius: 999, border: manualRangedDice === value ? "1px solid #eab308" : "1px solid #374151", background: manualRangedDice === value ? "#eab30822" : "#0f172a", color: manualRangedDice === value ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                        {value} dado{value === 1 ? "" : "s"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
