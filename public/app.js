@@ -2900,7 +2900,7 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
   }).slice(0, 24);
 
   return (
-    <Collapsible title="Inventario y Equipo" icon="INV">
+    <Collapsible title="Inventario y Equipo">
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Gestiona aqui el inventario oficial del aventurero. Los objetos equipados se resumen luego en la mesa para ataque, defensa y uso magico.
       </div>
@@ -3149,7 +3149,7 @@ SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
   };
 
   return (
-    <Collapsible title="Libro de Hechizos" icon="SPL" defaultOpen>
+    <Collapsible title="Libro de Hechizos" defaultOpen>
       <div style={{ color: "#9ca3af", fontSize: 12, marginBottom: 10 }}>
         Cada hechizo aprendido gasta 1 PX. El nivel maximo del hechizo usa el rango manual que hayas marcado en la ficha.
       </div>
@@ -3230,6 +3230,102 @@ SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
     </Collapsible>
   );
 };
+
+function ClassSkillsEditor({ adv, onUpdate }) {
+  const normalized = normalizeAdventurer(adv);
+  const className = normalized.clase || "";
+  const classSkills = CLASS_DATA[className]?.skills || [];
+  const remainingXP = getRemainingXP(normalized);
+
+  const setPurchasedLevel = (skillName, nextPurchasedLevel) => {
+    onUpdate(normalizeAdventurer({
+      ...normalized,
+      clase_habilidades: {
+        ...(normalized.clase_habilidades || {}),
+        [skillName]: Math.max(0, Math.min(3, Number(nextPurchasedLevel) || 0)),
+      },
+    }));
+  };
+
+  return (
+    <Collapsible title="Habilidades de clase" defaultOpen>
+      {!className ? (
+        <div style={{ color: "#6b7280", fontSize: 12, lineHeight: 1.5 }}>
+          Elige primero una clase para ver y subir sus habilidades.
+        </div>
+      ) : (
+        <>
+          <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.6, marginBottom: 10 }}>
+            Las habilidades innatas que tambien existen en la clase ya cuentan como nivel base. Cada subida comprada gasta 1 PX y aumenta al siguiente nivel disponible.
+          </div>
+          <div style={{ color: "#c4b5fd", fontSize: 12, marginBottom: 10 }}>
+            Clase: {className} | PX libre: {remainingXP}
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {classSkills.map(skillName => {
+              const innateLevel = getInnateSkillLevel(normalized, skillName);
+              const purchasedLevel = getPurchasedSkillLevel(normalized, skillName);
+              const effectiveLevel = getEffectiveSkillLevel(normalized, skillName);
+              const currentEntry = getSkillEntry(skillName, Math.max(1, effectiveLevel || innateLevel || 1), className);
+              const nextLevel = Math.min(3, effectiveLevel + 1);
+              const nextEntry = effectiveLevel < 3 ? getSkillEntry(skillName, nextLevel, className) : null;
+              const canIncrease = effectiveLevel < 3 && remainingXP > 0;
+              const canDecrease = purchasedLevel > 0;
+
+              return (
+                <div key={skillName} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, marginBottom: 6 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{skillName}</div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 6 }}>
+                        <span style={{ fontSize: 11, color: "#fca5a5", padding: "2px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>
+                          Nivel actual {effectiveLevel}
+                        </span>
+                        {innateLevel > 0 && (
+                          <span style={{ fontSize: 11, color: "#bbf7d0", padding: "2px 8px", borderRadius: 999, border: "1px solid #166534" }}>
+                            Innata {innateLevel}
+                          </span>
+                        )}
+                        {purchasedLevel > 0 && (
+                          <span style={{ fontSize: 11, color: "#dbeafe", padding: "2px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>
+                            Comprada +{purchasedLevel}
+                          </span>
+                        )}
+                      </div>
+                      <div style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>
+                        {currentEntry.summary}
+                      </div>
+                      {nextEntry && (
+                        <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginTop: 6 }}>
+                          Siguiente nivel ({nextLevel}): {nextEntry.summary}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <button onClick={() => canDecrease && setPurchasedLevel(skillName, purchasedLevel - 1)} disabled={!canDecrease}
+                        style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: canDecrease ? "#d4b896" : "#4b5563", fontSize: 16, cursor: canDecrease ? "pointer" : "default" }}>
+                        -
+                      </button>
+                      <span style={{ minWidth: 26, textAlign: "center", color: "#d4b896", fontSize: 16, fontWeight: 700 }}>
+                        {effectiveLevel}
+                      </span>
+                      <button onClick={() => canIncrease && setPurchasedLevel(skillName, purchasedLevel + 1)} disabled={!canIncrease}
+                        style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: canIncrease ? "#bbf7d0" : "#4b5563", fontSize: 16, cursor: canIncrease ? "pointer" : "default" }}>
+                        +
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </Collapsible>
+  );
+}
 
 function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false, onConfirmAdd = null }) {
   const normalized = normalizeAdventurer(adv);
@@ -3312,7 +3408,7 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false
         </div>
       </div>
 
-      <Collapsible title="Recursos y estados" icon="HP" defaultOpen>
+      <Collapsible title="Recursos y estados" defaultOpen>
         <PegBar label="HP" icon="HP" current={normalized.salud_actual} max={normalized.salud_max}
           color="#22c55e" onChange={value => patch({ salud_actual: value })} />
         <PegBar label="SP" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
@@ -3350,7 +3446,9 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false
           onChange={status_effects => patch({ status_effects })} />
       </Collapsible>
 
-      <Collapsible title="Resumen rapido" icon="SUM" defaultOpen>
+      <ClassSkillsEditor adv={normalized} onUpdate={onUpdate} />
+
+      <Collapsible title="Resumen rapido" defaultOpen>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
           {equipment.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "4px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{equipment.meleeDice}</span>}
           {equipment.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "4px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{equipment.rangedDice}</span>}
