@@ -3231,7 +3231,7 @@ SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
   );
 };
 
-function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
+function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false, onConfirmAdd = null }) {
   const normalized = normalizeAdventurer(adv);
   const availableClasses = Object.keys(CLASS_DATA || {}).sort((a, b) => a.localeCompare(b));
   const innateSkills = getInnateSkillEntries(normalized);
@@ -3264,7 +3264,7 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
         </div>
         <button onClick={onRemove}
           style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
-          Quitar
+          {createMode ? "Cancelar alta" : "Quitar"}
         </button>
       </div>
 
@@ -3393,6 +3393,13 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
 
       <SpellbookEditor adv={normalized} onUpdate={onUpdate} />
       <InventoryEditor adv={normalized} onUpdate={onUpdate} />
+
+      {createMode && (
+        <button onClick={() => typeof onConfirmAdd === "function" && onConfirmAdd(normalized)}
+          style={{ width: "100%", padding: 14, marginTop: 12, borderRadius: 10, border: "2px solid #166534", background: "#16653422", color: "#bbf7d0", fontSize: 14, fontWeight: 800, cursor: "pointer" }}>
+          Agregar aventurero al grupo
+        </button>
+      )}
     </div>
   );
 }
@@ -6114,10 +6121,10 @@ function NavButton({ icon, label, sub, onClick, accent }) {
   );
 }
 
-function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
+function AdventurersScreen({ campaign, adventurers, onUpdate, onAdd, onRemove, onDone }) {
   const [selected, setSelected] = useState(null);
   const [showAdd, setShowAdd] = useState(adventurers.length === 0);
-  const [selectedBaseCharacter, setSelectedBaseCharacter] = useState("");
+  const [draftAdventurer, setDraftAdventurer] = useState(null);
   const livingAdventurers = adventurers.filter(adv => !isAdventurerDead(adv));
   const fallenAdventurers = adventurers.filter(isAdventurerDead);
 
@@ -6139,6 +6146,23 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
         onRemove={() => {
           onRemove(adv.id);
           setSelected(null);
+        }}
+      />
+    );
+  }
+
+  if (draftAdventurer) {
+    return (
+      <AdventurerSheetV2
+        adv={draftAdventurer}
+        onUpdate={updated => setDraftAdventurer(normalizeAdventurer(updated))}
+        onBack={() => setDraftAdventurer(null)}
+        onRemove={() => setDraftAdventurer(null)}
+        createMode
+        onConfirmAdd={(updatedDraft) => {
+          onAdd(updatedDraft);
+          setDraftAdventurer(null);
+          setShowAdd(false);
         }}
       />
     );
@@ -6186,8 +6210,10 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
           <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 600, marginBottom: 8 }}>Selecciona personaje</div>
           <div style={{ maxHeight: 300, overflowY: "auto" }}>
             {BASE_CHARACTERS.map(ch => (
-              <button key={ch.nombre} onClick={() => setSelectedBaseCharacter(ch.nombre)}
-                style={{ width: "100%", padding: 10, borderRadius: 8, border: selectedBaseCharacter === ch.nombre ? "1px solid #22c55e" : "1px solid #2d2d44", background: selectedBaseCharacter === ch.nombre ? "#16653422" : "#0f172a", marginBottom: 4, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <button key={ch.nombre} onClick={() => {
+                setDraftAdventurer(normalizeAdventurer(defaultAdventurer(campaign?.id || "draft", ch)));
+              }}
+                style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #2d2d44", background: "#0f172a", marginBottom: 4, cursor: "pointer", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
                   <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 600 }}>{ch.nombre}</div>
                   <div style={{ color: "#6b7280", fontSize: 11 }}>{ch.especie} · HP {ch.salud_max} · MP {ch.magia_max} · SP {ch.habilidad_max}</div>
@@ -6196,17 +6222,6 @@ function AdventurersScreen({ adventurers, onUpdate, onAdd, onRemove, onDone }) {
               </button>
             ))}
           </div>
-          <button onClick={() => {
-            const selectedCharacter = BASE_CHARACTERS.find(ch => ch.nombre === selectedBaseCharacter);
-            if (!selectedCharacter) return;
-            const created = onAdd(selectedCharacter);
-            setSelectedBaseCharacter("");
-            setShowAdd(false);
-            if (created?.id) setSelected(created.id);
-          }} disabled={!selectedBaseCharacter}
-            style={{ width: "100%", marginTop: 10, padding: 12, borderRadius: 8, border: selectedBaseCharacter ? "1px solid #166534" : "1px solid #374151", background: selectedBaseCharacter ? "#16653422" : "#111827", color: selectedBaseCharacter ? "#bbf7d0" : "#4b5563", fontSize: 13, fontWeight: 700, cursor: selectedBaseCharacter ? "pointer" : "default" }}>
-            Agregar aventurero al grupo
-          </button>
           <button onClick={() => setShowAdd(false)}
             style={{ width: "100%", marginTop: 8, padding: 10, borderRadius: 8, border: "1px solid #374151", background: "transparent", color: "#9ca3af", fontSize: 13, cursor: "pointer" }}>
             Cancelar
@@ -6628,7 +6643,9 @@ function App() {
   };
 
   const addAdventurer = (charData) => {
-    const adv = normalizeAdventurer(defaultAdventurer(campaign.id, charData));
+    const adv = (charData?.id && charData?.campaign_id)
+      ? normalizeAdventurer({ ...charData, campaign_id: campaign.id })
+      : normalizeAdventurer(defaultAdventurer(campaign.id, charData));
     setAdventurers(prev => [...prev, adv]);
     return adv;
   };
