@@ -3721,6 +3721,172 @@ SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
   );
 };
 
+function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove }) {
+  const normalized = normalizeAdventurer(adv);
+  const availableClasses = Object.keys(CLASS_DATA || {}).sort((a, b) => a.localeCompare(b));
+  const innateSkills = getInnateSkillEntries(normalized);
+  const learnedSkills = getLearnedSkills(normalized);
+  const knownSpells = getKnownSpells(normalized);
+  const equipment = getEquipmentStats(normalized);
+  const remainingXP = getRemainingXP(normalized);
+
+  const patch = (updates) => {
+    onUpdate(normalizeAdventurer({ ...normalized, ...updates }));
+  };
+
+  const adjustStat = (field, delta, min = 0) => {
+    patch({ [field]: Math.max(min, Number(normalized[field] || 0) + delta) });
+  };
+
+  return (
+    <div style={{ padding: 16 }}>
+      <button onClick={onBack} style={{ background: "none", border: "none", color: "#9ca3af", cursor: "pointer", padding: 0, marginBottom: 12, fontSize: 13 }}>
+        Volver al grupo
+      </button>
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
+        <div>
+          <div style={{ color: "#9ca3af", fontSize: 11, textTransform: "uppercase", letterSpacing: 2 }}>Ficha de aventurero</div>
+          <h2 style={{ color: "#d4b896", fontSize: 22, fontWeight: 800, margin: "4px 0 0" }}>{normalized.nombre}</h2>
+          <div style={{ color: "#6b7280", fontSize: 12, marginTop: 4 }}>
+            {normalized.especie} {normalized.clase ? `| ${normalized.clase}` : ""} | Rango {normalized.rango}
+          </div>
+        </div>
+        <button onClick={onRemove}
+          style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          Quitar
+        </button>
+      </div>
+
+      <div style={{ background: "#1a1a2e", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 8 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 10 }}>
+          <div>
+            <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", marginBottom: 4 }}>Nombre</div>
+            <input value={normalized.nombre} onChange={e => patch({ nombre: e.target.value })}
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 14, boxSizing: "border-box" }} />
+          </div>
+          <div>
+            <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", marginBottom: 4 }}>Clase</div>
+            <select value={normalized.clase || ""} onChange={e => patch(updateAdventurerClass(normalized, e.target.value))}
+              style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 14 }}>
+              <option value="">Sin clase</option>
+              {availableClasses.map(cls => (
+                <option key={cls} value={cls}>{cls}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          {[
+            { field: "rango", label: "Rango" },
+            { field: "experiencia", label: "PX" },
+            { field: "coste", label: "Coste" },
+          ].map(entry => (
+            <div key={entry.field} style={{ background: "#0f172a", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+              <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", marginBottom: 6 }}>{entry.label}</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                <button onClick={() => adjustStat(entry.field, -1, entry.field === "rango" ? 1 : 0)}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+                <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700 }}>
+                  {normalized[entry.field]}{entry.field === "coste" ? "G" : ""}
+                </span>
+                <button onClick={() => adjustStat(entry.field, 1, entry.field === "rango" ? 1 : 0)}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div style={{ color: "#6b7280", fontSize: 11, marginTop: 8 }}>
+          PX libre actual: {remainingXP}
+        </div>
+      </div>
+
+      <Collapsible title="Recursos y estados" icon="HP" defaultOpen>
+        <PegBar label="HP" icon="HP" current={normalized.salud_actual} max={normalized.salud_max}
+          color="#22c55e" onChange={value => patch({ salud_actual: value })} />
+        <PegBar label="SP" icon="SP" current={normalized.habilidad_actual} max={normalized.habilidad_max}
+          color="#d946ef" onChange={value => patch({ habilidad_actual: value })} />
+        <PegBar label="MP" icon="MP" current={normalized.magia_actual} max={normalized.magia_max}
+          color="#3b82f6" onChange={value => patch({ magia_actual: value })} />
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, margin: "10px 0 12px" }}>
+          {[
+            { maxField: "salud_max", currentField: "salud_actual", label: "Salud max" },
+            { maxField: "habilidad_max", currentField: "habilidad_actual", label: "Habilidad max" },
+            { maxField: "magia_max", currentField: "magia_actual", label: "Magia max" },
+          ].map(entry => (
+            <div key={entry.maxField} style={{ background: "#0f172a", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+              <div style={{ color: "#9ca3af", fontSize: 10, textTransform: "uppercase", marginBottom: 6 }}>{entry.label}</div>
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 6 }}>
+                <button onClick={() => {
+                  const nextMax = Math.max(0, Number(normalized[entry.maxField] || 0) - 1);
+                  patch({
+                    [entry.maxField]: nextMax,
+                    [entry.currentField]: Math.min(nextMax, Number(normalized[entry.currentField] || 0)),
+                  });
+                }}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+                <span style={{ color: "#d4b896", fontSize: 16, fontWeight: 700 }}>{normalized[entry.maxField]}</span>
+                <button onClick={() => patch({ [entry.maxField]: Math.max(0, Number(normalized[entry.maxField] || 0) + 1) })}
+                  style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ color: "#9ca3af", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.5, marginBottom: 8 }}>Estados</div>
+        <StatusEffects effects={normalized.status_effects || []}
+          onChange={status_effects => patch({ status_effects })} />
+      </Collapsible>
+
+      <Collapsible title="Resumen rapido" icon="SUM" defaultOpen>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {equipment.meleeDice > 0 && <span style={{ fontSize: 11, color: "#fde68a", padding: "4px 8px", borderRadius: 999, border: "1px solid #92400e" }}>Melee +{equipment.meleeDice}</span>}
+          {equipment.rangedDice > 0 && <span style={{ fontSize: 11, color: "#fca5a5", padding: "4px 8px", borderRadius: 999, border: "1px solid #7f1d1d" }}>Dist +{equipment.rangedDice}</span>}
+          {equipment.shield > 0 && <span style={{ fontSize: 11, color: "#bfdbfe", padding: "4px 8px", borderRadius: 999, border: "1px solid #1d4ed8" }}>Escudo {equipment.shield}</span>}
+          {equipment.armor > 0 && <span style={{ fontSize: 11, color: "#cbd5e1", padding: "4px 8px", borderRadius: 999, border: "1px solid #475569" }}>Prot +{equipment.armor}</span>}
+          {knownSpells.length > 0 && <span style={{ fontSize: 11, color: "#c4b5fd", padding: "4px 8px", borderRadius: 999, border: "1px solid #4338ca" }}>{knownSpells.length} hechizos</span>}
+          {equipment.meleeDice <= 0 && equipment.rangedDice <= 0 && equipment.shield <= 0 && equipment.armor <= 0 && knownSpells.length === 0 && (
+            <span style={{ color: "#6b7280", fontSize: 12 }}>Aun no hay equipo ni hechizos cargados.</span>
+          )}
+        </div>
+
+        {innateSkills.length > 0 && (
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Habilidades innatas</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+              {innateSkills.map((skill, index) => (
+                <span key={skill.name + "_" + index} style={{ fontSize: 11, color: "#d4b896", padding: "4px 8px", borderRadius: 999, border: "1px solid #374151" }}>
+                  {skill.name} {skill.level > 1 ? `N${skill.level}` : ""}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {learnedSkills.length > 0 ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {learnedSkills.map((skill, index) => (
+              <div key={skill.name + "_" + index} style={{ background: "#0f172a", borderRadius: 8, border: "1px solid #1f2937", padding: 10 }}>
+                <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 4 }}>
+                  {skill.name} | Nivel {skill.level}
+                </div>
+                <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{skill.summary}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ color: "#6b7280", fontSize: 12 }}>Todavia no hay habilidades aprendidas registradas.</div>
+        )}
+      </Collapsible>
+
+      <SpellbookEditor adv={normalized} onUpdate={onUpdate} />
+      <InventoryEditor adv={normalized} onUpdate={onUpdate} />
+    </div>
+  );
+}
+
 function CombatAbilitiesModal({ adv, missionState, onUpdateMission, onCastMagic, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [filter, setFilter] = useState("all");
