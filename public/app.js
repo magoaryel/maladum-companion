@@ -1101,9 +1101,25 @@ function defaultAdventurer(campId, charData) {
     habilidades: [],
     clase_habilidades: {},
     hechizos: [],
+    pending_start_effects: { health: 0, skill: 0, magic: 0, statuses: [] },
     vivo: true,
     misiones_no_disponible: 0,
     motivo_baja: "",
+  };
+}
+
+function getEmptyRestResolution() {
+  return {
+    rest_roll_primary: 0,
+    rest_roll_secondary: 0,
+    rest_choice: "",
+    rest_target_adventurer_id: "",
+    rest_rolls_by_adventurer: {},
+    rest_gold_roll: 0,
+    rest_wager: 0,
+    rest_coin_result: "none",
+    rest_item_loss_adventurer_id: "",
+    rest_item_loss_item_ids: [],
   };
 }
 
@@ -1134,6 +1150,7 @@ function defaultMissionState(campId, missionId) {
     next_mission: missionId,
     rest_mode: "none",
     rest_notes: "",
+    ...getEmptyRestResolution(),
     maintenance_cost: 0,
     lodging_cost: 0,
     materials_gained: emptyMaterials,
@@ -1179,6 +1196,7 @@ function normalizeMissionState(state) {
   if (!state) return null;
   const base = defaultMissionState(state.campaign_id, state.mision_id);
   const materials = { ...base.materials_gained, ...(state.materials_gained || {}) };
+  const emptyRestResolution = getEmptyRestResolution();
   return {
     ...base,
     ...state,
@@ -1197,6 +1215,18 @@ function normalizeMissionState(state) {
     next_mission: state.next_mission || state.mision_id || base.next_mission,
     rest_mode: ["none", "posada", "naturaleza"].includes(state.rest_mode) ? state.rest_mode : "none",
     rest_notes: String(state.rest_notes || ""),
+    rest_roll_primary: Math.max(0, Math.min(6, Number(state.rest_roll_primary ?? emptyRestResolution.rest_roll_primary) || 0)),
+    rest_roll_secondary: Math.max(0, Math.min(6, Number(state.rest_roll_secondary ?? emptyRestResolution.rest_roll_secondary) || 0)),
+    rest_choice: String(state.rest_choice || ""),
+    rest_target_adventurer_id: String(state.rest_target_adventurer_id || ""),
+    rest_rolls_by_adventurer: Object.fromEntries(
+      Object.entries(state.rest_rolls_by_adventurer || {}).map(([key, value]) => [key, Math.max(0, Math.min(6, Number(value) || 0))])
+    ),
+    rest_gold_roll: Math.max(0, Math.min(6, Number(state.rest_gold_roll ?? emptyRestResolution.rest_gold_roll) || 0)),
+    rest_wager: Math.max(0, Number(state.rest_wager ?? emptyRestResolution.rest_wager) || 0),
+    rest_coin_result: ["none", "win", "lose"].includes(state.rest_coin_result) ? state.rest_coin_result : "none",
+    rest_item_loss_adventurer_id: String(state.rest_item_loss_adventurer_id || ""),
+    rest_item_loss_item_ids: Array.isArray(state.rest_item_loss_item_ids) ? state.rest_item_loss_item_ids.filter(Boolean) : [],
     maintenance_cost: Math.max(0, Number(state.maintenance_cost ?? 0) || 0),
     lodging_cost: Math.max(0, Number(state.lodging_cost ?? 0) || 0),
     materials_gained: Object.fromEntries(Object.entries(materials).map(([key, value]) => [key, Math.max(0, Number(value) || 0)])),
@@ -1464,6 +1494,14 @@ function normalizeAdventurer(adv) {
     clase_habilidades: hasSkillMap ? { ...fallbackSkills, ...adv.clase_habilidades } : fallbackSkills,
     hechizos: (adv?.hechizos || []).map(normalizeSpell),
     inventario: (adv?.inventario || []).map(normalizeInventoryItem),
+    pending_start_effects: {
+      health: Math.min(0, Number(adv?.pending_start_effects?.health) || 0),
+      skill: Math.min(0, Number(adv?.pending_start_effects?.skill) || 0),
+      magic: Math.min(0, Number(adv?.pending_start_effects?.magic) || 0),
+      statuses: Array.isArray(adv?.pending_start_effects?.statuses)
+        ? Array.from(new Set(adv.pending_start_effects.statuses.filter(Boolean)))
+        : [],
+    },
     vivo: adv?.vivo !== false,
     misiones_no_disponible: Math.max(0, Number(adv?.misiones_no_disponible) || 0),
     motivo_baja: String(adv?.motivo_baja || ""),
@@ -1488,6 +1526,19 @@ function getAdventurerAvailabilityLabel(adv) {
       : `Fuera ${normalized.misiones_no_disponible} misiones`;
   }
   return "";
+}
+
+function getPendingStartEffectLabel(adv) {
+  const pending = normalizeAdventurer(adv).pending_start_effects || {};
+  const parts = [];
+  if (Number(pending.health || 0) < 0) parts.push(`${pending.health} Salud`);
+  if (Number(pending.skill || 0) < 0) parts.push(`${pending.skill} Habilidad`);
+  if (Number(pending.magic || 0) < 0) parts.push(`${pending.magic} Magia`);
+  (pending.statuses || []).forEach(statusId => {
+    const status = STATUS_EFFECTS.find(entry => entry.id === statusId);
+    parts.push(status ? status.name : statusId);
+  });
+  return parts.join(", ");
 }
 
 function updateAdventurerClass(adv, cls) {
@@ -1974,6 +2025,268 @@ function applyMissionRestToAdventurer(adv, options = {}) {
     habilidad_actual: recoverTrack === "skill" ? Math.min(normalized.habilidad_max, normalized.habilidad_actual + 1) : normalized.habilidad_actual,
     status_effects: statusEffects,
   });
+}
+
+function addStatusEffectIfMissing(effects, effectId) {
+  const source = Array.isArray(effects) ? effects : [];
+  if (!effectId || source.includes(effectId)) return [...source];
+  return [...source, effectId];
+}
+
+function mergePendingStartEffects(existing, patch) {
+  const current = {
+    health: Math.min(0, Number(existing?.health) || 0),
+    skill: Math.min(0, Number(existing?.skill) || 0),
+    magic: Math.min(0, Number(existing?.magic) || 0),
+    statuses: Array.isArray(existing?.statuses) ? existing.statuses.filter(Boolean) : [],
+  };
+  const next = {
+    health: Math.min(0, Number(patch?.health) || 0),
+    skill: Math.min(0, Number(patch?.skill) || 0),
+    magic: Math.min(0, Number(patch?.magic) || 0),
+    statuses: Array.isArray(patch?.statuses) ? patch.statuses.filter(Boolean) : [],
+  };
+  return {
+    health: current.health + next.health,
+    skill: current.skill + next.skill,
+    magic: current.magic + next.magic,
+    statuses: Array.from(new Set([...(current.statuses || []), ...(next.statuses || [])])),
+  };
+}
+
+function applyPendingStartEffectsToAdventurer(adv) {
+  const normalized = normalizeAdventurer(adv);
+  const pending = normalized.pending_start_effects || {};
+  const hasPending = Number(pending.health || 0) !== 0
+    || Number(pending.skill || 0) !== 0
+    || Number(pending.magic || 0) !== 0
+    || (pending.statuses || []).length > 0;
+  if (!hasPending) return normalized;
+  let statusEffects = [...(normalized.status_effects || [])];
+  (pending.statuses || []).forEach(statusId => {
+    statusEffects = addStatusEffectIfMissing(statusEffects, statusId);
+  });
+  return normalizeAdventurer({
+    ...normalized,
+    salud_actual: Math.max(0, Math.min(normalized.salud_max, normalized.salud_actual + Number(pending.health || 0))),
+    habilidad_actual: Math.max(0, Math.min(normalized.habilidad_max, normalized.habilidad_actual + Number(pending.skill || 0))),
+    magia_actual: Math.max(0, Math.min(normalized.magia_max, normalized.magia_actual + Number(pending.magic || 0))),
+    status_effects: statusEffects,
+    pending_start_effects: { health: 0, skill: 0, magic: 0, statuses: [] },
+  });
+}
+
+function getEmptyRestEffect() {
+  return { health: 0, skill: 0, magic: 0, addStatuses: [], removeItemIds: [] };
+}
+
+function mergeRestEffect(existing, patch) {
+  const base = existing || getEmptyRestEffect();
+  const next = patch || {};
+  return {
+    health: Number(base.health || 0) + Number(next.health || 0),
+    skill: Number(base.skill || 0) + Number(next.skill || 0),
+    magic: Number(base.magic || 0) + Number(next.magic || 0),
+    addStatuses: Array.from(new Set([...(base.addStatuses || []), ...((next.addStatuses || []).filter(Boolean))])),
+    removeItemIds: Array.from(new Set([...(base.removeItemIds || []), ...((next.removeItemIds || []).filter(Boolean))])),
+  };
+}
+
+function addRestEffect(map, adventurerId, patch) {
+  if (!adventurerId) return map;
+  return {
+    ...map,
+    [adventurerId]: mergeRestEffect(map[adventurerId], patch),
+  };
+}
+
+function getRestOutcome(state, adventurers) {
+  const mission = normalizeMissionState(state);
+  const livingAdventurers = (adventurers || []).filter(adv => !isAdventurerDead(adv)).map(normalizeAdventurer);
+  const byId = Object.fromEntries(livingAdventurers.map(adv => [adv.id, adv]));
+  const primaryRoll = Math.max(0, Math.min(6, Number(mission.rest_roll_primary) || 0));
+  const secondaryRoll = Math.max(0, Math.min(6, Number(mission.rest_roll_secondary) || 0));
+  let immediateByAdventurer = {};
+  let pendingByAdventurer = {};
+  const xpByAdventurer = {};
+  let goldDelta = 0;
+  let renownBonus = 0;
+  const notes = [];
+  const summaryLines = [];
+  let unresolvedReason = "";
+
+  const addXp = (adventurerId, amount) => {
+    if (!adventurerId || !amount) return;
+    xpByAdventurer[adventurerId] = (xpByAdventurer[adventurerId] || 0) + amount;
+  };
+
+  if (mission.rest_mode === "none") {
+    return {
+      mode: "none",
+      resolved: true,
+      goldDelta,
+      renownBonus,
+      xpByAdventurer,
+      immediateByAdventurer,
+      pendingByAdventurer,
+      notes,
+      summaryLines,
+      unresolvedReason,
+    };
+  }
+
+  if (!primaryRoll) {
+    return {
+      mode: mission.rest_mode,
+      resolved: false,
+      goldDelta,
+      renownBonus,
+      xpByAdventurer,
+      immediateByAdventurer,
+      pendingByAdventurer,
+      notes,
+      summaryLines,
+      unresolvedReason: "Falta elegir el resultado del dado magico del descanso.",
+    };
+  }
+
+  if (mission.rest_mode === "posada") {
+    if (primaryRoll <= 2) {
+      if (mission.rest_choice === "posada_bless_all") {
+        livingAdventurers.forEach(adv => {
+          immediateByAdventurer = addRestEffect(immediateByAdventurer, adv.id, { addStatuses: ["blessed"] });
+        });
+        summaryLines.push("Posada 1-2: todos los aventureros quedan Benditos.");
+      } else if (mission.rest_choice === "posada_xp" && mission.rest_target_adventurer_id && byId[mission.rest_target_adventurer_id]) {
+        addXp(mission.rest_target_adventurer_id, 1);
+        summaryLines.push(`Posada 1-2: ${byId[mission.rest_target_adventurer_id].nombre} gana +1 PX.`);
+      } else {
+        unresolvedReason = "Elige si bendices a todo el grupo o que aventurero gana +1 PX.";
+      }
+    } else if (primaryRoll <= 4) {
+      if (!secondaryRoll) {
+        unresolvedReason = "Falta la segunda tirada de Posada.";
+      } else if (secondaryRoll <= 2) {
+        notes.push("Posada 3-4 > 1-2: coge una ficha poco comun al azar.");
+        summaryLines.push("Posada 3-4 > 1-2: anota 1 ficha poco comun al azar.");
+      } else if (secondaryRoll <= 4) {
+        notes.push("Posada 3-4 > 3-4: roba 2 poco comunes y 1 rara; puedes comprar a precio de venta.");
+        summaryLines.push("Posada 3-4 > 3-4: anota compra especial a precio de venta.");
+      } else {
+        notes.push("Posada 3-4 > 5-6: al comienzo de la siguiente partida puedes mirar las 3 primeras cartas de Evento o una pieza de terreno buscable.");
+        summaryLines.push("Posada 3-4 > 5-6: deja anotado el beneficio de inspeccion para la siguiente partida.");
+      }
+    } else {
+      if (!secondaryRoll) {
+        unresolvedReason = "Falta la segunda tirada de Posada.";
+      } else if (secondaryRoll === 1) {
+        if (mission.rest_target_adventurer_id && byId[mission.rest_target_adventurer_id]) {
+          immediateByAdventurer = addRestEffect(immediateByAdventurer, mission.rest_target_adventurer_id, { health: -1 });
+          summaryLines.push(`Posada 5-6 > 1: ${byId[mission.rest_target_adventurer_id].nombre} pierde 1 Salud.`);
+        } else {
+          unresolvedReason = "Elige que aventurero pierde 1 Salud por la tirada de Posada.";
+        }
+      } else if (secondaryRoll === 2) {
+        notes.push("Posada 5-6 > 2: coge Provisiones.");
+        summaryLines.push("Posada 5-6 > 2: anota Provisiones en las notas del grupo.");
+      } else if (secondaryRoll <= 4) {
+        renownBonus += 2;
+        summaryLines.push("Posada 5-6 > 3-4: +2 Renombre.");
+      } else if (mission.rest_choice === "posada_no_bet") {
+        summaryLines.push("Posada 5-6 > 5-6: no apuestas oro.");
+      } else if (mission.rest_choice === "posada_bet") {
+        const wager = Math.max(0, Number(mission.rest_wager) || 0);
+        if (wager <= 0 || mission.rest_coin_result === "none") {
+          unresolvedReason = "Si apuestas en Posada, indica cuanto oro apuestas y si ganaste o perdiste la moneda.";
+        } else {
+          goldDelta += mission.rest_coin_result === "win" ? wager : -wager;
+          summaryLines.push(`Posada 5-6 > 5-6: apuesta de ${wager}G ${mission.rest_coin_result === "win" ? "ganada" : "perdida"}.`);
+        }
+      } else {
+        unresolvedReason = "Elige si haces la apuesta opcional de Posada o si la ignoras.";
+      }
+    }
+  }
+
+  if (mission.rest_mode === "naturaleza") {
+    if (primaryRoll === 1) {
+      if (mission.rest_choice === "naturaleza_avoid") {
+        if (mission.rest_target_adventurer_id && byId[mission.rest_target_adventurer_id]) {
+          immediateByAdventurer = addRestEffect(immediateByAdventurer, mission.rest_target_adventurer_id, { health: -1, skill: -1 });
+          summaryLines.push(`Bosque 1: ${byId[mission.rest_target_adventurer_id].nombre} sufre -1 Salud y -1 Habilidad para evitar el resto del efecto.`);
+        } else {
+          unresolvedReason = "Elige que aventurero asume el coste de -1 Salud y -1 Habilidad para evitar el efecto del Bosque.";
+        }
+      } else if (mission.rest_choice === "naturaleza_take_loss") {
+        const goldRoll = Number(mission.rest_gold_roll) >= 1 && Number(mission.rest_gold_roll) <= 6
+          ? Number(mission.rest_gold_roll)
+          : 0;
+        const targetId = mission.rest_item_loss_adventurer_id;
+        const target = byId[targetId];
+        const requiredItems = Math.min(2, target?.inventario?.length || 0);
+        if (!goldRoll) {
+          unresolvedReason = "Indica el D6 de oro perdido en Bosque.";
+        } else if (!target) {
+          unresolvedReason = "Elige que aventurero pierde los objetos por la tirada de Bosque.";
+        } else if ((mission.rest_item_loss_item_ids || []).length < requiredItems) {
+          unresolvedReason = requiredItems > 0
+            ? "Selecciona los objetos que se pierden por la tirada de Bosque."
+            : "";
+        } else {
+          goldDelta -= goldRoll;
+          immediateByAdventurer = addRestEffect(immediateByAdventurer, targetId, { removeItemIds: (mission.rest_item_loss_item_ids || []).slice(0, requiredItems) });
+          const itemNames = (target.inventario || [])
+            .filter(item => (mission.rest_item_loss_item_ids || []).includes(item.id))
+            .map(item => item.name);
+          summaryLines.push(`Bosque 1: -${goldRoll}G y ${target.nombre} ${requiredItems === 0 ? "no tenia objetos que perder." : `pierde ${itemNames.join(", ")}.`}`);
+        }
+      } else {
+        unresolvedReason = "Elige si aceptas la sancion del Bosque o la evitas pagando -1 Salud y -1 Habilidad.";
+      }
+    } else if (primaryRoll === 2) {
+      if (!secondaryRoll) {
+        unresolvedReason = "Falta la segunda tirada de Bosque.";
+      } else if (mission.rest_target_adventurer_id && byId[mission.rest_target_adventurer_id]) {
+        const statusId = secondaryRoll <= 3 ? "fatigued" : "wounded";
+        pendingByAdventurer = addRestEffect(pendingByAdventurer, mission.rest_target_adventurer_id, { addStatuses: [statusId] });
+        summaryLines.push(`Bosque 2: ${byId[mission.rest_target_adventurer_id].nombre} empezara la siguiente mision ${statusId === "fatigued" ? "Fatigado" : "Herido"}.`);
+      } else {
+        unresolvedReason = "Elige que aventurero recibe el efecto de la tirada de Bosque.";
+      }
+    } else if (primaryRoll <= 4) {
+      const missingRoll = livingAdventurers.find(adv => !(Number(mission.rest_rolls_by_adventurer?.[adv.id]) >= 1 && Number(mission.rest_rolls_by_adventurer?.[adv.id]) <= 6));
+      if (missingRoll) {
+        unresolvedReason = "Falta elegir la tirada individual de cada aventurero para el Bosque.";
+      } else {
+        livingAdventurers.forEach(adv => {
+          const personalRoll = Number(mission.rest_rolls_by_adventurer?.[adv.id]) || 0;
+          if (personalRoll <= 2) {
+            pendingByAdventurer = addRestEffect(pendingByAdventurer, adv.id, { health: -1 });
+          } else if (personalRoll <= 4) {
+            pendingByAdventurer = addRestEffect(pendingByAdventurer, adv.id, { skill: -1 });
+          } else {
+            pendingByAdventurer = addRestEffect(pendingByAdventurer, adv.id, { magic: -1 });
+          }
+        });
+        summaryLines.push("Bosque 3-4: ya quedaron anotados los penalizadores individuales para la siguiente mision.");
+      }
+    } else {
+      summaryLines.push("Bosque 5-6: sin efecto.");
+    }
+  }
+
+  return {
+    mode: mission.rest_mode,
+    resolved: !unresolvedReason,
+    goldDelta,
+    renownBonus,
+    xpByAdventurer,
+    immediateByAdventurer,
+    pendingByAdventurer,
+    notes,
+    summaryLines,
+    unresolvedReason,
+  };
 }
 
 function getCombatEquipmentNames(items, mode) {
@@ -4513,8 +4826,6 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const manualRenownGain = Math.max(0, Number(missionState.renombre_ganado || 0) || 0);
   const manualGoldGain = Math.max(0, Number(missionState.oro_ganado || 0) || 0);
   const xpEach = Math.max(1, Number(missionState.xp_base || 1)) + objectiveResolution.xpExtra + manualXpExtra;
-  const totalRenownGain = objectiveResolution.renown + manualRenownGain;
-  const totalGoldGain = objectiveResolution.gold + manualGoldGain;
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
   const [craftingCatalog, setCraftingCatalog] = useState([]);
   const [officialItems, setOfficialItems] = useState([]);
@@ -4533,8 +4844,17 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const livingAdventurers = adventurers
     .filter(adv => !isAdventurerDead(adv))
     .map(normalizeAdventurer);
+  const restOutcome = getRestOutcome(missionState, livingAdventurers);
+  const totalRenownGain = objectiveResolution.renown + manualRenownGain + restOutcome.renownBonus;
+  const totalGoldGain = objectiveResolution.gold + manualGoldGain;
   const adjustNumber = (field, delta, min = 0) => {
     patchMission({ [field]: Math.max(min, Number(missionState[field] || 0) + delta) });
+  };
+  const setRestModeState = (mode) => {
+    patchMission({
+      rest_mode: mode,
+      ...getEmptyRestResolution(),
+    });
   };
   const maintenanceCost = livingAdventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
   const lodgingCost = missionState.rest_mode === "posada" ? livingAdventurers.length * 2 : 0;
@@ -4560,15 +4880,18 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const marketSpend = (missionState.purchased_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
   const repairSpend = (missionState.repaired_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.cost) || 0), 0);
   const soldIncome = (missionState.sold_items || []).reduce((sum, item) => sum + Math.max(0, Number(item.price) || 0), 0);
-  const availableGoldBeforeCraft = currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost - repairSpend - marketSpend;
-  const availableGoldBeforeMarket = currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
-  const phaseGoldDelta = totalGoldGain + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
+  const availableGoldBeforeCraft = currentGroupGold + totalGoldGain + soldIncome + restOutcome.goldDelta - maintenanceCost - lodgingCost - repairSpend - marketSpend;
+  const availableGoldBeforeMarket = currentGroupGold + totalGoldGain + soldIncome + restOutcome.goldDelta - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
+  const phaseGoldDelta = totalGoldGain + soldIncome + restOutcome.goldDelta - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
   const currentGoldAfterSales = Math.max(0, currentGroupGold + totalGoldGain + soldIncome);
-  const currentGoldAfterRestAndSales = Math.max(0, currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost);
+  const currentGoldBeforeRestOutcome = Math.max(0, currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost);
+  const currentGoldAfterRestAndSales = Math.max(0, currentGroupGold + totalGoldGain + soldIncome + restOutcome.goldDelta - maintenanceCost - lodgingCost);
   const currentGoldAfterRepairs = Math.max(0, currentGoldAfterRestAndSales - repairSpend);
   const totalGoldAfterPhase = Math.max(0, currentGroupGold + phaseGoldDelta);
-  const totalGoldAfterRest = Math.max(0, currentGroupGold + totalGoldGain - maintenanceCost - lodgingCost);
+  const totalGoldAfterRest = Math.max(0, currentGroupGold + totalGoldGain + restOutcome.goldDelta - maintenanceCost - lodgingCost);
   const currentStep = postMissionSteps[activeStepIndex] || postMissionSteps[0];
+  const restTargetAdventurer = livingAdventurers.find(adv => adv.id === missionState.rest_target_adventurer_id) || null;
+  const restItemLossAdventurer = livingAdventurers.find(adv => adv.id === missionState.rest_item_loss_adventurer_id) || null;
   useEffect(() => {
     loadCraftingCatalog()
       .then(setCraftingCatalog)
@@ -4605,7 +4928,8 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
       const entry = leftForDeadRolls.find(item => item.adventurerId === id);
       return !(Number(entry?.rawResult) >= 1 && Number(entry?.rawResult) <= 6);
     });
-  const canApplyMissionClosure = !rescuePending && !leftForDeadPending;
+  const unresolvedRest = missionState.rest_mode !== "none" && !restOutcome.resolved;
+  const canApplyMissionClosure = !rescuePending && !leftForDeadPending && !unresolvedRest;
 
   const setMissionSuccessState = (success) => {
     if (success) {
@@ -5103,11 +5427,11 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           Posada o Bosque
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-          <button onClick={() => patchMission({ rest_mode: "posada" })}
+          <button onClick={() => setRestModeState("posada")}
             style={{ padding: 12, borderRadius: 10, border: missionState.rest_mode === "posada" ? "2px solid #166534" : "1px solid #374151", background: missionState.rest_mode === "posada" ? "#16653422" : "#0f172a", color: missionState.rest_mode === "posada" ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
             Posada
           </button>
-          <button onClick={() => patchMission({ rest_mode: "naturaleza" })}
+          <button onClick={() => setRestModeState("naturaleza")}
             style={{ padding: 12, borderRadius: 10, border: missionState.rest_mode === "naturaleza" ? "2px solid #166534" : "1px solid #374151", background: missionState.rest_mode === "naturaleza" ? "#16653422" : "#0f172a", color: missionState.rest_mode === "naturaleza" ? "#bbf7d0" : "#9ca3af", fontWeight: 700, cursor: "pointer" }}>
             Bosque
           </button>
@@ -5146,12 +5470,278 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
           <div style={{ color: "#6b7280", fontSize: 11 }}>Incluye el oro acumulado de misiones anteriores</div>
         </div>
         {missionState.rest_mode !== "none" && (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
-            {REST_REFERENCE[missionState.rest_mode].map((line, index) => (
-              <div key={index} style={{ background: "#0f172a", borderRadius: 8, padding: 8, border: "1px solid #1f2937", color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
-                {line}
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #2d2d44", marginBottom: 8 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+              <div style={{ color: "#93c5fd", fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1.2 }}>
+                Tirada de Posada / Bosque
               </div>
-            ))}
+              <button onClick={() => patchMission(getEmptyRestResolution())}
+                style={{ padding: "6px 10px", borderRadius: 999, border: "1px solid #374151", background: "transparent", color: "#9ca3af", fontSize: 11, cursor: "pointer" }}>
+                Limpiar tirada
+              </button>
+            </div>
+            <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Resultado del dado magico</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 6, marginBottom: 10 }}>
+              {[1,2,3,4,5,6].map(value => (
+                <button key={value} onClick={() => patchMission({
+                  ...getEmptyRestResolution(),
+                  rest_roll_primary: value,
+                })}
+                  style={{ padding: 10, borderRadius: 8, border: Number(missionState.rest_roll_primary) === value ? "2px solid #eab308" : "1px solid #374151", background: Number(missionState.rest_roll_primary) === value ? "#eab30822" : "#111827", color: Number(missionState.rest_roll_primary) === value ? "#fde68a" : "#d4b896", fontWeight: 800, cursor: "pointer" }}>
+                  {value}
+                </button>
+              ))}
+            </div>
+
+            {((missionState.rest_mode === "posada" && Number(missionState.rest_roll_primary) >= 3) || (missionState.rest_mode === "naturaleza" && Number(missionState.rest_roll_primary) === 2)) && (
+              <>
+                <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Segunda tirada</div>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 6, marginBottom: 10 }}>
+                  {[1,2,3,4,5,6].map(value => (
+                    <button key={value} onClick={() => patchMission({
+                      rest_roll_secondary: value,
+                      rest_choice: "",
+                      rest_target_adventurer_id: "",
+                      rest_rolls_by_adventurer: {},
+                      rest_gold_roll: 0,
+                      rest_wager: 0,
+                      rest_coin_result: "none",
+                      rest_item_loss_adventurer_id: "",
+                      rest_item_loss_item_ids: [],
+                    })}
+                      style={{ padding: 10, borderRadius: 8, border: Number(missionState.rest_roll_secondary) === value ? "2px solid #60a5fa" : "1px solid #374151", background: Number(missionState.rest_roll_secondary) === value ? "#1d4ed822" : "#111827", color: Number(missionState.rest_roll_secondary) === value ? "#dbeafe" : "#d4b896", fontWeight: 800, cursor: "pointer" }}>
+                      {value}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {missionState.rest_mode === "posada" && Number(missionState.rest_roll_primary) >= 1 && Number(missionState.rest_roll_primary) <= 2 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Posada 1-2</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  <button onClick={() => patchMission({ rest_choice: "posada_bless_all", rest_target_adventurer_id: "" })}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_choice === "posada_bless_all" ? "1px solid #eab308" : "1px solid #374151", background: missionState.rest_choice === "posada_bless_all" ? "#eab30822" : "#111827", color: missionState.rest_choice === "posada_bless_all" ? "#fde68a" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                    Bendecir a todos
+                  </button>
+                  <button onClick={() => patchMission({ rest_choice: "posada_xp" })}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_choice === "posada_xp" ? "1px solid #22c55e" : "1px solid #374151", background: missionState.rest_choice === "posada_xp" ? "#16653422" : "#111827", color: missionState.rest_choice === "posada_xp" ? "#bbf7d0" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                    +1 PX a un aventurero
+                  </button>
+                </div>
+                {missionState.rest_choice === "posada_xp" && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {livingAdventurers.map(adv => (
+                      <button key={adv.id} onClick={() => patchMission({ rest_target_adventurer_id: adv.id })}
+                        style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_target_adventurer_id === adv.id ? "1px solid #22c55e" : "1px solid #374151", background: missionState.rest_target_adventurer_id === adv.id ? "#16653422" : "#111827", color: missionState.rest_target_adventurer_id === adv.id ? "#bbf7d0" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                        {adv.nombre}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {missionState.rest_mode === "posada" && Number(missionState.rest_roll_primary) >= 5 && Number(missionState.rest_roll_secondary) === 1 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Posada 5-6 > 1</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {livingAdventurers.map(adv => (
+                    <button key={adv.id} onClick={() => patchMission({ rest_target_adventurer_id: adv.id })}
+                      style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_target_adventurer_id === adv.id ? "1px solid #ef4444" : "1px solid #374151", background: missionState.rest_target_adventurer_id === adv.id ? "#7f1d1d22" : "#111827", color: missionState.rest_target_adventurer_id === adv.id ? "#fca5a5" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                      {adv.nombre}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {missionState.rest_mode === "posada" && Number(missionState.rest_roll_primary) >= 5 && Number(missionState.rest_roll_secondary) >= 5 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Posada 5-6 > 5-6</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  <button onClick={() => patchMission({ rest_choice: "posada_no_bet", rest_wager: 0, rest_coin_result: "none" })}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_choice === "posada_no_bet" ? "1px solid #60a5fa" : "1px solid #374151", background: missionState.rest_choice === "posada_no_bet" ? "#1d4ed822" : "#111827", color: missionState.rest_choice === "posada_no_bet" ? "#dbeafe" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                    No apostar
+                  </button>
+                  <button onClick={() => patchMission({ rest_choice: "posada_bet" })}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_choice === "posada_bet" ? "1px solid #eab308" : "1px solid #374151", background: missionState.rest_choice === "posada_bet" ? "#eab30822" : "#111827", color: missionState.rest_choice === "posada_bet" ? "#fde68a" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                    Apostar oro
+                  </button>
+                </div>
+                {missionState.rest_choice === "posada_bet" && (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#111827", borderRadius: 8, padding: "8px 10px", marginBottom: 8 }}>
+                      <span style={{ color: "#9ca3af", fontSize: 12 }}>Apuesta</span>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <button onClick={() => patchMission({ rest_wager: Math.max(0, Number(missionState.rest_wager || 0) - 1) })} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>-</button>
+                        <span style={{ color: "#fde68a", fontSize: 16, fontWeight: 700, minWidth: 40, textAlign: "center" }}>{missionState.rest_wager || 0}G</span>
+                        <button onClick={() => patchMission({ rest_wager: Math.min(currentGoldBeforeRestOutcome, Number(missionState.rest_wager || 0) + 1) })} style={{ width: 28, height: 28, borderRadius: 6, border: "1px solid #374151", background: "transparent", color: "#d4b896", fontSize: 16, cursor: "pointer" }}>+</button>
+                      </div>
+                    </div>
+                    <div style={{ display: "flex", gap: 6 }}>
+                      <button onClick={() => patchMission({ rest_coin_result: "win" })}
+                        style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: missionState.rest_coin_result === "win" ? "1px solid #22c55e" : "1px solid #374151", background: missionState.rest_coin_result === "win" ? "#16653422" : "#111827", color: missionState.rest_coin_result === "win" ? "#bbf7d0" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                        Moneda ganada
+                      </button>
+                      <button onClick={() => patchMission({ rest_coin_result: "lose" })}
+                        style={{ flex: 1, padding: "8px 10px", borderRadius: 8, border: missionState.rest_coin_result === "lose" ? "1px solid #ef4444" : "1px solid #374151", background: missionState.rest_coin_result === "lose" ? "#7f1d1d22" : "#111827", color: missionState.rest_coin_result === "lose" ? "#fca5a5" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                        Moneda perdida
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {missionState.rest_mode === "naturaleza" && Number(missionState.rest_roll_primary) === 1 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Bosque 1</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                  <button onClick={() => patchMission({ rest_choice: "naturaleza_avoid", rest_gold_roll: 0, rest_item_loss_adventurer_id: "", rest_item_loss_item_ids: [] })}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_choice === "naturaleza_avoid" ? "1px solid #22c55e" : "1px solid #374151", background: missionState.rest_choice === "naturaleza_avoid" ? "#16653422" : "#111827", color: missionState.rest_choice === "naturaleza_avoid" ? "#bbf7d0" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                    Evitarlo con -1 Salud / -1 Habilidad
+                  </button>
+                  <button onClick={() => patchMission({ rest_choice: "naturaleza_take_loss", rest_target_adventurer_id: "", rest_gold_roll: 0, rest_item_loss_adventurer_id: "", rest_item_loss_item_ids: [] })}
+                    style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_choice === "naturaleza_take_loss" ? "1px solid #ef4444" : "1px solid #374151", background: missionState.rest_choice === "naturaleza_take_loss" ? "#7f1d1d22" : "#111827", color: missionState.rest_choice === "naturaleza_take_loss" ? "#fca5a5" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                    Aplicar sancion completa
+                  </button>
+                </div>
+                {missionState.rest_choice === "naturaleza_avoid" && (
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                    {livingAdventurers.map(adv => (
+                      <button key={adv.id} onClick={() => patchMission({ rest_target_adventurer_id: adv.id })}
+                        style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_target_adventurer_id === adv.id ? "1px solid #22c55e" : "1px solid #374151", background: missionState.rest_target_adventurer_id === adv.id ? "#16653422" : "#111827", color: missionState.rest_target_adventurer_id === adv.id ? "#bbf7d0" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                        {adv.nombre}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {missionState.rest_choice === "naturaleza_take_loss" && (
+                  <>
+                    <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>D6 de oro perdido</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 6, marginBottom: 8 }}>
+                      {[1,2,3,4,5,6].map(value => (
+                        <button key={value} onClick={() => patchMission({ rest_gold_roll: value })}
+                          style={{ padding: 8, borderRadius: 8, border: Number(missionState.rest_gold_roll) === value ? "2px solid #ef4444" : "1px solid #374151", background: Number(missionState.rest_gold_roll) === value ? "#7f1d1d22" : "#111827", color: Number(missionState.rest_gold_roll) === value ? "#fca5a5" : "#d4b896", fontWeight: 700, cursor: "pointer" }}>
+                          {value}
+                        </button>
+                      ))}
+                    </div>
+                    <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>Aventurero que pierde 2 objetos</div>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                      {livingAdventurers.map(adv => (
+                        <button key={adv.id} onClick={() => patchMission({ rest_item_loss_adventurer_id: adv.id, rest_item_loss_item_ids: [] })}
+                          style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_item_loss_adventurer_id === adv.id ? "1px solid #ef4444" : "1px solid #374151", background: missionState.rest_item_loss_adventurer_id === adv.id ? "#7f1d1d22" : "#111827", color: missionState.rest_item_loss_adventurer_id === adv.id ? "#fca5a5" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                          {adv.nombre}
+                        </button>
+                      ))}
+                    </div>
+                    {restItemLossAdventurer && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                        <div style={{ color: "#9ca3af", fontSize: 11 }}>
+                          Elige {Math.min(2, restItemLossAdventurer.inventario.length)} objeto(s) a perder
+                        </div>
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {(restItemLossAdventurer.inventario || []).map(item => {
+                            const selected = (missionState.rest_item_loss_item_ids || []).includes(item.id);
+                            const maxReached = !selected && (missionState.rest_item_loss_item_ids || []).length >= Math.min(2, restItemLossAdventurer.inventario.length);
+                            return (
+                              <button key={item.id} onClick={() => {
+                                const selectedIds = missionState.rest_item_loss_item_ids || [];
+                                patchMission({
+                                  rest_item_loss_item_ids: selected
+                                    ? selectedIds.filter(id => id !== item.id)
+                                    : (maxReached ? selectedIds : [...selectedIds, item.id]),
+                                });
+                              }}
+                                style={{ padding: "8px 10px", borderRadius: 999, border: selected ? "1px solid #ef4444" : "1px solid #374151", background: selected ? "#7f1d1d22" : "#111827", color: selected ? "#fca5a5" : (maxReached ? "#4b5563" : "#d4b896"), fontSize: 12, cursor: maxReached && !selected ? "default" : "pointer" }}>
+                                {item.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
+
+            {missionState.rest_mode === "naturaleza" && Number(missionState.rest_roll_primary) === 2 && Number(missionState.rest_roll_secondary) >= 1 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Bosque 2</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {livingAdventurers.map(adv => (
+                    <button key={adv.id} onClick={() => patchMission({ rest_target_adventurer_id: adv.id })}
+                      style={{ padding: "8px 10px", borderRadius: 999, border: missionState.rest_target_adventurer_id === adv.id ? "1px solid #60a5fa" : "1px solid #374151", background: missionState.rest_target_adventurer_id === adv.id ? "#1d4ed822" : "#111827", color: missionState.rest_target_adventurer_id === adv.id ? "#dbeafe" : "#d4b896", fontSize: 12, cursor: "pointer" }}>
+                      {adv.nombre}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {missionState.rest_mode === "naturaleza" && Number(missionState.rest_roll_primary) >= 3 && Number(missionState.rest_roll_primary) <= 4 && (
+              <div style={{ marginBottom: 10 }}>
+                <div style={{ color: "#d4b896", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>Bosque 3-4</div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {livingAdventurers.map(adv => (
+                    <div key={adv.id} style={{ background: "#111827", borderRadius: 8, padding: 8 }}>
+                      <div style={{ color: "#d4b896", fontSize: 12, marginBottom: 6 }}>{adv.nombre}</div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, minmax(0, 1fr))", gap: 6 }}>
+                        {[1,2,3,4,5,6].map(value => (
+                          <button key={value} onClick={() => patchMission({
+                            rest_rolls_by_adventurer: {
+                              ...(missionState.rest_rolls_by_adventurer || {}),
+                              [adv.id]: value,
+                            },
+                          })}
+                            style={{ padding: 8, borderRadius: 8, border: Number(missionState.rest_rolls_by_adventurer?.[adv.id]) === value ? "2px solid #60a5fa" : "1px solid #374151", background: Number(missionState.rest_rolls_by_adventurer?.[adv.id]) === value ? "#1d4ed822" : "#0f172a", color: Number(missionState.rest_rolls_by_adventurer?.[adv.id]) === value ? "#dbeafe" : "#d4b896", fontWeight: 700, cursor: "pointer" }}>
+                            {value}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {restOutcome.unresolvedReason && (
+              <div style={{ background: "#7f1d1d22", borderRadius: 8, padding: 10, border: "1px solid #7f1d1d", color: "#fca5a5", fontSize: 11, marginBottom: 8 }}>
+                {restOutcome.unresolvedReason}
+              </div>
+            )}
+
+            {restOutcome.summaryLines.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+                {restOutcome.summaryLines.map((line, index) => (
+                  <div key={index} style={{ background: "#132034", borderRadius: 8, padding: 8, border: "1px solid #2d2d44", color: "#d4b896", fontSize: 11, lineHeight: 1.5 }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {restOutcome.notes.length > 0 && (
+              <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 8 }}>
+                {restOutcome.notes.map((line, index) => (
+                  <div key={index} style={{ background: "#111827", borderRadius: 8, padding: 8, border: "1px solid #1f2937", color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+                    {line}
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {REST_REFERENCE[missionState.rest_mode].map((line, index) => (
+                <div key={index} style={{ background: "#111827", borderRadius: 8, padding: 8, border: "1px solid #1f2937", color: "#6b7280", fontSize: 11, lineHeight: 1.5 }}>
+                  {line}
+                </div>
+              ))}
+            </div>
           </div>
         )}
         <textarea value={missionState.rest_notes || ""} onChange={e => patchMission({ rest_notes: e.target.value })}
@@ -5663,7 +6253,13 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
 
       <button onClick={onConfirm} disabled={!canApplyMissionClosure}
         style={{ width: "100%", padding: 16, borderRadius: 10, border: `2px solid ${canApplyMissionClosure ? "#166534" : "#7f1d1d"}`, background: canApplyMissionClosure ? "#16653422" : "#7f1d1d22", color: canApplyMissionClosure ? "#bbf7d0" : "#fca5a5", fontSize: 15, fontWeight: 800, cursor: canApplyMissionClosure ? "pointer" : "default" }}>
-        {rescuePending ? "Resuelve antes la Mision de Rescate" : leftForDeadPending ? "Completa Dado por Muerto" : "Aplicar cierre de mision"}
+        {rescuePending
+          ? "Resuelve antes la Mision de Rescate"
+          : leftForDeadPending
+            ? "Completa Dado por Muerto"
+            : unresolvedRest
+              ? "Completa la tirada de Posada / Bosque"
+              : "Aplicar cierre de mision"}
       </button>
       </>
       )}
@@ -6014,6 +6610,14 @@ function MissionSetupScreen({ campaign, adventurers, onStartMission, onBack }) {
             ))}
           </div>
         )}
+        {availableAdventurers.some(adv => getPendingStartEffectLabel(adv)) && (
+          <div style={{ color: "#fbbf24", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
+            Pendientes al inicio: {availableAdventurers
+              .filter(adv => getPendingStartEffectLabel(adv))
+              .map(adv => `${adv.nombre} (${getPendingStartEffectLabel(adv)})`)
+              .join(" | ")}
+          </div>
+        )}
         {recoveringAdventurers.length > 0 && (
           <div style={{ color: "#fbbf24", fontSize: 11, lineHeight: 1.5, marginBottom: 6 }}>
             Fuera temporalmente: {recoveringAdventurers.map(adv => `${adv.nombre} (${getAdventurerAvailabilityLabel(adv)})`).join(" | ")}
@@ -6340,6 +6944,13 @@ function App() {
 
   const startMission = () => {
     if (availableMissionAdventurers.length === 0) return;
+    const availableMissionIds = new Set(availableMissionAdventurers.map(adv => adv.id));
+    const adventurersForMissionStart = adventurers.map(adv => {
+      const normalized = normalizeAdventurer(adv);
+      return availableMissionIds.has(normalized.id)
+        ? applyPendingStartEffectsToAdventurer(normalized)
+        : normalized;
+    });
     const appliedDelayThreat = Math.max(0, Number(campaign?.demora || 0) || 0);
     const ms = normalizeMissionState({
       ...defaultMissionState(campaign.id, campaign.currentMission),
@@ -6353,6 +6964,7 @@ function App() {
         demora: Math.max(0, Number(prev?.demora || 0) - appliedDelayThreat),
       }));
     }
+    setAdventurers(adventurersForMissionStart);
     setMissionState(ms);
     setSubScreen("board");
   };
@@ -6366,10 +6978,11 @@ function App() {
         ? resolvedMission.participant_ids
         : adventurers.filter(canAdventurerJoinMission).map(adv => adv.id))
     );
-    const totalRenownGain = objectiveResolution.renown + Math.max(0, Number(resolvedMission.renombre_ganado || 0) || 0);
-    const totalGoldGain = objectiveResolution.gold + Math.max(0, Number(resolvedMission.oro_ganado || 0) || 0);
     const xpEach = Math.max(1, Number(resolvedMission.xp_base || 1)) + objectiveResolution.xpExtra + Math.max(0, Number(resolvedMission.xp_extra || 0) || 0);
     const livingAdventurers = adventurers.filter(adv => !isAdventurerDead(adv)).map(normalizeAdventurer);
+    const restOutcome = getRestOutcome(resolvedMission, livingAdventurers);
+    const totalRenownGain = objectiveResolution.renown + Math.max(0, Number(resolvedMission.renombre_ganado || 0) || 0) + restOutcome.renownBonus;
+    const totalGoldGain = objectiveResolution.gold + Math.max(0, Number(resolvedMission.oro_ganado || 0) || 0);
     const maintenanceCost = livingAdventurers.reduce((sum, adv) => sum + 1 + Math.max(1, Number(adv.rango || 1)), 0);
     const lodgingCost = resolvedMission.rest_mode === "posada" ? livingAdventurers.length * 2 : 0;
     const craftedSpend = (resolvedMission.crafted_items || []).reduce((sum, item) => sum + Number(item.price || 0), 0);
@@ -6387,7 +7000,7 @@ function App() {
       if (finalResult !== 5 || !entry.paidRansom) return sum;
       return sum + (5 * Math.max(1, Number(owner.rango || 1)));
     }, 0);
-    const phaseGoldDelta = totalGoldGain + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend - rescueSpend;
+    const phaseGoldDelta = totalGoldGain + soldIncome + restOutcome.goldDelta - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend - rescueSpend;
     const updatedAdventurers = adventurers.map(adv => {
       const normalized = normalizeAdventurer(adv);
       const craftedForAdventurer = (resolvedMission.crafted_items || [])
@@ -6405,9 +7018,12 @@ function App() {
         .map(item => normalizeInventoryItem(item.payload || { name: item.name, buy: item.price }));
       const baseUpdated = normalizeAdventurer({
         ...normalized,
-        experiencia: normalized.vivo !== false && participantIdSet.has(normalized.id)
-          ? Math.max(0, Number(normalized.experiencia || 0) + xpEach)
-          : Math.max(0, Number(normalized.experiencia || 0)),
+        experiencia: Math.max(
+          0,
+          Number(normalized.experiencia || 0)
+            + (normalized.vivo !== false && participantIdSet.has(normalized.id) ? xpEach : 0)
+            + Math.max(0, Number(restOutcome.xpByAdventurer?.[normalized.id] || 0))
+        ),
         misiones_no_disponible: normalized.vivo !== false
           ? Math.max(0, Number(normalized.misiones_no_disponible || 0) - 1)
           : 0,
@@ -6422,10 +7038,28 @@ function App() {
       const leftForDeadEntry = (resolvedMission.left_for_dead_rolls || []).find(entry => entry.adventurerId === normalized.id);
       const afterEscape = leftForDeadEntry ? applyLeftForDeadOutcomeToAdventurer(baseUpdated, leftForDeadEntry) : baseUpdated;
       if (afterEscape.vivo === false) return afterEscape;
+      const immediateRestEffect = restOutcome.immediateByAdventurer?.[normalized.id] || getEmptyRestEffect();
+      const pendingRestEffect = restOutcome.pendingByAdventurer?.[normalized.id] || { health: 0, skill: 0, magic: 0, addStatuses: [] };
+      let nextStatusEffects = [...(afterEscape.status_effects || [])];
+      (immediateRestEffect.addStatuses || []).forEach(statusId => {
+        nextStatusEffects = addStatusEffectIfMissing(nextStatusEffects, statusId);
+      });
+      const nextInventory = (afterEscape.inventario || [])
+        .filter(item => !(immediateRestEffect.removeItemIds || []).includes(item.id));
       return normalizeAdventurer({
         ...afterEscape,
+        salud_actual: Math.max(0, Math.min(afterEscape.salud_max, Number(afterEscape.salud_actual || 0) + Number(immediateRestEffect.health || 0))),
+        habilidad_actual: Math.max(0, Math.min(afterEscape.habilidad_max, Number(afterEscape.habilidad_actual || 0) + Number(immediateRestEffect.skill || 0))),
+        magia_actual: Math.max(0, Math.min(afterEscape.magia_max, Number(afterEscape.magia_actual || 0) + Number(immediateRestEffect.magic || 0))),
+        status_effects: nextStatusEffects,
+        pending_start_effects: mergePendingStartEffects(afterEscape.pending_start_effects, {
+          health: Number(pendingRestEffect.health || 0),
+          skill: Number(pendingRestEffect.skill || 0),
+          magic: Number(pendingRestEffect.magic || 0),
+          statuses: pendingRestEffect.addStatuses || [],
+        }),
         inventario: [
-          ...(afterEscape.inventario || []),
+          ...nextInventory,
           ...craftedForAdventurer,
           ...purchasedForAdventurer,
         ],
@@ -6462,6 +7096,12 @@ function App() {
               : "",
             rescueSpend > 0
               ? "Rescates pagados: -" + rescueSpend + "G"
+              : "",
+            restOutcome.summaryLines.length > 0
+              ? "Descanso: " + restOutcome.summaryLines.join(", ")
+              : "",
+            restOutcome.notes.length > 0
+              ? "Notas de Posada/Bosque: " + restOutcome.notes.join(", ")
               : "",
             (resolvedMission.left_for_dead_rolls || []).length > 0
               ? "Dado por Muerto: " + (resolvedMission.left_for_dead_rolls || []).map(entry => {
