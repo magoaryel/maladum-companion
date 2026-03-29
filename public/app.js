@@ -4277,6 +4277,8 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
   const availableGoldBeforeMarket = currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost - repairSpend - craftedSpend;
   const phaseGoldDelta = totalGoldGain + soldIncome - maintenanceCost - lodgingCost - craftedSpend - repairSpend - marketSpend;
   const currentGoldAfterSales = Math.max(0, currentGroupGold + totalGoldGain + soldIncome);
+  const currentGoldAfterRestAndSales = Math.max(0, currentGroupGold + totalGoldGain + soldIncome - maintenanceCost - lodgingCost);
+  const currentGoldAfterRepairs = Math.max(0, currentGoldAfterRestAndSales - repairSpend);
   const totalGoldAfterPhase = Math.max(0, currentGroupGold + phaseGoldDelta);
   const totalGoldAfterRest = Math.max(0, currentGroupGold + totalGoldGain - maintenanceCost - lodgingCost);
   const currentStep = postMissionSteps[activeStepIndex] || postMissionSteps[0];
@@ -4879,6 +4881,18 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
           Marca aqui los objetos rotos que quieres reparar durante la fase de mercado. Comun 1G, Poco comun 3G, Raro 5G. Si una carta especial no entra en esos rangos, puedes escribir el coste manualmente.
         </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+            <div style={{ color: "#93c5fd", fontSize: 10, marginBottom: 4 }}>Oro disponible ahora</div>
+            <div style={{ color: "#fde68a", fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{currentGoldAfterRestAndSales}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>Despues de ventas, mantenimiento y descanso</div>
+          </div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+            <div style={{ color: "#9ca3af", fontSize: 10, marginBottom: 4 }}>Oro restante tras reparar</div>
+            <div style={{ color: "#d4b896", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{currentGoldAfterRepairs}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>Con lo que ya has marcado en esta fase</div>
+          </div>
+        </div>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 8, color: "#9ca3af", fontSize: 11, marginBottom: 8 }}>
           <span>Objetos rotos: {brokenItems.length}</span>
           <span>Gasto en reparacion: {repairSpend}G</span>
@@ -4996,6 +5010,18 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         </div>
         <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
           Introduce los materiales obtenidos. Al tocar una receta elegiras que aventurero la recibe, se descontaran las letras usadas y el coste se restara del oro neto. Si un objeto unico ya fue fabricado o ya esta en el grupo, desaparece de esta lista.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+            <div style={{ color: "#93c5fd", fontSize: 10, marginBottom: 4 }}>Oro disponible ahora</div>
+            <div style={{ color: "#fde68a", fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{Math.max(0, availableGoldBeforeCraft)}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>Tras ventas, descanso, reparaciones y compras ya marcadas</div>
+          </div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+            <div style={{ color: "#9ca3af", fontSize: 10, marginBottom: 4 }}>Oro restante con lo marcado</div>
+            <div style={{ color: "#d4b896", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{totalGoldAfterPhase}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>Restando crafteo y compras ya preparados</div>
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 8, marginBottom: 10 }}>
           {RESOURCE_LETTERS.map(letter => (
@@ -5126,6 +5152,18 @@ function MissionResolutionScreen({ campaign, missionState, adventurers, onUpdate
         </div>
         <div style={{ color: "#6b7280", fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>
           Compra items usando el oro total del grupo. Al elegir un item, asignalo al aventurero que lo compra y se anadira a su inventario al aplicar el cierre.
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
+          <div style={{ background: "#132034", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+            <div style={{ color: "#93c5fd", fontSize: 10, marginBottom: 4 }}>Oro disponible ahora</div>
+            <div style={{ color: "#fde68a", fontSize: 28, fontWeight: 800, lineHeight: 1 }}>{Math.max(0, availableGoldBeforeMarket)}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>Tras ventas, descanso, reparaciones y crafteo ya marcados</div>
+          </div>
+          <div style={{ background: "#0f172a", borderRadius: 8, padding: 10, border: "1px solid #2d2d44" }}>
+            <div style={{ color: "#9ca3af", fontSize: 10, marginBottom: 4 }}>Oro restante con lo marcado</div>
+            <div style={{ color: "#d4b896", fontSize: 24, fontWeight: 800, lineHeight: 1 }}>{totalGoldAfterPhase}G</div>
+            <div style={{ color: "#6b7280", fontSize: 11, marginTop: 6 }}>Ya teniendo en cuenta crafteo y compras preparadas</div>
+          </div>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 110px", gap: 8, marginBottom: 8 }}>
           <input value={marketQuery} onChange={e => setMarketQuery(e.target.value)}
