@@ -3637,10 +3637,11 @@ function AdventurerSheetV2({ adv, onUpdate, onBack, onRemove, createMode = false
   );
 }
 
-function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission, onCastMagic, onClose }) {
+function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission, onCastMagic, onUpdateAdventurer, onClose }) {
   const normalized = normalizeAdventurer(adv);
   const [filter, setFilter] = useState("all");
   const [spellTargets, setSpellTargets] = useState({});
+  const [selectedEntryId, setSelectedEntryId] = useState(null);
   const learnedSkills = getLearnedSkills(normalized);
   const spells = getKnownSpells(normalized);
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
@@ -3683,6 +3684,7 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
   ];
 
   const visible = entries.filter(entry => filter === "all" || (entry.tags || []).includes(filter));
+  const selectedEntry = visible.find(entry => entry.id === selectedEntryId) || entries.find(entry => entry.id === selectedEntryId) || null;
 
   const markFirstMagicUse = () => {
     if (!missionState || missionState.magia_usada_esta_ronda) return;
@@ -3707,9 +3709,37 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
     onClose();
   };
 
+  useEffect(() => {
+    if (!visible.length) {
+      setSelectedEntryId(null);
+      return;
+    }
+    if (!visible.some(entry => entry.id === selectedEntryId)) {
+      setSelectedEntryId(visible[0].id);
+    }
+  }, [selectedEntryId, visible]);
+
+  const useSelectedSkill = () => {
+    if (!selectedEntry || selectedEntry.source === "Hechizo" || normalized.habilidad_actual <= 0 || typeof onUpdateAdventurer !== "function") return;
+    onUpdateAdventurer(normalizeAdventurer({
+      ...normalized,
+      habilidad_actual: Math.max(0, normalized.habilidad_actual - 1),
+    }));
+    onClose();
+  };
+
   return (
     <ModalSheet title="Habilidades" subtitle={normalized.nombre + (normalized.clase ? " | " + normalized.clase : "")} onClose={onClose}>
-      {normalized.magia_max > 0 && (
+      <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 12 }}>
+        <div style={{ color: "#d946ef", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
+          SP actual {normalized.habilidad_actual}/{normalized.habilidad_max}
+        </div>
+        <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>
+          Selecciona una habilidad para marcar que la usas en esta ronda y descontar 1 SP. Las pasivas no hace falta marcarlas.
+        </div>
+      </div>
+
+      {normalized.magia_max > 0 && spells.length > 0 && (
         <div style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12, marginBottom: 12 }}>
           <div style={{ color: "#93c5fd", fontSize: 12, fontWeight: 700, marginBottom: 6 }}>
             MP actual {normalized.magia_actual}/{normalized.magia_max}
@@ -3742,7 +3772,8 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
       {visible.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           {visible.map(entry => (
-            <div key={entry.id} style={{ background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 }}>
+            <div key={entry.id} onClick={() => setSelectedEntryId(entry.id)}
+              style={{ background: "#0f172a", borderRadius: 10, border: selectedEntryId === entry.id ? `1px solid ${entry.source === "Hechizo" ? "#3b82f6" : "#eab308"}` : "1px solid #2d2d44", padding: 12, cursor: "pointer" }}>
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 6 }}>
                 <span style={{ color: entry.accent, fontSize: 14, fontWeight: 700 }}>{entry.name}</span>
                 <span style={{ fontSize: 11, color: "#9ca3af", padding: "2px 8px", borderRadius: 999, border: "1px solid #374151" }}>{entry.source}</span>
@@ -3808,6 +3839,21 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
         </div>
       ) : (
         <div style={{ color: "#6b7280", fontSize: 13 }}>No hay entradas para este filtro.</div>
+      )}
+
+      {selectedEntry && selectedEntry.source !== "Hechizo" && (
+        <div style={{ marginTop: 12, background: "#111827", borderRadius: 10, border: "1px solid #1f2937", padding: 12 }}>
+          <div style={{ color: "#fde68a", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
+            {selectedEntry.name}
+          </div>
+          <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5, marginBottom: 10 }}>
+            Al confirmar, se descontara 1 SP de {normalized.nombre} para marcar el uso de esta habilidad.
+          </div>
+          <button onClick={useSelectedSkill} disabled={normalized.habilidad_actual <= 0}
+            style={{ width: "100%", padding: 12, borderRadius: 8, border: normalized.habilidad_actual > 0 ? "1px solid #86198f" : "1px solid #374151", background: normalized.habilidad_actual > 0 ? "#86198f22" : "#111827", color: normalized.habilidad_actual > 0 ? "#f5d0fe" : "#6b7280", fontSize: 12, fontWeight: 700, cursor: normalized.habilidad_actual > 0 ? "pointer" : "default" }}>
+            {normalized.habilidad_actual > 0 ? "Usar habilidad (-1 SP)" : "Sin SP disponible"}
+          </button>
+        </div>
       )}
     </ModalSheet>
   );
@@ -5200,6 +5246,7 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           missionState={missionState}
           onUpdateMission={onUpdateMission}
           onCastMagic={handleCastMagic}
+          onUpdateAdventurer={onUpdateAdventurer}
           onClose={() => setActiveAbilityAdv(null)}
         />
       )}
