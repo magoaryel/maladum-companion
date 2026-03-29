@@ -1845,7 +1845,7 @@ function getCombatWeaponOptions(adv, mode) {
         return item?.meleeDice > 0 || attrs.has("melee") || attrs.has("forceful_melee") || attrs.has("quickstrike") || attrs.has("parry") || attrs.has("reach");
       }
       if (mode === "ranged") {
-        return item?.rangedDice > 0 || (item?.range || []).length > 0 || attrs.has("ammo_arrow") || attrs.has("ammo_bullet") || attrs.has("blast") || attrs.has("trap_melee");
+        return item?.rangedDice > 0 || (item?.range || []).length > 0 || attrs.has("blast") || attrs.has("trap_melee");
       }
       return false;
     })
@@ -1865,6 +1865,29 @@ function getFrenzyBonusDice(level) {
   if (level === 2) return 3;
   if (level === 1) return 2;
   return 0;
+}
+
+function getRequiredAmmoAttribute(item) {
+  const attrs = new Set(item?.rawAttributes || item?.attributes || []);
+  if (attrs.has("infinite_ammo")) return null;
+  if (attrs.has("ammo_arrow")) return "ammo_arrow";
+  if (attrs.has("ammo_bullet")) return "ammo_bullet";
+  return null;
+}
+
+function getAvailableAmmoCount(adv, ammoAttribute, excludedItemId = null) {
+  if (!ammoAttribute) return 0;
+  return (normalizeAdventurer(adv).inventario || []).filter(item =>
+    !item?.broken &&
+    item?.id !== excludedItemId &&
+    (item?.attributes || []).includes(ammoAttribute)
+  ).length;
+}
+
+function canUseWeaponWithCurrentAmmo(adv, weapon) {
+  const ammoAttribute = getRequiredAmmoAttribute(weapon);
+  if (!ammoAttribute) return true;
+  return getAvailableAmmoCount(adv, ammoAttribute, weapon?.id) > 0;
 }
 
 function applyAdventurerResourceSpend(adv, costs = {}) {
@@ -2450,8 +2473,6 @@ function isWeaponItem(item) {
     attrs.has("sharp") ||
     attrs.has("piercing") ||
     attrs.has("blast") ||
-    attrs.has("ammo_arrow") ||
-    attrs.has("ammo_bullet") ||
     attrs.has("trap_melee")
   );
 }
@@ -3778,6 +3799,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const armorNames = getCombatEquipmentNames(equippedItems, "armor");
   const meleeWeapons = getCombatWeaponOptions(normalized, "melee");
   const rangedWeapons = getCombatWeaponOptions(normalized, "ranged");
+  const usableRangedWeapons = rangedWeapons.filter(item => canUseWeaponWithCurrentAmmo(normalized, item));
   const spells = getCombatSpellEntries(normalized).slice(0, 8);
   const defenseSkills = getCombatSkillEntries(normalized, ["defense", "reaction"]).slice(0, 5);
   const defenseAttributeEntries = getCombatAttributeEntries(equippedItems, "defense");
@@ -3788,7 +3810,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const blessingTargets = (adventurers || []).map(normalizeAdventurer).filter(target => target.id !== normalized.id);
   const availableAttackModes = [
     { id: "melee", label: "Ataque C/C", enabled: true },
-    { id: "ranged", label: "Ataque Dist", enabled: rangedWeapons.length > 0 || equipment.rangedDice > 0 },
+    { id: "ranged", label: "Ataque Dist", enabled: usableRangedWeapons.length > 0 },
     { id: "magic", label: "Magia", enabled: spells.length > 0 && normalized.magia_actual > 0 },
   ].filter(option => option.enabled);
   const defaultAttackMode = availableAttackModes[0]?.id || "melee";
@@ -3810,6 +3832,9 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const cardStyle = { background: "#0f172a", borderRadius: 10, border: "1px solid #2d2d44", padding: 12 };
   const selectedMelee = meleeWeapons.find(item => item.id === selectedMeleeId) || meleeWeapons[0] || null;
   const selectedRanged = rangedWeapons.find(item => item.id === selectedRangedId) || rangedWeapons[0] || null;
+  const selectedRangedHasAmmo = !selectedRanged || canUseWeaponWithCurrentAmmo(normalized, selectedRanged);
+  const selectedRangedAmmoAttribute = getRequiredAmmoAttribute(selectedRanged);
+  const selectedRangedAmmoCount = selectedRangedAmmoAttribute ? getAvailableAmmoCount(normalized, selectedRangedAmmoAttribute, selectedRanged?.id) : 0;
   const selectedSpell = spells.find(spell => spell.name === selectedSpellId) || spells[0] || null;
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
   const frenzyBonus = useFrenzy ? getFrenzyBonusDice(frenzyEntry?.level || 0) : 0;
@@ -3903,6 +3928,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const beginAttackResolution = (attackMode) => {
     const weapon = attackMode === "melee" ? selectedMelee : selectedRanged;
     const diceCount = attackMode === "melee" ? meleeDiceTotal : rangedDiceTotal;
+    if (attackMode === "ranged" && !canUseWeaponWithCurrentAmmo(normalized, weapon)) return;
     if (!weapon || diceCount <= 0) return;
     setAttackResolution({
       mode: attackMode,
@@ -4259,6 +4285,18 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
               {selectedRanged.range.length > 0 && <div style={{ color: "#d4b896", fontSize: 12, marginBottom: 6 }}>Alcance: {selectedRanged.range.join("/")}</div>}
               {!!selectedRanged.summary && <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{selectedRanged.summary}</div>}
               {renderTagList(selectedRanged.attributes, "attack")}
+              {selectedRangedAmmoAttribute && (
+                <div style={{ color: selectedRangedHasAmmo ? "#93c5fd" : "#fca5a5", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+                  {selectedRangedAmmoAttribute === "ammo_arrow"
+                    ? `Flechas disponibles: ${selectedRangedAmmoCount}`
+                    : `Balas disponibles: ${selectedRangedAmmoCount}`}
+                </div>
+              )}
+              {!selectedRangedHasAmmo && (
+                <div style={{ color: "#fca5a5", fontSize: 11, lineHeight: 1.5, marginTop: 8 }}>
+                  Esta arma necesita municion y ya no queda ninguna disponible.
+                </div>
+              )}
               {baseRangedDice <= 0 && (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>
@@ -4294,8 +4332,8 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
 
           {attackResolution?.mode === "ranged" && renderAttackResolutionPanel()}
 
-          <button onClick={() => beginAttackResolution("ranged")} disabled={!selectedRanged || rangedDiceTotal <= 0}
-            style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: "#fca5a5", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
+          <button onClick={() => beginAttackResolution("ranged")} disabled={!selectedRanged || rangedDiceTotal <= 0 || !selectedRangedHasAmmo}
+            style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: (!selectedRanged || rangedDiceTotal <= 0 || !selectedRangedHasAmmo) ? "#6b7280" : "#fca5a5", fontSize: 12, fontWeight: 700, cursor: (!selectedRanged || rangedDiceTotal <= 0 || !selectedRangedHasAmmo) ? "default" : "pointer" }}>
             Atacar
           </button>
         </>
@@ -4953,9 +4991,10 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         const equipped = summarizeEquippedItems(normalized);
         const knownSpells = getKnownSpells(normalized);
         const rangedOptions = getCombatWeaponOptions(normalized, "ranged");
+        const usableRangedOptions = rangedOptions.filter(item => canUseWeaponWithCurrentAmmo(normalized, item));
         const actionButtons = [
           { id: "melee", label: "Ataque C/C", enabled: true, tone: "attack" },
-          { id: "ranged", label: "Ataque Dist", enabled: rangedOptions.length > 0 || equipment.rangedDice > 0, tone: "ranged" },
+          { id: "ranged", label: "Ataque Dist", enabled: usableRangedOptions.length > 0, tone: "ranged" },
           { id: "magic", label: "Magia", enabled: knownSpells.length > 0, disabled: normalized.magia_actual <= 0, tone: "magic" },
           { id: "defense", label: "Defensa", enabled: true, tone: "defense" },
           { id: "rest", label: "Descansar", enabled: true, tone: "rest" },
