@@ -3597,7 +3597,7 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
   const learnedSkills = getLearnedSkills(normalized);
   const spells = getKnownSpells(normalized);
   const magicPegOptions = getMagicPegOptions(normalized.magia_actual);
-  const blessTargets = (adventurers || []).map(normalizeAdventurer);
+  const blessTargets = (adventurers || []).map(normalizeAdventurer).filter(target => target.id !== normalized.id);
   const filters = [
     { id: "all", label: "Todo" },
     { id: "magic", label: "Magia" },
@@ -3644,7 +3644,8 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
 
   const castSpellFromAbilities = (spell, pegs) => {
     if (!spell || typeof onCastMagic !== "function") return;
-    const blessingTargetId = isBlessingSpell(spell) ? (spellTargets[spell.id] || normalized.id) : null;
+    const blessingTargetId = isBlessingSpell(spell) ? (spellTargets[spell.id] || blessTargets[0]?.id || null) : null;
+    if (isBlessingSpell(spell) && !blessingTargetId) return;
     onCastMagic({
       adventurerId: normalized.id,
       adventurerName: normalized.nombre,
@@ -3718,17 +3719,23 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
                   {isBlessingSpell(entry.spell) && (
                     <div style={{ marginBottom: 8 }}>
                       <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
-                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                        {blessTargets.map(target => {
-                          const selected = (spellTargets[entry.spell.id] || normalized.id) === target.id;
-                          return (
-                            <button key={target.id} onClick={() => setSpellTargets(prev => ({ ...prev, [entry.spell.id]: target.id }))}
-                              style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                              {target.nombre}
-                            </button>
-                          );
-                        })}
-                      </div>
+                      {blessTargets.length > 0 ? (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                          {blessTargets.map(target => {
+                            const selected = (spellTargets[entry.spell.id] || blessTargets[0]?.id) === target.id;
+                            return (
+                              <button key={target.id} onClick={() => setSpellTargets(prev => ({ ...prev, [entry.spell.id]: target.id }))}
+                                style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                                {target.nombre}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div style={{ color: "#fca5a5", fontSize: 11, lineHeight: 1.5 }}>
+                          No hay otro aventurero valido para recibir Bendicion.
+                        </div>
+                      )}
                     </div>
                   )}
                   {isConcentrationSpell(entry.spell) && (
@@ -3740,6 +3747,7 @@ function CombatAbilitiesModal({ adv, adventurers, missionState, onUpdateMission,
                     <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                       {magicPegOptions.map(value => (
                         <button key={value} onClick={() => castSpellFromAbilities(entry.spell, value)}
+                          disabled={isBlessingSpell(entry.spell) && blessTargets.length === 0}
                           style={{ padding: "8px 10px", borderRadius: 999, border: "1px solid #3b82f6", background: "#1d4ed822", color: "#dbeafe", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
                           Usar {value}
                         </button>
@@ -3773,7 +3781,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const blessingCount = getStatusEffectCount(normalized.status_effects, "blessed");
   const frenzyEntry = getLearnedSkills(normalized).find(skill => skill.name === "Frenzy") || null;
   const canUseFrenzy = !!frenzyEntry && normalized.habilidad_actual > 0;
-  const blessingTargets = (adventurers || []).map(normalizeAdventurer);
+  const blessingTargets = (adventurers || []).map(normalizeAdventurer).filter(target => target.id !== normalized.id);
   const availableAttackModes = [
     { id: "melee", label: "Ataque C/C", enabled: true },
     { id: "ranged", label: "Ataque Dist", enabled: rangedWeapons.length > 0 || equipment.rangedDice > 0 },
@@ -3786,7 +3794,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
   const [selectedRangedId, setSelectedRangedId] = useState(rangedWeapons[0]?.id || null);
   const [selectedSpellId, setSelectedSpellId] = useState(spells[0]?.name || null);
   const [selectedMagicPegs, setSelectedMagicPegs] = useState(1);
-  const [selectedBlessingTargetId, setSelectedBlessingTargetId] = useState(normalized.id);
+  const [selectedBlessingTargetId, setSelectedBlessingTargetId] = useState(null);
   const [useFrenzy, setUseFrenzy] = useState(false);
   const [useForceful, setUseForceful] = useState(false);
   const [useBlessing, setUseBlessing] = useState(false);
@@ -3860,10 +3868,14 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
 
   useEffect(() => {
     const availableTargetIds = blessingTargets.map(target => target.id);
-    if (!availableTargetIds.includes(selectedBlessingTargetId)) {
-      setSelectedBlessingTargetId(normalized.id);
+    if (!availableTargetIds.length) {
+      setSelectedBlessingTargetId(null);
+      return;
     }
-  }, [blessingTargets, normalized.id, selectedBlessingTargetId]);
+    if (!availableTargetIds.includes(selectedBlessingTargetId)) {
+      setSelectedBlessingTargetId(availableTargetIds[0]);
+    }
+  }, [blessingTargets, selectedBlessingTargetId]);
 
   useEffect(() => {
     if (attackResolution && !["melee", "ranged"].includes(mode)) {
@@ -3953,6 +3965,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
 
   const castSelectedSpell = () => {
     if (!selectedSpell || !selectedMagicPegs || typeof onCastMagic !== "function") return;
+    if (isBlessingSpell(selectedSpell) && !selectedBlessingTargetId) return;
     onCastMagic({
       adventurerId: normalized.id,
       adventurerName: normalized.nombre,
@@ -4293,20 +4306,28 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
               {isBlessingSpell(selectedSpell) && (
                 <div style={{ marginTop: 10 }}>
                   <div style={{ color: "#d4b896", fontSize: 11, marginBottom: 6 }}>Objetivo de Bendicion</div>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
-                    {blessingTargets.map(target => {
-                      const selected = selectedBlessingTargetId === target.id;
-                      return (
-                        <button key={target.id} onClick={() => setSelectedBlessingTargetId(target.id)}
-                          style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
-                          {target.nombre}
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5 }}>
-                    Al confirmar, {blessingTargets.find(target => target.id === selectedBlessingTargetId)?.nombre || normalized.nombre} ganara {selectedMagicPegs} ficha{selectedMagicPegs === 1 ? "" : "s"} de Bendicion.
-                  </div>
+                  {blessingTargets.length > 0 ? (
+                    <>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
+                        {blessingTargets.map(target => {
+                          const selected = selectedBlessingTargetId === target.id;
+                          return (
+                            <button key={target.id} onClick={() => setSelectedBlessingTargetId(target.id)}
+                              style={{ padding: "7px 10px", borderRadius: 999, border: selected ? "1px solid #fbbf24" : "1px solid #374151", background: selected ? "#f59e0b22" : "#0f172a", color: selected ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                              {target.nombre}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div style={{ color: "#fde68a", fontSize: 11, lineHeight: 1.5 }}>
+                        Al confirmar, {blessingTargets.find(target => target.id === selectedBlessingTargetId)?.nombre || "el objetivo"} ganara {selectedMagicPegs} ficha{selectedMagicPegs === 1 ? "" : "s"} de Bendicion.
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ color: "#fca5a5", fontSize: 11, lineHeight: 1.5 }}>
+                      No hay otro aventurero valido para recibir Bendicion.
+                    </div>
+                  )}
                 </div>
               )}
               {isConcentrationSpell(selectedSpell) && (
@@ -4319,7 +4340,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             </div>
           )}
 
-          <button onClick={castSelectedSpell} disabled={!selectedSpell || !selectedMagicPegs}
+          <button onClick={castSelectedSpell} disabled={!selectedSpell || !selectedMagicPegs || (isBlessingSpell(selectedSpell) && !selectedBlessingTargetId)}
             style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #1d4ed8", background: selectedSpell ? "#1d4ed822" : "#111827", color: selectedSpell ? "#dbeafe" : "#6b7280", fontSize: 12, fontWeight: 700, cursor: selectedSpell ? "pointer" : "default" }}>
             Atacar con magia
           </button>
@@ -4482,9 +4503,9 @@ function MagicResultModal({ state, adventurers, onApplyResult, onClose }) {
   );
 }
 
-function InventoryModal({ adv, onUpdateAdventurer, onClose }) {
+function InventoryModal({ adv, onUpdateAdventurer, onClose, initialView = "inventory" }) {
   const normalized = normalizeAdventurer(adv);
-  const [view, setView] = useState("inventory");
+  const [view, setView] = useState(initialView);
   return (
     <ModalSheet
       title="Items encontrados"
@@ -4629,7 +4650,8 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
   const [activeCombatMode, setActiveCombatMode] = useState("melee");
   const [magicResultState, setMagicResultState] = useState(null);
   const [activeAbilityAdv, setActiveAbilityAdv] = useState(null);
-  const [activeItemAdv, setActiveItemAdv] = useState(null);
+  const [activeInventoryAdv, setActiveInventoryAdv] = useState(null);
+  const [activeSearchAdv, setActiveSearchAdv] = useState(null);
   const [activeRestAdv, setActiveRestAdv] = useState(null);
   const patchMission = (updates) => onUpdateMission(normalizeMissionState({ ...missionState, ...updates }));
 
@@ -4663,7 +4685,8 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
 
   const selectedCombatAdv = adventurers.find(a => a.id === activeCombatAdv) || null;
   const selectedAbilityAdv = adventurers.find(a => a.id === activeAbilityAdv) || null;
-  const selectedItemAdv = adventurers.find(a => a.id === activeItemAdv) || null;
+  const selectedInventoryAdv = adventurers.find(a => a.id === activeInventoryAdv) || null;
+  const selectedSearchAdv = adventurers.find(a => a.id === activeSearchAdv) || null;
   const selectedRestAdv = adventurers.find(a => a.id === activeRestAdv) || null;
   const handleCastMagic = (payload) => {
     if (!payload?.adventurerId) return;
@@ -4842,7 +4865,8 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
           { id: "defense", label: "Defensa", enabled: true, tone: "defense" },
           { id: "rest", label: "Descansar", enabled: true, tone: "rest" },
           { id: "abilities", label: "Habilidades", enabled: true, tone: "neutral" },
-          { id: "items", label: "Items", enabled: true, tone: "neutral" },
+          { id: "inventory", label: "Inventario", enabled: true, tone: "neutral" },
+          { id: "search", label: "Busqueda", enabled: true, tone: "neutral" },
         ].filter(button => button.enabled);
         return (
           <div key={a.id} style={{ background: "#1a1a2e", borderRadius: 10, padding: 12,
@@ -4916,8 +4940,12 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
                     setActiveAbilityAdv(normalized.id);
                     return;
                   }
-                  if (button.id === "items") {
-                    setActiveItemAdv(normalized.id);
+                  if (button.id === "inventory") {
+                    setActiveInventoryAdv(normalized.id);
+                    return;
+                  }
+                  if (button.id === "search") {
+                    setActiveSearchAdv(normalized.id);
                     return;
                   }
                   setActiveCombatMode(button.id);
@@ -4976,13 +5004,21 @@ MainBoardV2 = function MainBoardV2Patched({ missionState, adventurers, campaign,
         />
       )}
 
-      {selectedItemAdv && (
+      {selectedInventoryAdv && (
         <InventoryModal
-          adv={selectedItemAdv}
-          missionState={missionState}
-          onUpdateMission={onUpdateMission}
+          adv={selectedInventoryAdv}
           onUpdateAdventurer={onUpdateAdventurer}
-          onClose={() => setActiveItemAdv(null)}
+          initialView="inventory"
+          onClose={() => setActiveInventoryAdv(null)}
+        />
+      )}
+
+      {selectedSearchAdv && (
+        <InventoryModal
+          adv={selectedSearchAdv}
+          onUpdateAdventurer={onUpdateAdventurer}
+          initialView="search"
+          onClose={() => setActiveSearchAdv(null)}
         />
       )}
 
