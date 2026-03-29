@@ -4053,7 +4053,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             ...updated,
             inventario: updated.inventario.filter((_, index) => index !== ammoIndex),
           });
-          outcomeLines.push("Se queda sin 1 flecha");
+          outcomeLines.push("SE QUEDA SIN MUNICION");
         }
       }
       if (attackResolution.rawAttributes.includes("ammo_bullet")) {
@@ -4063,7 +4063,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             ...updated,
             inventario: updated.inventario.filter((_, index) => index !== ammoIndex),
           });
-          outcomeLines.push("Se queda sin 1 bala");
+          outcomeLines.push("SE QUEDA SIN MUNICION");
         }
       }
     }
@@ -4210,7 +4210,7 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
           {attackOutcomeSummary.lines.map((line, index) => (
-            <div key={index} style={{ color: "#9ca3af", fontSize: 12, lineHeight: 1.5 }}>
+            <div key={index} style={{ color: "#ffffff", fontSize: 13, fontWeight: 700, lineHeight: 1.5 }}>
               {line}
             </div>
           ))}
@@ -4269,7 +4269,8 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
 
       {mode === "melee" && (
         <>
-          {attackOutcomeSummary && renderAttackOutcomeSummary()}
+          {attackOutcomeSummary ? renderAttackOutcomeSummary() : (
+          <>
           <div style={{ marginBottom: 12 }}>
             <div style={sectionTitleStyle}>Arma cuerpo a cuerpo</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -4360,12 +4361,15 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #92400e", background: "#92400e22", color: "#fde68a", fontSize: 12, fontWeight: 700, cursor: "pointer" }}>
             Atacar
           </button>
+          </>
+          )}
         </>
       )}
 
       {mode === "ranged" && (
         <>
-          {attackOutcomeSummary && renderAttackOutcomeSummary()}
+          {attackOutcomeSummary ? renderAttackOutcomeSummary() : (
+          <>
           <div style={{ marginBottom: 12 }}>
             <div style={sectionTitleStyle}>Arma a distancia</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -4446,6 +4450,8 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             style={{ width: "100%", padding: 12, borderRadius: 8, border: "1px solid #7f1d1d", background: "#7f1d1d22", color: (!selectedRanged || rangedDiceTotal <= 0 || !selectedRangedHasAmmo) ? "#6b7280" : "#fca5a5", fontSize: 12, fontWeight: 700, cursor: (!selectedRanged || rangedDiceTotal <= 0 || !selectedRangedHasAmmo) ? "default" : "pointer" }}>
             Atacar
           </button>
+          </>
+          )}
         </>
       )}
 
