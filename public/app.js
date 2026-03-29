@@ -4295,10 +4295,25 @@ function CombatQuickReferenceModal({ adv, adventurers, missionState, onCastMagic
             <div style={{ ...cardStyle, marginBottom: 12 }}>
               <div style={{ color: "#d4b896", fontSize: 14, fontWeight: 700, marginBottom: 6 }}>{selectedMelee.name}</div>
               <div style={{ color: "#fde68a", fontSize: 13, fontWeight: 700, marginBottom: 6 }}>
-                {selectedMelee.dice > 0 ? `Tira ${selectedMelee.dice} dado${selectedMelee.dice === 1 ? "" : "s"} base.` : "Usa el perfil de la carta del arma."}
+                {baseMeleeDice > 0 ? `Tira ${baseMeleeDice} dado${baseMeleeDice === 1 ? "" : "s"} base.` : "Usa el perfil de la carta del arma."}
               </div>
               {!!selectedMelee.summary && <div style={{ color: "#9ca3af", fontSize: 11, lineHeight: 1.5 }}>{selectedMelee.summary}</div>}
               {renderTagList(selectedMelee.attributes, "attack")}
+              {baseMeleeDice <= 0 && (
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ color: "#9ca3af", fontSize: 11, marginBottom: 6 }}>
+                    Esta arma no trae dados cargados en la base oficial. Elige los dados que indica su carta para resolver este ataque.
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {[1,2,3,4,5,6].map(value => (
+                      <button key={value} onClick={() => setManualMeleeDice(value)}
+                        style={{ padding: "6px 10px", borderRadius: 999, border: manualMeleeDice === value ? "1px solid #eab308" : "1px solid #374151", background: manualMeleeDice === value ? "#eab30822" : "#0f172a", color: manualMeleeDice === value ? "#fde68a" : "#9ca3af", fontSize: 11, fontWeight: 700, cursor: "pointer" }}>
+                        {value} dado{value === 1 ? "" : "s"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
