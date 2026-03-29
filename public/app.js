@@ -3108,43 +3108,35 @@ InventoryEditor = function InventoryEditorPatched({ adv, onUpdate }) {
 };
 
 SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
-  const [draft, setDraft] = useState({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
-  const rank = Math.max(1, Number(adv?.rango) || 1);
-  const remainingXP = getRemainingXP(adv);
-  const officialOptions = getAvailableOfficialSpells(adv);
+  const normalized = normalizeAdventurer(adv);
+  const [draft, setDraft] = useState({ spellId: "" });
+  const rank = Math.max(1, Number(normalized?.rango) || 1);
+  const remainingXP = getRemainingXP(normalized);
+  const knownSpells = getKnownSpells(normalized);
+  const allOfficialSpells = getOfficialSpellsForClass(normalized);
+  const officialOptions = getAvailableOfficialSpells(normalized);
   const selectedOfficial = officialOptions.find(spell => spell.id === draft.spellId) || null;
+  const canUseSpells = !!CLASS_DATA[normalized?.clase]?.spell;
 
-  const resetDraft = () => setDraft({ spellId: "", name: "", level: 1, school: "Manual", notes: "" });
+  if (!canUseSpells || (!allOfficialSpells.length && !knownSpells.length)) {
+    return null;
+  }
+
+  const resetDraft = () => setDraft({ spellId: "" });
 
   const addOfficial = () => {
-    if (!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)) return;
+    if (!selectedOfficial || !canLearnSpell(normalized, selectedOfficial.level)) return;
     onUpdate({
-      ...adv,
-      hechizos: [...getKnownSpells(adv), normalizeSpell(selectedOfficial)],
-    });
-    resetDraft();
-  };
-
-  const addManual = () => {
-    const name = draft.name.trim();
-    if (!name || !canLearnSpell(adv, draft.level)) return;
-    onUpdate({
-      ...adv,
-      hechizos: [...getKnownSpells(adv), normalizeSpell({
-        id: "sp_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        name,
-        level: Math.max(1, Math.min(rank, Number(draft.level) || 1)),
-        school: draft.school || "Manual",
-        notes: draft.notes.trim(),
-      })],
+      ...normalized,
+      hechizos: [...knownSpells, normalizeSpell(selectedOfficial)],
     });
     resetDraft();
   };
 
   const removeSpell = (spellId) => {
     onUpdate({
-      ...adv,
-      hechizos: getKnownSpells(adv).filter(spell => spell.id !== spellId),
+      ...normalized,
+      hechizos: knownSpells.filter(spell => spell.id !== spellId),
     });
   };
 
@@ -3176,43 +3168,18 @@ SpellbookEditor = function SpellbookEditorSafe({ adv, onUpdate }) {
             </div>
           </div>
         )}
-        <button onClick={addOfficial} disabled={!selectedOfficial || !canLearnSpell(adv, selectedOfficial.level)}
+        <button onClick={addOfficial} disabled={!selectedOfficial || !canLearnSpell(normalized, selectedOfficial.level)}
           style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
-            background: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#1d4ed8" : "#1e293b",
-            color: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "#dbeafe" : "#64748b",
-            fontWeight: 700, cursor: selectedOfficial && canLearnSpell(adv, selectedOfficial.level) ? "pointer" : "default" }}>
+            background: selectedOfficial && canLearnSpell(normalized, selectedOfficial.level) ? "#1d4ed8" : "#1e293b",
+            color: selectedOfficial && canLearnSpell(normalized, selectedOfficial.level) ? "#dbeafe" : "#64748b",
+            fontWeight: 700, cursor: selectedOfficial && canLearnSpell(normalized, selectedOfficial.level) ? "pointer" : "default" }}>
           Aprender hechizo oficial (1 PX)
         </button>
       </div>
 
-      <div style={{ background: "#111827", border: "1px solid #2d2d44", borderRadius: 10, padding: 10, marginBottom: 10 }}>
-        <div style={{ color: "#d4b896", fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Carga manual de respaldo</div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 90px", gap: 8, marginBottom: 8 }}>
-          <input value={draft.name} onChange={e => setDraft(prev => ({ ...prev, name: e.target.value }))}
-            placeholder="Nombre del hechizo"
-            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
-          <input type="number" min="1" max={rank} value={draft.level} onChange={e => setDraft(prev => ({ ...prev, level: Number(e.target.value) || 1 }))}
-            style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, boxSizing: "border-box" }}/>
-        </div>
-        <input value={draft.school} onChange={e => setDraft(prev => ({ ...prev, school: e.target.value }))}
-          placeholder="Escuela o clase"
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#d4b896", fontSize: 13, marginBottom: 8, boxSizing: "border-box" }}/>
-        <textarea value={draft.notes} onChange={e => setDraft(prev => ({ ...prev, notes: e.target.value }))}
-          placeholder="Resumen del hechizo"
-          rows={3}
-          style={{ width: "100%", padding: 10, borderRadius: 8, border: "1px solid #374151", background: "#0f172a", color: "#9ca3af", fontSize: 12, marginBottom: 8, boxSizing: "border-box", resize: "vertical" }}/>
-        <button onClick={addManual} disabled={!draft.name.trim() || !canLearnSpell(adv, draft.level)}
-          style={{ width: "100%", padding: 12, borderRadius: 8, border: "none",
-            background: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#7f1d1d" : "#1e293b",
-            color: draft.name.trim() && canLearnSpell(adv, draft.level) ? "#fff" : "#64748b",
-            fontWeight: 700, cursor: draft.name.trim() && canLearnSpell(adv, draft.level) ? "pointer" : "default" }}>
-          Agregar hechizo manual (1 PX)
-        </button>
-      </div>
-
-      {getKnownSpells(adv).length > 0 && (
+      {knownSpells.length > 0 && (
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          {getKnownSpells(adv).map(spell => (
+          {knownSpells.map(spell => (
             <div key={spell.id} style={{ background: "#0f172a", border: "1px solid #2d2d44", borderRadius: 10, padding: 10 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 8, alignItems: "flex-start", marginBottom: 6 }}>
                 <div>
